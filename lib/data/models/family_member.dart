@@ -20,6 +20,7 @@ class FamilyMember {
     this.birthDate,
     this.currentSize,
     this.avatarUrl,
+    this.pinCode,
   });
 
   final String id;
@@ -28,6 +29,8 @@ class FamilyMember {
   final DateTime? birthDate;
   final String? currentSize;
   final String? avatarUrl;
+  final String? pinCode;
+
 
   factory FamilyMember.fromJson(Map<String, dynamic> json) => FamilyMember(
     id: json['id'] as String,
@@ -38,6 +41,7 @@ class FamilyMember {
     birthDate: DateTime.tryParse(json['birth_date'] as String? ?? ''),
     currentSize: json['current_size'] as String?,
     avatarUrl: json['avatar_url'] as String?,
+    pinCode: json['pin_code'] as String?,
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -46,6 +50,7 @@ class FamilyMember {
     'birth_date': birthDate?.toIso8601String().split('T').first,
     'current_size': currentSize,
     'avatar_url': avatarUrl,
+    'pin_code': pinCode,
   };
 
   FamilyMember copyWith({
@@ -54,6 +59,7 @@ class FamilyMember {
     DateTime? birthDate,
     String? currentSize,
     String? avatarUrl,
+    String? pinCode,
   }) => FamilyMember(
     id: id,
     name: name ?? this.name,
@@ -61,5 +67,6 @@ class FamilyMember {
     birthDate: birthDate ?? this.birthDate,
     currentSize: currentSize ?? this.currentSize,
     avatarUrl: avatarUrl ?? this.avatarUrl,
+    pinCode: pinCode ?? this.pinCode,
   );
 }

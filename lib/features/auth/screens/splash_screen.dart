@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
       final bool signedIn = SupabaseService.client.auth.currentSession != null;
-      if (mounted) context.go(signedIn ? '/app' : '/auth');
+      if (mounted) context.go(signedIn ? '/profiles' : '/auth',);
     });
   }
 
