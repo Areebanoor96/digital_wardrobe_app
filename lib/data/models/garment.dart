@@ -40,6 +40,7 @@ class Garment {
     required this.category,
     required this.photoPaths,
     required this.photoUrls,
+    this.memberId,
     this.subcategory,
     this.colorName,
     this.colorHex,
@@ -61,6 +62,7 @@ class Garment {
 
   final String id;
   final String name;
+  final String? memberId;
   final GarmentCategory category;
   final List<String> photoPaths;
   final List<String> photoUrls;
@@ -93,6 +95,8 @@ class Garment {
     return Garment(
       id: json['id'] as String,
       name: json['name'] as String,
+      memberId: json['member_id'] as String?,
+
       category: GarmentCategory.values.byName(json['category'] as String),
       photoPaths: List<String>.from(
         json['photo_urls'] as List<dynamic>? ?? const <String>[],
@@ -130,6 +134,7 @@ class Garment {
     'id': id,
     'user_id': userId,
     'name': name,
+    'member_id': memberId,
     'category': category.name,
     'subcategory': subcategory,
     'color_name': colorName,
@@ -153,6 +158,7 @@ class Garment {
     List<String>? photoPaths,
     List<String>? photoUrls,
     bool? isArchived,
+    String? memberId,
   }) => Garment(
     id: id,
     name: name,

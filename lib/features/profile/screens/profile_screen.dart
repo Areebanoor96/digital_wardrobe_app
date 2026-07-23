@@ -1,6 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
+import 'package:digital_wardrobe_app/features/profile/Family/screens/family_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,16 @@ class ProfileScreen extends ConsumerWidget {
               leading: const Icon(Icons.edit_outlined),
               title: const Text('Edit name'),
               onTap: () => _editName(context, ref, user.fullName ?? ''),
+            ),
+            ListTile(
+              leading: const Icon(Icons.people_outline),
+              title: const Text('Family members'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) => const FamilyScreen(),
+                ),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.logout),

@@ -6,17 +6,19 @@ class FamilyMemberCard extends StatelessWidget {
     super.key,
     required this.member,
     this.onTap,
+    this.onDelete,
   });
-
 
   final FamilyMember member;
   final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
+
         onTap: onTap,
 
         leading: CircleAvatar(
@@ -31,9 +33,31 @@ class FamilyMemberCard extends StatelessWidget {
           member.relationship.name,
         ),
 
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
+        trailing: PopupMenuButton<String>(
+
+          onSelected: (value){
+
+            if(value == "edit"){
+              onTap?.call();
+            }
+
+            if(value == "delete"){
+              onDelete?.call();
+            }
+
+          },
+
+          itemBuilder: (context)=>[
+            const PopupMenuItem(
+              value: "edit",
+              child: Text("Edit"),
+            ),
+
+            const PopupMenuItem(
+              value: "delete",
+              child: Text("Delete"),
+            ),
+          ],
         ),
       ),
     );

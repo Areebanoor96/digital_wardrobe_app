@@ -19,7 +19,6 @@ import 'package:digital_wardrobe_app/data/repositories/wear_log_repository.dart'
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-
 final Provider<ImageService> imageServiceProvider = Provider<ImageService>(
   (Ref ref) => ImageService(ImagePicker()),
 );
@@ -53,9 +52,21 @@ final Provider<AlertsRepository> alertsRepositoryProvider =
       (Ref ref) => AlertsRepository(SupabaseService.client),
     );
 final FutureProvider<List<Garment>> garmentsProvider =
-    FutureProvider<List<Garment>>(
-      (Ref ref) => ref.watch(garmentRepositoryProvider).fetchGarments(),
+FutureProvider<List<Garment>>(
+      (Ref ref) {
+
+    final selectedMember =
+    ref.watch(selectedFamilyMemberProvider);
+
+
+    return ref
+        .watch(garmentRepositoryProvider)
+        .fetchGarments(
+      memberId: selectedMember?.id,
     );
+
+  },
+);
 final garmentProvider = FutureProvider.family<Garment, String>(
   (Ref ref, String id) => ref.watch(garmentRepositoryProvider).fetchGarment(id),
 );
@@ -217,3 +228,9 @@ class FamilyMutationController extends AutoDisposeAsyncNotifier<void> {
     );
   }
 }
+
+
+final selectedFamilyMemberProvider =
+StateProvider<FamilyMember?>(
+      (Ref ref) => null,
+);

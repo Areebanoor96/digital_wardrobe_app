@@ -61,7 +61,29 @@ class FamilyRepository {
       as Map,
     );
 
-
     return FamilyMember.fromJson(row);
+  }
+  Future<void> deleteFamilyMember(String id) async {
+
+    await _client
+        .from('family_members')
+        .delete()
+        .eq('id', id);
+
+  }
+  Future<void> updateFamilyMember({
+    required String id,
+    required String name,
+    required String relationship,
+  }) async {
+
+    await _client
+        .from('family_members')
+        .update({
+      'name': name,
+      'relationship': relationship,
+    })
+        .eq('id', id);
+
   }
 }
