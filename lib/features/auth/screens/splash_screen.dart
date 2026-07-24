@@ -15,6 +15,9 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      debugPrint(
+        "SESSION: ${SupabaseService.client.auth.currentSession}",
+      );
       if (!SupabaseConfig.isConfigured) {
         context.go('/onboarding');
         return;

@@ -11,7 +11,6 @@ import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_sc
 import 'package:go_router/go_router.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/profile_selection_screen.dart';
 
-
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
   routes: <RouteBase>[

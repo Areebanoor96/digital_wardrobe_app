@@ -1,13 +1,25 @@
 enum RelationshipType {
   self,
-  child,
+  mother,
+  father,
+  brother,
+  sister,
   partner,
+  child,
+  grandparent,
+  cousin,
   other;
 
   String get label => switch (this) {
     RelationshipType.self => 'Self',
-    RelationshipType.child => 'Child',
+    RelationshipType.mother => 'Mother',
+    RelationshipType.father => 'Father',
+    RelationshipType.brother => 'Brother',
+    RelationshipType.sister => 'Sister',
     RelationshipType.partner => 'Partner',
+    RelationshipType.child => 'Child',
+    RelationshipType.grandparent => 'Grandparent',
+    RelationshipType.cousin => 'Cousin',
     RelationshipType.other => 'Other',
   };
 }
