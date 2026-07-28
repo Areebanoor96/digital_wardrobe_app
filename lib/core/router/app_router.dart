@@ -6,10 +6,10 @@ import 'package:digital_wardrobe_app/features/auth/screens/splash_screen.dart';
 import 'package:digital_wardrobe_app/features/garment_form/screens/garment_form_screen.dart';
 import 'package:digital_wardrobe_app/features/outfits/screens/outfit_builder_screen.dart';
 import 'package:digital_wardrobe_app/features/outfits/screens/outfit_detail_screen.dart';
+import 'package:digital_wardrobe_app/features/profile/screens/profile_selection_screen.dart';
 import 'package:digital_wardrobe_app/features/shell/screens/app_shell_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_screen.dart';
 import 'package:go_router/go_router.dart';
-import 'package:digital_wardrobe_app/features/profile/screens/profile_selection_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -20,7 +20,7 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/setup', builder: (_, _) => const SetupWizardScreen()),
     GoRoute(
       path: '/profiles',
-      builder: (_, __) => const ProfileSelectionScreen(),
+      builder: (_, _) => const ProfileSelectionScreen(),
     ),
 
     GoRoute(path: '/app', builder: (_, _) => const AppShellScreen()),

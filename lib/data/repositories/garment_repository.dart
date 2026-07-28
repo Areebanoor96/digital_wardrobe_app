@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -8,39 +9,21 @@ class GarmentRepository {
   final SupabaseClient _client;
   static const String _bucket = 'garments';
 
-  Future<List<Garment>> fetchGarments({
-    String? memberId,
-  }) async {
+  Future<List<Garment>> fetchGarments({String? familyMemberId}) async {
+    var query = _client.from('garments').select().eq('is_archived', false);
 
-    var query = _client
-        .from('garments')
-        .select()
-        .eq('is_archived', false);
-
-
-    if (memberId != null) {
-      query = query.eq(
-        'member_id',
-        memberId,
-      );
+    if (familyMemberId != null) {
+      query = query.eq('member_id', familyMemberId);
     }
 
-
-    final List<dynamic> rows =
-    await query.order(
+    final List<dynamic> rows = await query.order(
       'created_at',
       ascending: false,
     );
 
-
     return Future.wait(
       rows.map(
-            (dynamic row) =>
-            _withSignedUrls(
-              Map<String,dynamic>.from(
-                row as Map,
-              ),
-            ),
+        (dynamic row) => _withSignedUrls(Map<String, dynamic>.from(row as Map)),
       ),
     );
   }

@@ -52,23 +52,16 @@ final Provider<AlertsRepository> alertsRepositoryProvider =
       (Ref ref) => AlertsRepository(SupabaseService.client),
     );
 final FutureProvider<List<Garment>> garmentsProvider =
-FutureProvider<List<Garment>>(
-      (Ref ref) {
+    FutureProvider<List<Garment>>((Ref ref) {
+      final selectedMember = ref.watch(selectedFamilyMemberProvider);
 
-    final selectedMember =
-    ref.watch(selectedFamilyMemberProvider);
-
-
-    return ref
-        .watch(garmentRepositoryProvider)
-        .fetchGarments(
-      memberId: selectedMember?.id,
-    );
-
-  },
-);
+      return ref
+          .watch(garmentRepositoryProvider)
+          .fetchGarments(familyMemberId: selectedMember?.id);
+    });
 final garmentProvider = FutureProvider.family<Garment, String>(
-  (Ref ref, String id) => ref.watch(garmentRepositoryProvider).fetchGarment(id),
+  (Ref ref, String garmentId) =>
+      ref.watch(garmentRepositoryProvider).fetchGarment(garmentId),
 );
 final FutureProvider<List<Outfit>> outfitsProvider =
     FutureProvider<List<Outfit>>(
@@ -229,8 +222,6 @@ class FamilyMutationController extends AutoDisposeAsyncNotifier<void> {
   }
 }
 
-
-final selectedFamilyMemberProvider =
-StateProvider<FamilyMember?>(
-      (Ref ref) => null,
+final selectedFamilyMemberProvider = StateProvider<FamilyMember?>(
+  (Ref ref) => null,
 );

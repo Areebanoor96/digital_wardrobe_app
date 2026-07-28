@@ -90,4 +90,20 @@ class FamilyRepository {
         .eq('id', id);
 
   }
+  Future<FamilyMember?> getFamilyMemberById(String id) async {
+    final response =
+    await _client
+        .from('family_members')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+
+    if (response == null) {
+      return null;
+    }
+
+    return FamilyMember.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
+  }
 }

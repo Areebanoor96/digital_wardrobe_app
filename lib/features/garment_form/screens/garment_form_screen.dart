@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
-import 'package:digital_wardrobe_app/data/models/family_member.dart';
+
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +38,6 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   XFile? _image;
 
   bool _saving = false;
-  FamilyMember? _selectedOwner;
 
   @override
   void dispose() {
@@ -53,23 +52,22 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   Future<void> _chooseImage() async {
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
-      builder: (BuildContext context) =>
-          SafeArea(
-            child: Wrap(
-              children: <Widget>[
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined),
-                  title: const Text('Take photo'),
-                  onTap: () => Navigator.pop(context, ImageSource.camera),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Choose from gallery'),
-                  onTap: () => Navigator.pop(context, ImageSource.gallery),
-                ),
-              ],
+      builder: (BuildContext context) => SafeArea(
+        child: Wrap(
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
-          ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
     );
     if (source == null) return;
     final XFile? image = source == ImageSource.camera
@@ -85,6 +83,16 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       return;
     }
     setState(() => _saving = true);
+    final selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No profile selected.')));
+      }
+      return;
+    }
     try {
       final String id = widget.garment?.id ?? const Uuid().v4();
       List<String> photoPaths = widget.garment?.photoPaths ?? const <String>[];
@@ -93,16 +101,16 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
           await ref
               .read(garmentRepositoryProvider)
               .uploadImage(
-            garmentId: id,
-            bytes: await ref.read(imageServiceProvider).readBytes(_image!),
-          ),
+                garmentId: id,
+                bytes: await ref.read(imageServiceProvider).readBytes(_image!),
+              ),
         ];
       }
       final Garment garment = Garment(
         id: id,
         name: _name.text.trim(),
         category: _category,
-        memberId: _selectedOwner?.id,
+        familyMemberId: selectedMember.id,
         photoPaths: photoPaths,
         photoUrls: widget.garment?.photoUrls ?? const <String>[],
         subcategory: widget.garment?.subcategory,
@@ -144,16 +152,10 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     }
   }
 
-  String? _optional(String value) =>
-      value
-          .trim()
-          .isEmpty ? null : value.trim();
+  String? _optional(String value) => value.trim().isEmpty ? null : value.trim();
 
-  @override
   @override
   Widget build(BuildContext context) {
-    final family = ref.watch(familyMembersProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.garment == null ? 'Add garment' : 'Edit garment'),
@@ -172,10 +174,10 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                   child: _image == null
                       ? GarmentImage(imageUrl: widget.garment?.coverImageUrl)
                       : Image.file(
-                    File(_image!.path),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox(),
-                  ),
+                          File(_image!.path),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox(),
+                        ),
                 ),
               ),
             ),
@@ -193,9 +195,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               controller: _name,
               decoration: const InputDecoration(labelText: 'Name *'),
               validator: (String? value) =>
-              value == null || value
-                  .trim()
-                  .isEmpty ? 'Enter a name' : null,
+                  value == null || value.trim().isEmpty ? 'Enter a name' : null,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<GarmentCategory>(
@@ -203,49 +203,17 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               decoration: const InputDecoration(labelText: 'Category *'),
               items: GarmentCategory.values
                   .map(
-                    (GarmentCategory category) =>
-                    DropdownMenuItem(
+                    (GarmentCategory category) => DropdownMenuItem(
                       value: category,
                       child: Text(category.label),
                     ),
-              )
+                  )
                   .toList(),
               onChanged: (GarmentCategory? value) =>
                   setState(() => _category = value!),
             ),
             const SizedBox(height: 12),
 
-            family.when(
-              loading: () => const CircularProgressIndicator(),
-
-              error: (_, _) =>
-              const Text(
-                "Could not load family members",
-              ),
-
-              data: (members) {
-                return DropdownButtonFormField<FamilyMember>(
-                  initialValue: _selectedOwner,
-
-                  decoration: const InputDecoration(
-                    labelText: "Owner",
-                  ),
-
-                  items: members.map((member) {
-                    return DropdownMenuItem<FamilyMember>(
-                      value: member,
-                      child: Text(member.name),
-                    );
-                  }).toList(),
-
-                  onChanged: (member) {
-                    setState(() {
-                      _selectedOwner = member;
-                    });
-                  },
-                );
-              },
-            ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _brand,
@@ -265,7 +233,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             TextFormField(
               controller: _price,
               keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true),
+                decimal: true,
+              ),
               decoration: const InputDecoration(labelText: 'Price (PKR)'),
             ),
             const SizedBox(height: 28),
