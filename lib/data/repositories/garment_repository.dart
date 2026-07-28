@@ -9,17 +9,13 @@ class GarmentRepository {
   final SupabaseClient _client;
   static const String _bucket = 'garments';
 
-  Future<List<Garment>> fetchGarments({String? familyMemberId}) async {
-    var query = _client.from('garments').select().eq('is_archived', false);
-
-    if (familyMemberId != null) {
-      query = query.eq('member_id', familyMemberId);
-    }
-
-    final List<dynamic> rows = await query.order(
-      'created_at',
-      ascending: false,
-    );
+  Future<List<Garment>> fetchGarments({required String memberId}) async {
+    final List<dynamic> rows = await _client
+        .from('garments')
+        .select()
+        .eq('is_archived', false)
+        .eq('member_id', memberId)
+        .order('created_at', ascending: false);
 
     return Future.wait(
       rows.map(

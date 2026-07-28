@@ -65,15 +65,13 @@ class OutfitsScreen extends ConsumerWidget {
                       onSave: actionState.isLoading
                           ? null
                           : () => ref
-                              .read(ootdActionControllerProvider.notifier)
-                              .saveAsOutfit(
-                                rec.garments,
-                              ),
+                                .read(ootdActionControllerProvider.notifier)
+                                .saveAsOutfit(rec.garments),
                       onWear: actionState.isLoading
                           ? null
                           : () => ref
-                              .read(ootdActionControllerProvider.notifier)
-                              .wearOutfit(rec.garments),
+                                .read(ootdActionControllerProvider.notifier)
+                                .wearOutfit(rec.garments),
                       isSaving: actionState.isLoading,
                       isWearing: actionState.isLoading,
                     ),
@@ -88,26 +86,24 @@ class OutfitsScreen extends ConsumerWidget {
                     onAction: () => context.push('/outfits/new'),
                   )
                 else
-                  ...saved.map(
-                    (Outfit outfit) {
-                      final List<Garment> items = outfit.garmentIds
-                          .map(
-                            (String id) => wardrobe
-                                .where((Garment garment) => garment.id == id)
-                                .firstOrNull,
-                          )
-                          .whereType<Garment>()
-                          .toList();
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: OutfitCard(
-                          outfit: outfit,
-                          garments: items,
-                          onTap: () => context.push('/outfits/${outfit.id}'),
-                        ),
-                      );
-                    },
-                  ),
+                  ...saved.map((Outfit outfit) {
+                    final List<Garment> items = outfit.garmentIds
+                        .map(
+                          (String id) => wardrobe
+                              .where((Garment garment) => garment.id == id)
+                              .firstOrNull,
+                        )
+                        .whereType<Garment>()
+                        .toList();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: OutfitCard(
+                        outfit: outfit,
+                        garments: items,
+                        onTap: () => context.push('/outfits/${outfit.id}'),
+                      ),
+                    );
+                  }),
               ],
             ),
           );

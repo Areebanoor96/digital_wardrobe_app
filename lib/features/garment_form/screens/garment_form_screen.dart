@@ -82,7 +82,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    setState(() => _saving = true);
+
     final selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
@@ -93,6 +93,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       }
       return;
     }
+    setState(() => _saving = true);
+
     try {
       final String id = widget.garment?.id ?? const Uuid().v4();
       List<String> photoPaths = widget.garment?.photoPaths ?? const <String>[];
@@ -110,7 +112,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         id: id,
         name: _name.text.trim(),
         category: _category,
-        familyMemberId: selectedMember.id,
+        memberId: widget.garment?.memberId ?? selectedMember.id,
         photoPaths: photoPaths,
         photoUrls: widget.garment?.photoUrls ?? const <String>[],
         subcategory: widget.garment?.subcategory,

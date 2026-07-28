@@ -64,8 +64,7 @@ class AlertsRepository {
         )
         .toList();
 
-    final List<Map<String, dynamic>> newAlerts =
-        <Map<String, dynamic>>[];
+    final List<Map<String, dynamic>> newAlerts = <Map<String, dynamic>>[];
 
     for (final Garment garment in garments) {
       _addUnusedAlert(garment, userId, existingKeys, newAlerts);
@@ -87,10 +86,9 @@ class AlertsRepository {
     if (existingKeys.contains(key)) return;
 
     if (garment.wearCount == 0) {
-      final int daysSince =
-          garment.purchaseDate != null
-              ? DateTime.now().difference(garment.purchaseDate!).inDays
-              : 0;
+      final int daysSince = garment.purchaseDate != null
+          ? DateTime.now().difference(garment.purchaseDate!).inDays
+          : 0;
       if (daysSince >= 7) {
         newAlerts.add(<String, dynamic>{
           'user_id': userId,
@@ -107,8 +105,9 @@ class AlertsRepository {
     }
 
     if (garment.lastWornDate != null && garment.wearCount > 0) {
-      final int daysSinceLastWorn =
-          DateTime.now().difference(garment.lastWornDate!).inDays;
+      final int daysSinceLastWorn = DateTime.now()
+          .difference(garment.lastWornDate!)
+          .inDays;
       if (daysSinceLastWorn >= 30) {
         newAlerts.add(<String, dynamic>{
           'user_id': userId,

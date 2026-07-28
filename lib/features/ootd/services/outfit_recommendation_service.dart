@@ -3,10 +3,7 @@ import 'dart:math';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 
 class OutfitRecommendation {
-  const OutfitRecommendation({
-    required this.garments,
-    required this.reason,
-  });
+  const OutfitRecommendation({required this.garments, required this.reason});
 
   final List<Garment> garments;
   final String reason;
@@ -110,7 +107,8 @@ class OutfitRecommendationService {
 
     return OutfitRecommendation(
       garments: <Garment>[],
-      reason: 'Add some clean garments to your wardrobe to get a recommendation.',
+      reason:
+          'Add some clean garments to your wardrobe to get a recommendation.',
     );
   }
 
@@ -145,7 +143,8 @@ class OutfitRecommendationService {
 
     if (shoes.isNotEmpty) addIfNotUsed(shoes);
     if (outerwears.isNotEmpty && Random().nextBool()) addIfNotUsed(outerwears);
-    if (accessories.isNotEmpty && Random().nextBool()) addIfNotUsed(accessories);
+    if (accessories.isNotEmpty && Random().nextBool())
+      addIfNotUsed(accessories);
 
     return extras;
   }
@@ -155,8 +154,14 @@ class OutfitRecommendationService {
     final String cleanB = hexB.replaceFirst('#', '').toLowerCase();
     if (cleanA == cleanB) return true;
     final Set<String> neutrals = <String>{
-      '000000', 'ffffff', '808080', 'c0c0c0',
-      'd3d3d3', '696969', 'f5f5f5', 'd2b48c',
+      '000000',
+      'ffffff',
+      '808080',
+      'c0c0c0',
+      'd3d3d3',
+      '696969',
+      'f5f5f5',
+      'd2b48c',
     };
     if (neutrals.contains(cleanA) || neutrals.contains(cleanB)) return false;
     try {
@@ -175,9 +180,7 @@ class OutfitRecommendationService {
 
   double _colorDistance(int r1, int g1, int b1, int r2, int g2, int b2) {
     return sqrt(
-      (r1 - r2) * (r1 - r2) +
-      (g1 - g2) * (g1 - g2) +
-      (b1 - b2) * (b1 - b2),
+      (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2),
     );
   }
 
@@ -191,7 +194,10 @@ class OutfitRecommendationService {
     if (top.lastWornDate == null && bottom.lastWornDate == null) {
       return 'Fresh picks — neither ${top.name} nor ${bottom.name} has been worn yet.';
     }
-    if (!topRecent && !bottomRecent && top.lastWornDate != null && bottom.lastWornDate != null) {
+    if (!topRecent &&
+        !bottomRecent &&
+        top.lastWornDate != null &&
+        bottom.lastWornDate != null) {
       return 'Both ${top.name} and ${bottom.name} haven\'t been worn recently — time to rotate them in!';
     }
     return '${top.name} pairs well with ${bottom.name}.';

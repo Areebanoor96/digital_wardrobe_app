@@ -58,7 +58,6 @@ class Garment {
     this.purchaseDate,
     this.laundryStatus = LaundryStatus.clean,
     this.isArchived = false,
-    this.familyMemberId,
   });
 
   final String id;
@@ -84,7 +83,6 @@ class Garment {
   final DateTime? purchaseDate;
   final LaundryStatus laundryStatus;
   final bool isArchived;
-  final String? familyMemberId;
 
   String? get coverImageUrl => photoUrls.isEmpty ? null : photoUrls.first;
   double? get costPerWear =>
@@ -98,7 +96,6 @@ class Garment {
       id: json['id'] as String,
       name: json['name'] as String,
       memberId: json['member_id'] as String?,
-      familyMemberId: json['family_member_id'] as String?,
 
       category: GarmentCategory.values.byName(json['category'] as String),
       photoPaths: List<String>.from(
@@ -155,19 +152,17 @@ class Garment {
     'purchase_date': purchaseDate?.toIso8601String().split('T').first,
     'laundry_status': laundryStatus.name,
     'is_archived': isArchived,
-    'family_member_id': familyMemberId,
   };
-
 
   Garment copyWith({
     List<String>? photoPaths,
     List<String>? photoUrls,
     bool? isArchived,
     String? memberId,
-    String? familyMemberId,
   }) => Garment(
     id: id,
     name: name,
+    memberId: memberId ?? this.memberId,
     category: category,
     photoPaths: photoPaths ?? this.photoPaths,
     photoUrls: photoUrls ?? this.photoUrls,
@@ -188,6 +183,5 @@ class Garment {
     purchaseDate: purchaseDate,
     laundryStatus: laundryStatus,
     isArchived: isArchived ?? this.isArchived,
-      familyMemberId: familyMemberId ?? this.familyMemberId,
   );
 }

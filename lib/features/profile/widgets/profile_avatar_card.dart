@@ -20,15 +20,12 @@ class ProfileAvatarCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-
               CircleAvatar(
                 radius: 42,
                 child: Text(
@@ -55,9 +52,7 @@ class ProfileAvatarCard extends StatelessWidget {
 
               Text(
                 member.relationship.label,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(color: Colors.grey.shade600),
               ),
 
               const SizedBox(height: 18),

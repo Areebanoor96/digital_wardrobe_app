@@ -6,43 +6,53 @@ import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final ootdProvider = FutureProvider<OutfitRecommendation>(
-  (Ref ref) {
-    final List<Garment> garments =
-        ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
-    final List<WearLog> recentLogs =
-        ref.watch(recentWearActivityProvider).valueOrNull ?? const <WearLog>[];
+final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
+  final List<Garment> garments =
+      ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
+  final List<WearLog> recentLogs =
+      ref.watch(recentWearActivityProvider).valueOrNull ?? const <WearLog>[];
 
-    final Set<String> recentlyWornIds = recentLogs
-        .map((WearLog log) => log.garmentId)
-        .toSet();
+  final Set<String> recentlyWornIds = recentLogs
+      .map((WearLog log) => log.garmentId)
+      .toSet();
 
-    return OutfitRecommendationService().recommend(
-      allGarments: garments,
-      recentlyWornGarmentIds: recentlyWornIds,
-    );
-  },
-);
+  return OutfitRecommendationService().recommend(
+    allGarments: garments,
+    recentlyWornGarmentIds: recentlyWornIds,
+  );
+});
 
 final ootdActionControllerProvider =
     AutoDisposeAsyncNotifierProvider<OotdActionController, void>(
-  OotdActionController.new,
-);
+      OotdActionController.new,
+    );
 
 class OotdActionController extends AutoDisposeAsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
-  Future<void> saveAsOutfit(
-    List<Garment> garments, {
-    String? name,
-  }) async {
-    state = const AsyncLoading<void>();
-    state = await AsyncValue.guard(() async {
-      await ref.read(outfitRepositoryProvider).saveOutfit(
-        name: name ?? 'OOTD Recommendation',
-        garmentIds: garments.map((Garment g) => g.id).toList(),
+  Future<void> saveAsOutfit(List<Garment> garments, {String? name}) async {
+    final selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No wardrobe profile is selected.'),
+        StackTrace.current,
       );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(outfitRepositoryProvider)
+          .saveOutfit(
+            memberId: selectedMember.id,
+            name: name ?? 'OOTD Recommendation',
+            garmentIds: garments.map((Garment garment) => garment.id).toList(),
+          );
+
       ref.invalidate(outfitsProvider);
     });
   }
@@ -50,8 +60,8 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
   Future<void> wearOutfit(List<Garment> garments) async {
     state = const AsyncLoading<void>();
     state = await AsyncValue.guard(() async {
-      for (final Garment g in garments) {
-        await ref.read(wearLogRepositoryProvider).createWearLog(g.id);
+      for (final Garment garment in garments) {
+        await ref.read(wearLogRepositoryProvider).createWearLog(garment.id);
       }
       ref.invalidate(garmentsProvider);
       ref.invalidate(recentWearActivityProvider);

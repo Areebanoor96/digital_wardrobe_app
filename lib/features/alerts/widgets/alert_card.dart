@@ -2,12 +2,7 @@ import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:flutter/material.dart';
 
 class AlertCard extends StatelessWidget {
-  const AlertCard({
-    super.key,
-    required this.alert,
-    this.onTap,
-    this.onDismiss,
-  });
+  const AlertCard({super.key, required this.alert, this.onTap, this.onDismiss});
 
   final Alert alert;
   final VoidCallback? onTap;
@@ -21,7 +16,9 @@ class AlertCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: alert.isRead ? colors.outline : colors.primary.withValues(alpha: 0.3),
+          color: alert.isRead
+              ? colors.outline
+              : colors.primary.withValues(alpha: 0.3),
         ),
       ),
       child: InkWell(
@@ -46,10 +43,9 @@ class AlertCard extends StatelessWidget {
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.w700,
-                                  color:
-                                      alert.isRead
-                                          ? colors.onSurface
-                                          : colors.primary,
+                                  color: alert.isRead
+                                      ? colors.onSurface
+                                      : colors.primary,
                                 ),
                           ),
                         ),
@@ -112,8 +108,9 @@ class _AlertIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color iconColor =
-        isRead ? colors.onSurface.withValues(alpha: 0.5) : _iconColor(colors);
+    final Color iconColor = isRead
+        ? colors.onSurface.withValues(alpha: 0.5)
+        : _iconColor(colors);
 
     return Container(
       width: 44,

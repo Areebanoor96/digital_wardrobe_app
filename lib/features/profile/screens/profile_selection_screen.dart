@@ -72,7 +72,7 @@ class ProfileSelectionScreen extends ConsumerWidget {
                 onTap: () async {
                   ref.read(selectedFamilyMemberProvider.notifier).state =
                       member;
-                  ref.invalidate(garmentsProvider);
+
                   await ProfileSessionService.saveSelectedProfile(member.id);
 
                   if (context.mounted) {

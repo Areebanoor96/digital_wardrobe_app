@@ -52,21 +52,37 @@ final Provider<AlertsRepository> alertsRepositoryProvider =
       (Ref ref) => AlertsRepository(SupabaseService.client),
     );
 final FutureProvider<List<Garment>> garmentsProvider =
-    FutureProvider<List<Garment>>((Ref ref) {
-      final selectedMember = ref.watch(selectedFamilyMemberProvider);
+    FutureProvider<List<Garment>>((Ref ref) async {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
+
+      if (selectedMember == null) {
+        return const <Garment>[];
+      }
 
       return ref
           .watch(garmentRepositoryProvider)
-          .fetchGarments(familyMemberId: selectedMember?.id);
+          .fetchGarments(memberId: selectedMember.id);
     });
 final garmentProvider = FutureProvider.family<Garment, String>(
   (Ref ref, String garmentId) =>
       ref.watch(garmentRepositoryProvider).fetchGarment(garmentId),
 );
 final FutureProvider<List<Outfit>> outfitsProvider =
-    FutureProvider<List<Outfit>>(
-      (Ref ref) => ref.watch(outfitRepositoryProvider).fetchOutfits(),
-    );
+    FutureProvider<List<Outfit>>((Ref ref) async {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
+
+      if (selectedMember == null) {
+        return const <Outfit>[];
+      }
+
+      return ref
+          .watch(outfitRepositoryProvider)
+          .fetchOutfits(memberId: selectedMember.id);
+    });
 final outfitProvider = FutureProvider.family<Outfit, String>(
   (Ref ref, String outfitId) =>
       ref.watch(outfitRepositoryProvider).fetchOutfit(outfitId),
@@ -137,16 +153,32 @@ class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
     required List<String> garmentIds,
     String? coverPhotoUrl,
   }) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
     state = const AsyncLoading<void>();
+
     state = await AsyncValue.guard(
       () => ref
           .read(outfitRepositoryProvider)
           .saveOutfit(
+            memberId: selectedMember.id,
             name: name,
             garmentIds: garmentIds,
             coverPhotoUrl: coverPhotoUrl,
           ),
     );
+
+    if (!state.hasError) {
+      ref.invalidate(outfitsProvider);
+    }
   }
 
   Future<void> updateOutfit({

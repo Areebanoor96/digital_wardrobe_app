@@ -2,30 +2,23 @@ import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FamilyRepository {
-
   FamilyRepository(this._client);
 
   final SupabaseClient _client;
 
-
   Future<List<FamilyMember>> fetchFamilyMembers() async {
-
     final List<dynamic> rows = await _client
         .from('family_members')
         .select()
         .order('created_at');
 
-
     return rows
         .map(
           (dynamic row) =>
-          FamilyMember.fromJson(
-            Map<String,dynamic>.from(row as Map),
-          ),
-    )
+              FamilyMember.fromJson(Map<String, dynamic>.from(row as Map)),
+        )
         .toList();
   }
-
 
   Future<FamilyMember> addFamilyMember({
     required String name,
@@ -36,63 +29,51 @@ class FamilyRepository {
     double? weightKg,
     String? currentSize,
   }) async {
+    final String userId = _client.auth.currentUser!.id;
 
-    final String userId =
-        _client.auth.currentUser!.id;
-
-
-    final Map<String,dynamic> row =
-    Map<String,dynamic>.from(
+    final Map<String, dynamic> row = Map<String, dynamic>.from(
       await _client
-          .from('family_members')
-          .insert({
-        'user_id': userId,
-        'name': name,
-        'relationship': relationship,
-        'pin_code': pinCode,
-        'birth_date': birthDate
-            ?.toIso8601String()
-            .split('T')
-            .first,
-        'height_cm': heightCm,
-        'weight_kg': weightKg,
-        'current_size': currentSize,
-      })
-          .select()
-          .single()
-      as Map,
+              .from('family_members')
+              .insert({
+                'user_id': userId,
+                'name': name,
+                'relationship': relationship,
+                'pin_code': pinCode,
+                'birth_date': birthDate?.toIso8601String().split('T').first,
+                'height_cm': heightCm,
+                'weight_kg': weightKg,
+                'current_size': currentSize,
+              })
+              .select()
+              .single()
+          as Map,
     );
 
     return FamilyMember.fromJson(row);
   }
+
   Future<void> deleteFamilyMember(String id) async {
-
-    await _client
-        .from('family_members')
-        .delete()
-        .eq('id', id);
-
+    await _client.from('family_members').delete().eq('id', id);
   }
+
   Future<void> updateFamilyMember({
     required String id,
     required String name,
     required String relationship,
     String? pinCode,
   }) async {
-
     await _client
         .from('family_members')
         .update({
-      'name': name,
-      'relationship': relationship,
-      'pin_code': pinCode,
-    })
+          'name': name,
+          'relationship': relationship,
+          'pin_code': pinCode,
+        })
         .eq('id', id);
-
   }
+
   Future<FamilyMember?> getFamilyMemberById(String id) async {
-    final response =
-    await _client
+    final response = await _client
         .from('family_members')
         .select()
         .eq('id', id)
@@ -102,8 +83,6 @@ class FamilyRepository {
       return null;
     }
 
-    return FamilyMember.fromJson(
-      Map<String, dynamic>.from(response as Map),
-    );
+    return FamilyMember.fromJson(Map<String, dynamic>.from(response as Map));
   }
 }

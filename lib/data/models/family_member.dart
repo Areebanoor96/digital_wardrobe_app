@@ -43,7 +43,6 @@ class FamilyMember {
   final String? avatarUrl;
   final String? pinCode;
 
-
   factory FamilyMember.fromJson(Map<String, dynamic> json) => FamilyMember(
     id: json['id'] as String,
     name: json['name'] as String,

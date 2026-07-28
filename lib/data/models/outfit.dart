@@ -2,6 +2,7 @@ class Outfit {
   const Outfit({
     required this.id,
     required this.garmentIds,
+    required this.memberId,
     this.name,
     this.occasion,
     this.coverPhotoUrl,
@@ -12,6 +13,7 @@ class Outfit {
 
   final String id;
   final String? name;
+  final String memberId;
   final List<String> garmentIds;
   final String? occasion;
   final String? coverPhotoUrl;
@@ -21,6 +23,7 @@ class Outfit {
 
   factory Outfit.fromJson(Map<String, dynamic> json) => Outfit(
     id: json['id'] as String,
+    memberId: json['member_id'] as String,
     name: json['name'] as String?,
     garmentIds: List<String>.from(json['garment_ids'] as List<dynamic>),
     occasion: json['occasion'] as String?,
@@ -33,6 +36,7 @@ class Outfit {
   Outfit copyWith({DateTime? lastWornDate, int? timesWorn}) => Outfit(
     id: id,
     garmentIds: garmentIds,
+    memberId: memberId,
     name: name,
     occasion: occasion,
     coverPhotoUrl: coverPhotoUrl,

@@ -4,19 +4,17 @@ import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final alertsProvider = FutureProvider<List<Alert>>(
-  (Ref ref) async {
-    final repo = ref.watch(alertsRepositoryProvider);
-    await repo.generateAndInsertAlerts();
-    ref.keepAlive();
-    return repo.fetchAlerts();
-  },
-);
+final alertsProvider = FutureProvider<List<Alert>>((Ref ref) async {
+  final repo = ref.watch(alertsRepositoryProvider);
+  await repo.generateAndInsertAlerts();
+  ref.keepAlive();
+  return repo.fetchAlerts();
+});
 
 final alertMutationControllerProvider =
     AutoDisposeAsyncNotifierProvider<AlertMutationController, void>(
-  AlertMutationController.new,
-);
+      AlertMutationController.new,
+    );
 
 class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
   @override

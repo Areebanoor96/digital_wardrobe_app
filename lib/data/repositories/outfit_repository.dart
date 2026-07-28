@@ -5,11 +5,13 @@ class OutfitRepository {
   OutfitRepository(this._client);
   final SupabaseClient _client;
 
-  Future<List<Outfit>> fetchOutfits() async {
+  Future<List<Outfit>> fetchOutfits({required String memberId}) async {
     final List<dynamic> rows = await _client
         .from('outfits')
         .select()
+        .eq('member_id', memberId)
         .order('created_at', ascending: false);
+
     return _withLastWorn(rows);
   }
 
@@ -17,12 +19,14 @@ class OutfitRepository {
     final Map<String, dynamic> row = Map<String, dynamic>.from(
       await _client.from('outfits').select().eq('id', outfitId).single() as Map,
     );
-    return _withLastWorn(<dynamic>[
-      row,
-    ]).then((List<Outfit> outfits) => outfits.single);
+
+    final List<Outfit> outfits = await _withLastWorn(<dynamic>[row]);
+
+    return outfits.single;
   }
 
   Future<void> saveOutfit({
+    required String memberId,
     required String name,
     required List<String> garmentIds,
     String? occasion,
@@ -31,6 +35,7 @@ class OutfitRepository {
     await _client.from('outfits').insert(<String, dynamic>{
       'user_id': _client.auth.currentUser!.id,
       'name': name,
+      'member_id': memberId,
       'garment_ids': garmentIds,
       'occasion': occasion,
       'cover_photo_url': coverPhotoUrl,

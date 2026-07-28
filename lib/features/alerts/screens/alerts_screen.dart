@@ -43,13 +43,13 @@ class AlertsScreen extends ConsumerWidget {
                   onTap: mutationState.isLoading
                       ? null
                       : () => ref
-                          .read(alertMutationControllerProvider.notifier)
-                          .markAsRead(alert.id),
+                            .read(alertMutationControllerProvider.notifier)
+                            .markAsRead(alert.id),
                   onDismiss: mutationState.isLoading
                       ? () {}
                       : () => ref
-                          .read(alertMutationControllerProvider.notifier)
-                          .dismissAlert(alert.id),
+                            .read(alertMutationControllerProvider.notifier)
+                            .dismissAlert(alert.id),
                 );
               },
             ),
@@ -82,11 +82,7 @@ class _AlertFeedback extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(
-            icon,
-            size: 64,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+          Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 16),
           Text(title, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
