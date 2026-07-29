@@ -29,7 +29,8 @@ enum LaundryStatus {
   String get label => switch (this) {
     LaundryStatus.clean => 'Clean',
     LaundryStatus.dirty => 'Needs washing',
-    LaundryStatus.washing || LaundryStatus.ironing => 'In laundry',
+    LaundryStatus.washing => 'Washing',
+    LaundryStatus.ironing => 'Needs ironing',
   };
 }
 
@@ -46,6 +47,7 @@ class Garment {
     this.colorHex,
     this.size,
     this.brand,
+    this.purchaseStore,
     this.price,
     this.currency = 'PKR',
     this.occasions = const <String>[],
@@ -71,6 +73,10 @@ class Garment {
   final String? colorHex;
   final String? size;
   final String? brand;
+
+  /// Example: Outfitters - Centaurus Mall, Islamabad
+  final String? purchaseStore;
+
   final double? price;
   final String currency;
   final List<String> occasions;
@@ -85,18 +91,18 @@ class Garment {
   final bool isArchived;
 
   String? get coverImageUrl => photoUrls.isEmpty ? null : photoUrls.first;
+
   double? get costPerWear =>
       price == null || wearCount == 0 ? null : price! / wearCount;
 
   factory Garment.fromJson(
-    Map<String, dynamic> json, {
-    List<String>? photoUrls,
-  }) {
+      Map<String, dynamic> json, {
+        List<String>? photoUrls,
+      }) {
     return Garment(
       id: json['id'] as String,
       name: json['name'] as String,
       memberId: json['member_id'] as String?,
-
       category: GarmentCategory.values.byName(json['category'] as String),
       photoPaths: List<String>.from(
         json['photo_urls'] as List<dynamic>? ?? const <String>[],
@@ -107,6 +113,7 @@ class Garment {
       colorHex: json['color_hex'] as String?,
       size: json['size'] as String?,
       brand: json['brand'] as String?,
+      purchaseStore: json['purchase_store'] as String?,
       price: (json['price'] as num?)?.toDouble(),
       currency: json['currency'] as String? ?? 'PKR',
       occasions: List<String>.from(
@@ -121,8 +128,12 @@ class Garment {
       fabric: json['fabric'] as String?,
       washInstructions: json['wash_instructions'] as String?,
       wearCount: json['wear_count'] as int? ?? 0,
-      lastWornDate: DateTime.tryParse(json['last_worn_date'] as String? ?? ''),
-      purchaseDate: DateTime.tryParse(json['purchase_date'] as String? ?? ''),
+      lastWornDate: DateTime.tryParse(
+        json['last_worn_date'] as String? ?? '',
+      ),
+      purchaseDate: DateTime.tryParse(
+        json['purchase_date'] as String? ?? '',
+      ),
       laundryStatus: LaundryStatus.values.byName(
         json['laundry_status'] as String? ?? LaundryStatus.clean.name,
       ),
@@ -141,6 +152,7 @@ class Garment {
     'color_hex': colorHex,
     'size': size,
     'brand': brand,
+    'purchase_store': purchaseStore,
     'price': price,
     'currency': currency,
     'occasions': occasions,
@@ -159,29 +171,34 @@ class Garment {
     List<String>? photoUrls,
     bool? isArchived,
     String? memberId,
-  }) => Garment(
-    id: id,
-    name: name,
-    memberId: memberId ?? this.memberId,
-    category: category,
-    photoPaths: photoPaths ?? this.photoPaths,
-    photoUrls: photoUrls ?? this.photoUrls,
-    subcategory: subcategory,
-    colorName: colorName,
-    colorHex: colorHex,
-    size: size,
-    brand: brand,
-    price: price,
-    currency: currency,
-    occasions: occasions,
-    seasons: seasons,
-    moods: moods,
-    fabric: fabric,
-    washInstructions: washInstructions,
-    wearCount: wearCount,
-    lastWornDate: lastWornDate,
-    purchaseDate: purchaseDate,
-    laundryStatus: laundryStatus,
-    isArchived: isArchived ?? this.isArchived,
-  );
+    String? purchaseStore,
+    LaundryStatus? laundryStatus,
+  }) {
+    return Garment(
+      id: id,
+      name: name,
+      memberId: memberId ?? this.memberId,
+      category: category,
+      photoPaths: photoPaths ?? this.photoPaths,
+      photoUrls: photoUrls ?? this.photoUrls,
+      subcategory: subcategory,
+      colorName: colorName,
+      colorHex: colorHex,
+      size: size,
+      brand: brand,
+      purchaseStore: purchaseStore ?? this.purchaseStore,
+      price: price,
+      currency: currency,
+      occasions: occasions,
+      seasons: seasons,
+      moods: moods,
+      fabric: fabric,
+      washInstructions: washInstructions,
+      wearCount: wearCount,
+      lastWornDate: lastWornDate,
+      purchaseDate: purchaseDate,
+      laundryStatus: laundryStatus ?? this.laundryStatus,
+      isArchived: isArchived ?? this.isArchived,
+    );
+  }
 }

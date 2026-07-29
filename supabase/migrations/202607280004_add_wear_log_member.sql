@@ -12,3 +12,4 @@ from public.garments as garment
 where wear.garment_id = garment.id
   and wear.member_id is null
   and garment.member_id is not null;
+

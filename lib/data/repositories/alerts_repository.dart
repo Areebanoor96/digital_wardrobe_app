@@ -7,12 +7,15 @@ class AlertsRepository {
 
   final SupabaseClient _client;
 
-  Future<List<Alert>> fetchAlerts() async {
+  Future<List<Alert>> fetchAlerts({required String memberId}) async {
     final String userId = _client.auth.currentUser!.id;
+
     final List<dynamic> rows = await _client
         .from('alerts')
         .select()
+
         .eq('user_id', userId)
+        .eq('member_id', memberId)
         .eq('is_dismissed', false)
         .order('created_at', ascending: false);
     return rows
@@ -24,26 +27,34 @@ class AlertsRepository {
   }
 
   Future<void> markAsRead(String alertId) async {
+    final String userId = _client.auth.currentUser!.id;
+
     await _client
         .from('alerts')
         .update(<String, bool>{'is_read': true})
-        .eq('id', alertId);
+        .eq('id', alertId)
+        .eq('user_id', userId);
   }
 
   Future<void> dismissAlert(String alertId) async {
+    final String userId = _client.auth.currentUser!.id;
+
     await _client
         .from('alerts')
         .update(<String, bool>{'is_dismissed': true})
-        .eq('id', alertId);
+        .eq('id', alertId)
+        .eq('user_id', userId);
   }
 
-  Future<int> generateAndInsertAlerts() async {
+  Future<int> generateAndInsertAlerts({required String memberId}) async {
     final String userId = _client.auth.currentUser!.id;
+
 
     final List<dynamic> existingRows = await _client
         .from('alerts')
         .select('type, garment_id')
         .eq('user_id', userId)
+        .eq('member_id', memberId)
         .eq('is_dismissed', false);
 
     final Set<String> existingKeys = existingRows.map((dynamic row) {
@@ -55,6 +66,7 @@ class AlertsRepository {
         .from('garments')
         .select()
         .eq('user_id', userId)
+        .eq('member_id', memberId)
         .eq('is_archived', false);
 
     final List<Garment> garments = garmentRows
@@ -67,8 +79,21 @@ class AlertsRepository {
     final List<Map<String, dynamic>> newAlerts = <Map<String, dynamic>>[];
 
     for (final Garment garment in garments) {
-      _addUnusedAlert(garment, userId, existingKeys, newAlerts);
-      _addLaundryAlert(garment, userId, existingKeys, newAlerts);
+      _addUnusedAlert(
+        garment,
+        userId,
+        memberId,
+        existingKeys,
+        newAlerts,
+      );
+
+      _addLaundryAlert(
+        garment,
+        userId,
+        memberId,
+        existingKeys,
+        newAlerts,
+      );
     }
 
     if (newAlerts.isEmpty) return 0;
@@ -77,11 +102,12 @@ class AlertsRepository {
   }
 
   void _addUnusedAlert(
-    Garment garment,
-    String userId,
-    Set<String> existingKeys,
-    List<Map<String, dynamic>> newAlerts,
-  ) {
+      Garment garment,
+      String userId,
+      String memberId,
+      Set<String> existingKeys,
+      List<Map<String, dynamic>> newAlerts,
+      ){
     final String key = 'unused_${garment.id}';
     if (existingKeys.contains(key)) return;
 
@@ -92,6 +118,7 @@ class AlertsRepository {
       if (daysSince >= 7) {
         newAlerts.add(<String, dynamic>{
           'user_id': userId,
+          'member_id': memberId,
           'type': 'unused',
           'garment_id': garment.id,
           'title': 'Unworn garment',
@@ -122,19 +149,20 @@ class AlertsRepository {
       }
     }
   }
-
   void _addLaundryAlert(
-    Garment garment,
-    String userId,
-    Set<String> existingKeys,
-    List<Map<String, dynamic>> newAlerts,
-  ) {
+      Garment garment,
+      String userId,
+      String memberId,
+      Set<String> existingKeys,
+      List<Map<String, dynamic>> newAlerts,
+      ) {
     final String key = 'laundry_${garment.id}';
     if (existingKeys.contains(key)) return;
 
     if (garment.laundryStatus == LaundryStatus.dirty) {
       newAlerts.add(<String, dynamic>{
         'user_id': userId,
+        'member_id': memberId,
         'type': 'laundry',
         'garment_id': garment.id,
         'title': 'Laundry needed',

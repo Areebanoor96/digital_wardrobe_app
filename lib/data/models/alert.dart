@@ -23,6 +23,7 @@ enum AlertType {
 class Alert {
   const Alert({
     required this.id,
+    required this.memberId,
     required this.userId,
     required this.type,
     this.garmentId,
@@ -34,6 +35,7 @@ class Alert {
   });
 
   final String id;
+  final String memberId;
   final String userId;
   final AlertType type;
   final String? garmentId;
@@ -45,6 +47,7 @@ class Alert {
 
   factory Alert.fromJson(Map<String, dynamic> json) => Alert(
     id: json['id'] as String,
+    memberId: json['member_id'] as String,
     userId: json['user_id'] as String,
     type: AlertType.values.byName(json['type'] as String),
     garmentId: json['garment_id'] as String?,

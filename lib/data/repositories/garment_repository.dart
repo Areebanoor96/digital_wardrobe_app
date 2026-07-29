@@ -7,6 +7,7 @@ class GarmentRepository {
   GarmentRepository(this._client);
 
   final SupabaseClient _client;
+
   static const String _bucket = 'garments';
 
   Future<List<Garment>> fetchGarments({required String memberId}) async {
@@ -24,16 +25,27 @@ class GarmentRepository {
     );
   }
 
-  Future<Garment> fetchGarment(String id) async {
+  Future<Garment> fetchGarment({
+    required String id,
+    required String memberId,
+  }) async {
     final Map<String, dynamic> row = Map<String, dynamic>.from(
-      await _client.from('garments').select().eq('id', id).single() as Map,
+      await _client
+              .from('garments')
+              .select()
+              .eq('id', id)
+              .eq('member_id', memberId)
+              .single()
+          as Map,
     );
+
     return _withSignedUrls(row);
   }
 
   Future<Garment> saveGarment(Garment garment, {required bool isNew}) async {
     final String userId = _client.auth.currentUser!.id;
     final Map<String, dynamic> row;
+
     if (isNew) {
       row = Map<String, dynamic>.from(
         await _client
@@ -44,16 +56,29 @@ class GarmentRepository {
             as Map,
       );
     } else {
+      final String? garmentId = garment.id;
+      final String? memberId = garment.memberId;
+
+      if (garmentId == null) {
+        throw StateError('Cannot update a garment without an ID.');
+      }
+
+      if (memberId == null) {
+        throw StateError('Cannot update a garment without a member ID.');
+      }
+
       row = Map<String, dynamic>.from(
         await _client
                 .from('garments')
                 .update(garment.toInsertJson(userId))
-                .eq('id', garment.id)
+                .eq('id', garmentId)
+                .eq('member_id', memberId)
                 .select()
                 .single()
             as Map,
       );
     }
+
     return _withSignedUrls(row);
   }
 
@@ -63,6 +88,7 @@ class GarmentRepository {
   }) async {
     final String userId = _client.auth.currentUser!.id;
     final String path = '$userId/$garmentId/cover.jpg';
+
     await _client.storage
         .from(_bucket)
         .uploadBinary(
@@ -73,19 +99,28 @@ class GarmentRepository {
             upsert: true,
           ),
         );
+
     return path;
   }
 
-  Future<void> archiveGarment(String garmentId) async {
+  Future<void> archiveGarment({
+    required String garmentId,
+    required String memberId,
+  }) async {
     await _client
         .from('garments')
         .update(<String, bool>{'is_archived': true})
-        .eq('id', garmentId);
+        .eq('id', garmentId)
+        .eq('member_id', memberId);
   }
 
   Future<Garment> _withSignedUrls(Map<String, dynamic> row) async {
     final Garment garment = Garment.fromJson(row);
-    if (garment.photoPaths.isEmpty) return garment;
+
+    if (garment.photoPaths.isEmpty) {
+      return garment;
+    }
+
     final List<String> urls =
         (await _client.storage
                 .from(_bucket)
@@ -93,6 +128,7 @@ class GarmentRepository {
             .whereType<SignedUrlSuccess>()
             .map((SignedUrlSuccess result) => result.signedUrl)
             .toList();
+
     return garment.copyWith(photoUrls: urls);
   }
 }

@@ -57,14 +57,46 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
     });
   }
 
-  Future<void> wearOutfit(List<Garment> garments) async {
+  Future<void> wearOutfit(
+      List<Garment> garments, {
+        String eventName = 'OOTD',
+        LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
+        String? notes,
+      }) async {
+    final selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No wardrobe profile is selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
     state = const AsyncLoading<void>();
+
     state = await AsyncValue.guard(() async {
       for (final Garment garment in garments) {
-        await ref.read(wearLogRepositoryProvider).createWearLog(garment.id);
+        await ref.read(wearLogRepositoryProvider).createWearLog(
+          memberId: selectedMember.id,
+          garmentId: garment.id,
+          eventName: eventName,
+          laundryStatusAfter: laundryStatusAfter,
+          notes: notes,
+        );
       }
+    });
+
+    if (!state.hasError) {
       ref.invalidate(garmentsProvider);
       ref.invalidate(recentWearActivityProvider);
-    });
+      ref.invalidate(analyticsSummaryProvider);
+      ref.invalidate(costPerWearProvider);
+
+      for (final Garment garment in garments) {
+        ref.invalidate(garmentProvider(garment.id));
+        ref.invalidate(garmentWearHistoryProvider(garment.id));
+      }
+    }
   }
 }
