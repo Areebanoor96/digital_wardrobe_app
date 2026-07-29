@@ -5,9 +5,14 @@ class WearLogRepository {
   WearLogRepository(this._client);
   final SupabaseClient _client;
 
-  Future<void> createWearLog(String garmentId, {String? outfitId}) async {
+  Future<void> createWearLog({
+    required String memberId,
+    required String garmentId,
+    String? outfitId,
+  }) async {
     await _client.from('wear_log').insert(<String, dynamic>{
       'user_id': _client.auth.currentUser!.id,
+      'member_id': memberId,
       'garment_id': garmentId,
       'worn_date': _dateOnly(DateTime.now()),
       'outfit_id': outfitId,
@@ -15,11 +20,13 @@ class WearLogRepository {
   }
 
   Future<void> createWearLogsForOutfit({
+
+    required String memberId,
     required String outfitId,
     required List<String> garmentIds,
   }) async {
     for (final String garmentId in garmentIds) {
-      await createWearLog(garmentId, outfitId: outfitId);
+      await createWearLog(memberId: memberId,garmentId:garmentId, outfitId: outfitId);
     }
   }
 
