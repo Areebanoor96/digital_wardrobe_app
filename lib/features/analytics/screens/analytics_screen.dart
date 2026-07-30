@@ -10,7 +10,6 @@ class AnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(analyticsSummaryProvider);
-    final costs = ref.watch(costPerWearProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Analytics')),
       body: summary.when(
@@ -31,7 +30,6 @@ class AnalyticsScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(analyticsSummaryProvider);
-              ref.invalidate(costPerWearProvider);
             },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -61,10 +59,6 @@ class AnalyticsScreen extends ConsumerWidget {
                       label: 'Wardrobe value',
                       value: data.totalValue?.toStringAsFixed(0) ?? '—',
                     ),
-                    StatCard(
-                      label: 'Average cost per wear',
-                      value: data.averageCostPerWear?.toStringAsFixed(0) ?? '—',
-                    ),
                   ],
                 ),
                 const SizedBox(height: 28),
@@ -87,34 +81,6 @@ class AnalyticsScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 28),
-                AnalyticsSection(
-                  title: 'Cost per wear',
-                  child: costs.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                    error: (_, _) => TextButton.icon(
-                      onPressed: () => ref.invalidate(costPerWearProvider),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry cost-per-wear data'),
-                    ),
-                    data: (List<CostPerWearEntry> entries) => entries.isEmpty
-                        ? const Text(
-                            'Add a purchase price to garments to track cost per wear.',
-                          )
-                        : Column(
-                            children: entries
-                                .map(
-                                  (CostPerWearEntry entry) =>
-                                      CostPerWearRow(entry: entry),
-                                )
-                                .toList(),
-                          ),
-                  ),
-                ),
               ],
             ),
           );

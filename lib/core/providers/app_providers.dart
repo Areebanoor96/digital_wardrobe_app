@@ -20,127 +20,119 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 final selectedFamilyMemberProvider = StateProvider<FamilyMember?>(
-      (Ref ref) => null,
+  (Ref ref) => null,
 );
 
 final Provider<ImageService> imageServiceProvider = Provider<ImageService>(
-      (Ref ref) => ImageService(ImagePicker()),
+  (Ref ref) => ImageService(ImagePicker()),
 );
 
 final Provider<GarmentRepository> garmentRepositoryProvider =
-Provider<GarmentRepository>(
+    Provider<GarmentRepository>(
       (Ref ref) => GarmentRepository(SupabaseService.client),
-);
+    );
 
 final Provider<AnalyticsRepository> analyticsRepositoryProvider =
-Provider<AnalyticsRepository>(
+    Provider<AnalyticsRepository>(
       (Ref ref) => AnalyticsRepository(SupabaseService.client),
-);
+    );
 
 final Provider<OutfitRepository> outfitRepositoryProvider =
-Provider<OutfitRepository>(
+    Provider<OutfitRepository>(
       (Ref ref) => OutfitRepository(SupabaseService.client),
-);
+    );
 
 final Provider<ProfileRepository> profileRepositoryProvider =
-Provider<ProfileRepository>(
+    Provider<ProfileRepository>(
       (Ref ref) => ProfileRepository(SupabaseService.client),
-);
+    );
 
 final Provider<FamilyRepository> familyRepositoryProvider =
-Provider<FamilyRepository>(
+    Provider<FamilyRepository>(
       (Ref ref) => FamilyRepository(SupabaseService.client),
-);
+    );
 
 final Provider<WearLogRepository> wearLogRepositoryProvider =
-Provider<WearLogRepository>(
+    Provider<WearLogRepository>(
       (Ref ref) => WearLogRepository(SupabaseService.client),
-);
+    );
 
 final Provider<AlertsRepository> alertsRepositoryProvider =
-Provider<AlertsRepository>(
+    Provider<AlertsRepository>(
       (Ref ref) => AlertsRepository(SupabaseService.client),
-);
+    );
 
 final FutureProvider<List<Garment>> garmentsProvider =
-FutureProvider<List<Garment>>((Ref ref) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+    FutureProvider<List<Garment>>((Ref ref) async {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
+
+      if (selectedMember == null) {
+        return const <Garment>[];
+      }
+
+      return ref
+          .watch(garmentRepositoryProvider)
+          .fetchGarments(memberId: selectedMember.id);
+    });
+
+final garmentProvider = FutureProvider.family<Garment, String>((
+  Ref ref,
+  String garmentId,
+) async {
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedMember == null) {
-    return const <Garment>[];
+    throw StateError('No profile selected.');
   }
 
   return ref
       .watch(garmentRepositoryProvider)
-      .fetchGarments(memberId: selectedMember.id);
+      .fetchGarment(id: garmentId, memberId: selectedMember.id);
 });
 
-final garmentProvider = FutureProvider.family<Garment, String>(
-      (Ref ref, String garmentId) async {
-    final FamilyMember? selectedMember = ref.watch(
-      selectedFamilyMemberProvider,
-    );
-
-    if (selectedMember == null) {
-      throw StateError('No profile selected.');
-    }
-
-    return ref
-        .watch(garmentRepositoryProvider)
-        .fetchGarment(
-      id: garmentId,
-      memberId: selectedMember.id,
-    );
-  },
-);
-
 final FutureProvider<List<Outfit>> outfitsProvider =
-FutureProvider<List<Outfit>>((Ref ref) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+    FutureProvider<List<Outfit>>((Ref ref) async {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
+
+      if (selectedMember == null) {
+        return const <Outfit>[];
+      }
+
+      return ref
+          .watch(outfitRepositoryProvider)
+          .fetchOutfits(memberId: selectedMember.id);
+    });
+
+final outfitProvider = FutureProvider.family<Outfit, String>((
+  Ref ref,
+  String outfitId,
+) async {
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedMember == null) {
-    return const <Outfit>[];
+    throw StateError('No profile selected.');
   }
 
   return ref
       .watch(outfitRepositoryProvider)
-      .fetchOutfits(memberId: selectedMember.id);
+      .fetchOutfit(outfitId: outfitId, memberId: selectedMember.id);
 });
 
-final outfitProvider = FutureProvider.family<Outfit, String>(
-      (Ref ref, String outfitId) async {
-    final FamilyMember? selectedMember = ref.watch(
-      selectedFamilyMemberProvider,
-    );
-
-    if (selectedMember == null) {
-      throw StateError('No profile selected.');
-    }
-
-    return ref
-        .watch(outfitRepositoryProvider)
-        .fetchOutfit(
-      outfitId: outfitId,
-      memberId: selectedMember.id,
-    );
-  },
-);
-
 final FutureProvider<Profile> profileProvider = FutureProvider<Profile>(
-      (Ref ref) => ref.watch(profileRepositoryProvider).fetchProfile(),
+  (Ref ref) => ref.watch(profileRepositoryProvider).fetchProfile(),
 );
 
 final FutureProvider<List<FamilyMember>> familyMembersProvider =
-FutureProvider<List<FamilyMember>>(
+    FutureProvider<List<FamilyMember>>(
       (Ref ref) => ref.watch(familyRepositoryProvider).fetchFamilyMembers(),
-);
+    );
 
 final garmentWearHistoryProvider = FutureProvider.family<List<WearLog>, String>(
-      (Ref ref, String garmentId) async {
+  (Ref ref, String garmentId) async {
     final FamilyMember? selectedMember = ref.watch(
       selectedFamilyMemberProvider,
     );
@@ -151,19 +143,14 @@ final garmentWearHistoryProvider = FutureProvider.family<List<WearLog>, String>(
 
     return ref
         .watch(wearLogRepositoryProvider)
-        .fetchGarmentHistory(
-      memberId: selectedMember.id,
-      garmentId: garmentId,
-    );
+        .fetchGarmentHistory(memberId: selectedMember.id, garmentId: garmentId);
   },
 );
 
 final recentWearActivityProvider = FutureProvider<List<WearLog>>((
-    Ref ref,
-    ) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+  Ref ref,
+) async {
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedMember == null) {
     return const <WearLog>[];
@@ -175,11 +162,9 @@ final recentWearActivityProvider = FutureProvider<List<WearLog>>((
 });
 
 final analyticsSummaryProvider = FutureProvider<AnalyticsSummary>((
-    Ref ref,
-    ) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+  Ref ref,
+) async {
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedMember == null) {
     return const AnalyticsSummary(
@@ -195,27 +180,10 @@ final analyticsSummaryProvider = FutureProvider<AnalyticsSummary>((
       .fetchSummary(memberId: selectedMember.id);
 });
 
-final costPerWearProvider = FutureProvider<List<CostPerWearEntry>>((
-    Ref ref,
-    ) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
-
-  if (selectedMember == null) {
-    return const <CostPerWearEntry>[];
-  }
-
-  return ref
-      .watch(analyticsRepositoryProvider)
-      .fetchCostPerWear(memberId: selectedMember.id);
-});
-
-final FutureProvider<List<Alert>> alertsProvider =
-FutureProvider<List<Alert>>((Ref ref) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+final FutureProvider<List<Alert>> alertsProvider = FutureProvider<List<Alert>>((
+  Ref ref,
+) async {
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedMember == null) {
     return const <Alert>[];
@@ -227,12 +195,10 @@ FutureProvider<List<Alert>>((Ref ref) async {
 });
 
 final calendarMonthProvider = FutureProvider.family<List<WearLog>, DateTime>((
-    Ref ref,
-    DateTime month,
-    ) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+  Ref ref,
+  DateTime month,
+) async {
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedMember == null) {
     return const <WearLog>[];
@@ -240,23 +206,16 @@ final calendarMonthProvider = FutureProvider.family<List<WearLog>, DateTime>((
 
   return ref
       .watch(wearLogRepositoryProvider)
-      .fetchMonthActivity(
-    memberId: selectedMember.id,
-    month: month,
-  );
+      .fetchMonthActivity(memberId: selectedMember.id, month: month);
 });
 
-final selectedCalendarDayProvider = StateProvider<DateTime?>(
-      (Ref ref) => null,
-);
+final selectedCalendarDayProvider = StateProvider<DateTime?>((Ref ref) => null);
 
 final selectedDayWearHistoryProvider = FutureProvider<List<WearLog>>((
-    Ref ref,
-    ) async {
+  Ref ref,
+) async {
   final DateTime? selectedDay = ref.watch(selectedCalendarDayProvider);
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedDay == null || selectedMember == null) {
     return const <WearLog>[];
@@ -264,40 +223,35 @@ final selectedDayWearHistoryProvider = FutureProvider<List<WearLog>>((
 
   return ref
       .watch(wearLogRepositoryProvider)
-      .fetchDayHistory(
-    memberId: selectedMember.id,
-    day: selectedDay,
-  );
+      .fetchDayHistory(memberId: selectedMember.id, day: selectedDay);
 });
 
 final wearLogControllerProvider =
-AutoDisposeAsyncNotifierProvider<WearLogController, void>(
-  WearLogController.new,
-);
+    AutoDisposeAsyncNotifierProvider<WearLogController, void>(
+      WearLogController.new,
+    );
 
 final outfitMutationControllerProvider =
-AutoDisposeAsyncNotifierProvider<OutfitMutationController, void>(
-  OutfitMutationController.new,
-);
+    AutoDisposeAsyncNotifierProvider<OutfitMutationController, void>(
+      OutfitMutationController.new,
+    );
 
 final wearOutfitControllerProvider =
-AutoDisposeAsyncNotifierProvider<WearOutfitController, void>(
-  WearOutfitController.new,
-);
+    AutoDisposeAsyncNotifierProvider<WearOutfitController, void>(
+      WearOutfitController.new,
+    );
 
 class WearLogController extends AutoDisposeAsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
   Future<void> markAsWorn(
-      String garmentId, {
-        String eventName = 'General wear',
-        LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
-        String? notes,
-      }) async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+    String garmentId, {
+    String eventName = 'General wear',
+    LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
+    String? notes,
+  }) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -310,13 +264,15 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref.read(wearLogRepositoryProvider).createWearLog(
-        memberId: selectedMember.id,
-        garmentId: garmentId,
-        eventName: eventName,
-        laundryStatusAfter: laundryStatusAfter,
-        notes: notes,
-      ),
+      () => ref
+          .read(wearLogRepositoryProvider)
+          .createWearLog(
+            memberId: selectedMember.id,
+            garmentId: garmentId,
+            eventName: eventName,
+            laundryStatusAfter: laundryStatusAfter,
+            notes: notes,
+          ),
     );
 
     if (!state.hasError) {
@@ -326,7 +282,6 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
       ref.invalidate(calendarMonthProvider);
       ref.invalidate(selectedDayWearHistoryProvider);
       ref.invalidate(analyticsSummaryProvider);
-      ref.invalidate(costPerWearProvider);
       ref.invalidate(garmentsProvider);
     }
   }
@@ -341,9 +296,7 @@ class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
     required List<String> garmentIds,
     String? coverPhotoUrl,
   }) async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -356,14 +309,14 @@ class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref
+      () => ref
           .read(outfitRepositoryProvider)
           .saveOutfit(
-        memberId: selectedMember.id,
-        name: name,
-        garmentIds: garmentIds,
-        coverPhotoUrl: coverPhotoUrl,
-      ),
+            memberId: selectedMember.id,
+            name: name,
+            garmentIds: garmentIds,
+            coverPhotoUrl: coverPhotoUrl,
+          ),
     );
 
     if (!state.hasError) {
@@ -376,9 +329,7 @@ class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
     required String name,
     required List<String> garmentIds,
   }) async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -399,13 +350,9 @@ class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref
+      () => ref
           .read(outfitRepositoryProvider)
-          .updateOutfit(
-        outfit,
-        name: name,
-        garmentIds: garmentIds,
-      ),
+          .updateOutfit(outfit, name: name, garmentIds: garmentIds),
     );
 
     if (!state.hasError) {
@@ -415,9 +362,7 @@ class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
   }
 
   Future<void> delete(String outfitId) async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -430,12 +375,9 @@ class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref
+      () => ref
           .read(outfitRepositoryProvider)
-          .deleteOutfit(
-        outfitId: outfitId,
-        memberId: selectedMember.id,
-      ),
+          .deleteOutfit(outfitId: outfitId, memberId: selectedMember.id),
     );
 
     if (!state.hasError) {
@@ -450,9 +392,7 @@ class WearOutfitController extends AutoDisposeAsyncNotifier<void> {
   FutureOr<void> build() {}
 
   Future<void> wearOutfit(Outfit outfit) async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -476,10 +416,10 @@ class WearOutfitController extends AutoDisposeAsyncNotifier<void> {
       await ref
           .read(wearLogRepositoryProvider)
           .createWearLogsForOutfit(
-        memberId: selectedMember.id,
-        outfitId: outfit.id,
-        garmentIds: outfit.garmentIds,
-      );
+            memberId: selectedMember.id,
+            outfitId: outfit.id,
+            garmentIds: outfit.garmentIds,
+          );
 
       await ref.read(outfitRepositoryProvider).incrementWearCount(outfit);
     });
@@ -490,7 +430,6 @@ class WearOutfitController extends AutoDisposeAsyncNotifier<void> {
       ref.invalidate(recentWearActivityProvider);
       ref.invalidate(selectedDayWearHistoryProvider);
       ref.invalidate(analyticsSummaryProvider);
-      ref.invalidate(costPerWearProvider);
       ref.invalidate(garmentsProvider);
 
       for (final String garmentId in outfit.garmentIds) {
@@ -501,9 +440,9 @@ class WearOutfitController extends AutoDisposeAsyncNotifier<void> {
 }
 
 final familyMutationControllerProvider =
-AutoDisposeAsyncNotifierProvider<FamilyMutationController, void>(
-  FamilyMutationController.new,
-);
+    AutoDisposeAsyncNotifierProvider<FamilyMutationController, void>(
+      FamilyMutationController.new,
+    );
 
 class FamilyMutationController extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -520,16 +459,16 @@ class FamilyMutationController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref
+      () => ref
           .read(familyRepositoryProvider)
           .addFamilyMember(
-        name: name,
-        relationship: relationship,
-        birthDate: birthDate,
-        heightCm: heightCm,
-        weightKg: weightKg,
-        currentSize: currentSize,
-      ),
+            name: name,
+            relationship: relationship,
+            birthDate: birthDate,
+            heightCm: heightCm,
+            weightKg: weightKg,
+            currentSize: currentSize,
+          ),
     );
   }
 }

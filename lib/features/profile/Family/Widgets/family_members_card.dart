@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
 import 'package:flutter/material.dart';
 
 class FamilyMemberCard extends StatelessWidget {
@@ -19,13 +20,14 @@ class FamilyMemberCard extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
 
-        leading: CircleAvatar(
-          child: Text(member.name.characters.first.toUpperCase()),
+        leading: FamilyMemberAvatar(
+          name: member.name,
+          avatarUrl: member.avatarUrl,
         ),
 
         title: Text(member.name),
 
-        subtitle: Text(member.relationship.name),
+        subtitle: Text(member.relationship.label),
 
         trailing: PopupMenuButton<String>(
           onSelected: (value) {

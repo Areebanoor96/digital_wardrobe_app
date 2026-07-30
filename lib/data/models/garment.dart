@@ -92,13 +92,10 @@ class Garment {
 
   String? get coverImageUrl => photoUrls.isEmpty ? null : photoUrls.first;
 
-  double? get costPerWear =>
-      price == null || wearCount == 0 ? null : price! / wearCount;
-
   factory Garment.fromJson(
-      Map<String, dynamic> json, {
-        List<String>? photoUrls,
-      }) {
+    Map<String, dynamic> json, {
+    List<String>? photoUrls,
+  }) {
     return Garment(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -128,12 +125,8 @@ class Garment {
       fabric: json['fabric'] as String?,
       washInstructions: json['wash_instructions'] as String?,
       wearCount: json['wear_count'] as int? ?? 0,
-      lastWornDate: DateTime.tryParse(
-        json['last_worn_date'] as String? ?? '',
-      ),
-      purchaseDate: DateTime.tryParse(
-        json['purchase_date'] as String? ?? '',
-      ),
+      lastWornDate: DateTime.tryParse(json['last_worn_date'] as String? ?? ''),
+      purchaseDate: DateTime.tryParse(json['purchase_date'] as String? ?? ''),
       laundryStatus: LaundryStatus.values.byName(
         json['laundry_status'] as String? ?? LaundryStatus.clean.name,
       ),

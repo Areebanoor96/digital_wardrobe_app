@@ -30,7 +30,7 @@ class ProfileSelectionScreen extends ConsumerWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 20,
               mainAxisSpacing: 20,
-              childAspectRatio: .9,
+              mainAxisExtent: 200,
             ),
             itemBuilder: (context, index) {
               if (index == members.length) {
@@ -50,10 +50,10 @@ class ProfileSelectionScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircleAvatar(
-                          radius: 40,
-                          child: Icon(Icons.add, size: 36),
+                          radius: 36,
+                          child: Icon(Icons.add, size: 32),
                         ),
-                        SizedBox(height: 16),
+                        SizedBox(height: 12),
                         Text(
                           "Add Profile",
                           style: TextStyle(fontWeight: FontWeight.bold),
@@ -68,7 +68,6 @@ class ProfileSelectionScreen extends ConsumerWidget {
 
               return ProfileAvatarCard(
                 member: member,
-                locked: false,
                 onTap: () async {
                   ref.read(selectedFamilyMemberProvider.notifier).state =
                       member;

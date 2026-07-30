@@ -1,4 +1,3 @@
-import 'package:digital_wardrobe_app/data/models/analytics.dart';
 import 'package:flutter/material.dart';
 
 class StatCard extends StatelessWidget {
@@ -50,25 +49,5 @@ class AnalyticsSection extends StatelessWidget {
       const SizedBox(height: 12),
       child,
     ],
-  );
-}
-
-class CostPerWearRow extends StatelessWidget {
-  const CostPerWearRow({super.key, required this.entry});
-  final CostPerWearEntry entry;
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    title: Text(entry.name),
-    subtitle: Text(
-      '${entry.wearCount} wears · ${entry.price.toStringAsFixed(0)} paid',
-    ),
-    trailing: Text(
-      entry.costPerWear.toStringAsFixed(0),
-      style: Theme.of(
-        context,
-      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-    ),
   );
 }

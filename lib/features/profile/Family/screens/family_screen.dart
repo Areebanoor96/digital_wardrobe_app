@@ -1,5 +1,6 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/features/profile/Family/widgets/add_family_member_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,7 +17,10 @@ class FamilyScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text("Family Members")),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _showAddMemberDialog(context, ref);
+          showDialog<void>(
+            context: context,
+            builder: (_) => const AddFamilyMemberDialog(),
+          );
         },
         child: const Icon(Icons.add),
       ),
@@ -59,86 +63,6 @@ class FamilyScreen extends ConsumerWidget {
   }
 }
 
-Future<void> _showAddMemberDialog(BuildContext context, WidgetRef ref) async {
-  final nameController = TextEditingController();
-
-  RelationshipType relationship = RelationshipType.self;
-  await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Add Family Member"),
-        content: StatefulBuilder(
-          builder: (context, setState) {
-            return SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "Name"),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<RelationshipType>(
-                    initialValue: relationship,
-                    decoration: const InputDecoration(
-                      labelText: "Relationship",
-                    ),
-                    items: RelationshipType.values.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(type.label),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          relationship = value;
-                        });
-                      }
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
-          ),
-
-          FilledButton(
-            onPressed: () async {
-              if (nameController.text.trim().isEmpty) {
-                return;
-              }
-
-              await ref
-                  .read(familyRepositoryProvider)
-                  .addFamilyMember(
-                    name: nameController.text.trim(),
-                    relationship: relationship.name,
-                  );
-
-              ref.invalidate(familyMembersProvider);
-
-              if (context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      );
-    },
-  );
-}
 
 Future<void> _showEditMemberDialog(
   BuildContext context,

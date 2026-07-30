@@ -58,11 +58,11 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
   }
 
   Future<void> wearOutfit(
-      List<Garment> garments, {
-        String eventName = 'OOTD',
-        LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
-        String? notes,
-      }) async {
+    List<Garment> garments, {
+    String eventName = 'OOTD',
+    LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
+    String? notes,
+  }) async {
     final selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
@@ -77,13 +77,15 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
 
     state = await AsyncValue.guard(() async {
       for (final Garment garment in garments) {
-        await ref.read(wearLogRepositoryProvider).createWearLog(
-          memberId: selectedMember.id,
-          garmentId: garment.id,
-          eventName: eventName,
-          laundryStatusAfter: laundryStatusAfter,
-          notes: notes,
-        );
+        await ref
+            .read(wearLogRepositoryProvider)
+            .createWearLog(
+              memberId: selectedMember.id,
+              garmentId: garment.id,
+              eventName: eventName,
+              laundryStatusAfter: laundryStatusAfter,
+              notes: notes,
+            );
       }
     });
 
@@ -91,7 +93,6 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
       ref.invalidate(garmentsProvider);
       ref.invalidate(recentWearActivityProvider);
       ref.invalidate(analyticsSummaryProvider);
-      ref.invalidate(costPerWearProvider);
 
       for (final Garment garment in garments) {
         ref.invalidate(garmentProvider(garment.id));

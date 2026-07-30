@@ -69,14 +69,6 @@ class WearStatsRow extends StatelessWidget {
               : _shortDate(garment.lastWornDate!),
         ),
       ),
-      Expanded(
-        child: _WearStat(
-          label: 'Cost per wear',
-          value: garment.costPerWear == null
-              ? '—'
-              : '${garment.currency} ${garment.costPerWear!.toStringAsFixed(0)}',
-        ),
-      ),
     ],
   );
 

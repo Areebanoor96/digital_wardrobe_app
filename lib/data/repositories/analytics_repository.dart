@@ -6,9 +6,7 @@ class AnalyticsRepository {
 
   final SupabaseClient _client;
 
-  Future<AnalyticsSummary> fetchSummary({
-    required String memberId,
-  }) async {
+  Future<AnalyticsSummary> fetchSummary({required String memberId}) async {
     final User? currentUser = _client.auth.currentUser;
 
     if (currentUser == null) {
@@ -39,29 +37,26 @@ class AnalyticsRepository {
         .eq('member_id', memberId)
         .eq('is_archived', false);
 
-    final List<Map<String, dynamic>> active = activeRows
-        .map(
-          (dynamic row) => Map<String, dynamic>.from(row as Map),
-    )
-        .toList()
-      ..sort(
-            (Map<String, dynamic> left, Map<String, dynamic> right) {
-          final int leftWearCount = left['wear_count'] as int? ?? 0;
-          final int rightWearCount = right['wear_count'] as int? ?? 0;
+    final List<Map<String, dynamic>> active =
+        activeRows
+            .map((dynamic row) => Map<String, dynamic>.from(row as Map))
+            .toList()
+          ..sort((Map<String, dynamic> left, Map<String, dynamic> right) {
+            final int leftWearCount = left['wear_count'] as int? ?? 0;
+            final int rightWearCount = right['wear_count'] as int? ?? 0;
 
-          return rightWearCount.compareTo(leftWearCount);
-        },
-      );
+            return rightWearCount.compareTo(leftWearCount);
+          });
 
     final Map<String, dynamic>? most = active.isEmpty ? null : active.first;
     final Map<String, dynamic>? least = active.isEmpty ? null : active.last;
 
-    final int totalWears = active.fold<int>(
-      0,
-          (int total, Map<String, dynamic> garment) {
-        return total + (garment['wear_count'] as int? ?? 0);
-      },
-    );
+    final int totalWears = active.fold<int>(0, (
+      int total,
+      Map<String, dynamic> garment,
+    ) {
+      return total + (garment['wear_count'] as int? ?? 0);
+    });
 
     final int activeCount =
         (stats?['total_items'] as num?)?.toInt() ?? active.length;
@@ -72,36 +67,10 @@ class AnalyticsRepository {
       archivedGarments: archivedRows.length,
       totalWears: totalWears,
       totalValue: (stats?['total_value'] as num?)?.toDouble(),
-      averageCostPerWear: (stats?['avg_cpw'] as num?)?.toDouble(),
       mostWornName: most?['name'] as String?,
       mostWornCount: (most?['wear_count'] as num?)?.toInt(),
       leastWornName: least?['name'] as String?,
       leastWornCount: (least?['wear_count'] as num?)?.toInt(),
     );
-  }
-
-  Future<List<CostPerWearEntry>> fetchCostPerWear({
-    required String memberId,
-  }) async {
-    final User? currentUser = _client.auth.currentUser;
-
-    if (currentUser == null) {
-      throw StateError('No authenticated user.');
-    }
-
-    final List<dynamic> rows = await _client
-        .from('v_cost_per_wear')
-        .select()
-        .eq('user_id', currentUser.id)
-        .eq('member_id', memberId)
-        .order('cost_per_wear');
-
-    return rows
-        .map(
-          (dynamic row) => CostPerWearEntry.fromJson(
-        Map<String, dynamic>.from(row as Map),
-      ),
-    )
-        .toList();
   }
 }

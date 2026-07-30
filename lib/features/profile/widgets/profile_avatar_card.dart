@@ -6,12 +6,10 @@ class ProfileAvatarCard extends StatelessWidget {
     super.key,
     required this.member,
     required this.onTap,
-    this.locked = false,
   });
 
   final FamilyMember member;
   final VoidCallback onTap;
-  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -22,44 +20,41 @@ class ProfileAvatarCard extends StatelessWidget {
         elevation: 3,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircleAvatar(
-                radius: 42,
+                radius: 36,
                 child: Text(
                   member.name.characters.first.toUpperCase(),
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
 
               Text(
                 member.name,
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 19,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
 
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
 
               Text(
                 member.relationship.label,
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-
-              const SizedBox(height: 18),
-
-              Icon(
-                locked ? Icons.lock : Icons.lock_open,
-                color: locked ? Colors.red : Colors.green,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
             ],
           ),

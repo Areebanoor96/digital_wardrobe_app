@@ -23,7 +23,6 @@ class FamilyRepository {
   Future<FamilyMember> addFamilyMember({
     required String name,
     required String relationship,
-    String? pinCode,
     DateTime? birthDate,
     double? heightCm,
     double? weightKg,
@@ -38,7 +37,6 @@ class FamilyRepository {
                 'user_id': userId,
                 'name': name,
                 'relationship': relationship,
-                'pin_code': pinCode,
                 'birth_date': birthDate?.toIso8601String().split('T').first,
                 'height_cm': heightCm,
                 'weight_kg': weightKg,
@@ -60,15 +58,10 @@ class FamilyRepository {
     required String id,
     required String name,
     required String relationship,
-    String? pinCode,
   }) async {
     await _client
         .from('family_members')
-        .update({
-          'name': name,
-          'relationship': relationship,
-          'pin_code': pinCode,
-        })
+        .update({'name': name, 'relationship': relationship})
         .eq('id', id);
   }
 
