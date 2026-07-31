@@ -7,8 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AddFamilyMemberDialog extends ConsumerStatefulWidget {
-  const AddFamilyMemberDialog({super.key});
+  const AddFamilyMemberDialog({
+    super.key,
+    this.member,
+  });
 
+  final FamilyMember? member;
   @override
   ConsumerState<AddFamilyMemberDialog> createState() =>
       _AddFamilyMemberDialogState();
@@ -26,6 +30,15 @@ class _AddFamilyMemberDialogState
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.member != null) {
+      _nameController.text = widget.member!.name;
+      _relationship = widget.member!.relationship;
+    }
   }
   Future<void> _pickAvatar({required bool fromCamera}) async {
     final imageService = ref.read(imageServiceProvider);
@@ -72,17 +85,26 @@ class _AddFamilyMemberDialogState
                   _pickAvatar(fromCamera: false);
                 },
               ),
-              if (_selectedAvatarBytes != null)
+              if (_selectedAvatarBytes != null ||
+                  widget.member?.avatarUrl != null)
                 ListTile(
                   leading: const Icon(Icons.delete_outline),
                   title: const Text('Remove photo'),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(sheetContext);
 
                     setState(() {
-
                       _selectedAvatarBytes = null;
                     });
+
+                    if (widget.member != null &&
+                        widget.member!.avatarPath != null) {
+                      await ref
+                          .read(familyRepositoryProvider)
+                          .removeAvatar(widget.member!);
+
+                      ref.invalidate(familyMembersProvider);
+                    }
                   },
                 ),
             ],
@@ -94,7 +116,11 @@ class _AddFamilyMemberDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Family Member'),
+      title: Text(
+        widget.member == null
+            ? 'Add Family Member'
+            : 'Edit Family Member',
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -105,8 +131,11 @@ class _AddFamilyMemberDialogState
                 radius: 42,
                 backgroundImage: _selectedAvatarBytes != null
                     ? MemoryImage(_selectedAvatarBytes!)
-                    : null,
-                child: _selectedAvatarBytes == null
+                    : (widget.member?.avatarUrl != null
+                    ? NetworkImage(widget.member!.avatarUrl!)
+                    : null) as ImageProvider?,
+                child: (_selectedAvatarBytes == null &&
+                    widget.member?.avatarUrl == null)
                     ? const Icon(
                   Icons.add_a_photo_outlined,
                   size: 28,
@@ -118,9 +147,10 @@ class _AddFamilyMemberDialogState
             const SizedBox(height: 8),
 
             Text(
-              _selectedAvatarBytes == null
-                  ? 'Add photo (optional)'
-                  : 'Change photo',
+                (_selectedAvatarBytes == null &&
+                    widget.member?.avatarUrl == null)
+                    ? 'Add photo (optional)'
+                    : 'Change photo'
             ),
 
             const SizedBox(height: 20),
@@ -183,9 +213,9 @@ class _AddFamilyMemberDialogState
   }
 
   Future<void> _saveMember() async {
-    final name = _nameController.text.trim();
+    final String name = _nameController.text.trim();
 
-    if (name.isEmpty) {
+    if (name.isEmpty || _isSaving) {
       return;
     }
 
@@ -194,16 +224,45 @@ class _AddFamilyMemberDialogState
     });
 
     try {
-      await ref.read(familyRepositoryProvider).addFamilyMember(
-        name: name,
-        relationship: _relationship.name,
-      );
+      if (widget.member == null) {
+        // Add new family member
+        await ref.read(familyRepositoryProvider).addFamilyMember(
+          name: name,
+          relationship: _relationship.name,
+          avatarBytes: _selectedAvatarBytes,
+        );
+      } else {
+        // Update existing family member
+        await ref.read(familyRepositoryProvider).updateFamilyMember(
+          id: widget.member!.id,
+          name: name,
+          relationship: _relationship.name,
+        );
+
+        // Upload new avatar if user selected one
+        if (_selectedAvatarBytes != null) {
+          await ref.read(familyRepositoryProvider).updateAvatar(
+            memberId: widget.member!.id,
+            bytes: _selectedAvatarBytes!,
+          );
+        }
+      }
 
       ref.invalidate(familyMembersProvider);
 
       if (mounted) {
         Navigator.pop(context);
       }
+    }catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not add family member: $error'),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {

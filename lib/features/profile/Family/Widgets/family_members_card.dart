@@ -23,6 +23,7 @@ class FamilyMemberCard extends StatelessWidget {
         leading: FamilyMemberAvatar(
           name: member.name,
           avatarUrl: member.avatarUrl,
+          radius: 24,
         ),
 
         title: Text(member.name),
@@ -31,12 +32,23 @@ class FamilyMemberCard extends StatelessWidget {
 
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
-            if (value == "edit") {
-              onTap?.call();
-            }
+            switch (value) {
+              case "edit":
+                onTap?.call();
+                break;
 
-            if (value == "delete") {
-              onDelete?.call();
+              case "delete":
+                onDelete?.call();
+                break;
+            }
+            switch (value) {
+              case "edit":
+                onTap?.call();
+                break;
+
+              case "delete":
+                onDelete?.call();
+                break;
             }
           },
 

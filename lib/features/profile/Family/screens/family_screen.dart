@@ -44,13 +44,18 @@ class FamilyScreen extends ConsumerWidget {
                 member: member,
 
                 onTap: () {
-                  _showEditMemberDialog(context, ref, member);
+                  showDialog(
+                    context: context,
+                    builder: (_) => AddFamilyMemberDialog(
+                      member: member,
+                    ),
+                  );
                 },
 
                 onDelete: () async {
                   await ref
                       .read(familyRepositoryProvider)
-                      .deleteFamilyMember(member.id);
+                      .deleteFamilyMember(member);
 
                   ref.invalidate(familyMembersProvider);
                 },
@@ -63,54 +68,3 @@ class FamilyScreen extends ConsumerWidget {
   }
 }
 
-
-Future<void> _showEditMemberDialog(
-  BuildContext context,
-  WidgetRef ref,
-  FamilyMember member,
-) async {
-  final controller = TextEditingController(text: member.name);
-
-  await showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Edit Family Member"),
-
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: "Name"),
-        ),
-
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("Cancel"),
-          ),
-
-          FilledButton(
-            onPressed: () async {
-              await ref
-                  .read(familyRepositoryProvider)
-                  .updateFamilyMember(
-                    id: member.id,
-                    name: controller.text.trim(),
-                    relationship: member.relationship.name,
-                  );
-
-              ref.invalidate(familyMembersProvider);
-
-              if (context.mounted) {
-                Navigator.pop(context);
-              }
-            },
-
-            child: const Text("Save"),
-          ),
-        ],
-      );
-    },
-  );
-}

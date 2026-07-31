@@ -31,6 +31,7 @@ class FamilyMember {
     required this.relationship,
     this.birthDate,
     this.currentSize,
+    this.avatarPath,
     this.avatarUrl,
   });
 
@@ -39,6 +40,7 @@ class FamilyMember {
   final RelationshipType relationship;
   final DateTime? birthDate;
   final String? currentSize;
+  final String? avatarPath;
   final String? avatarUrl;
 
   factory FamilyMember.fromJson(Map<String, dynamic> json) => FamilyMember(
@@ -49,7 +51,7 @@ class FamilyMember {
     ),
     birthDate: DateTime.tryParse(json['birth_date'] as String? ?? ''),
     currentSize: json['current_size'] as String?,
-    avatarUrl: json['avatar_url'] as String?,
+    avatarPath: json['avatar_path'] as String?,
   );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -57,7 +59,7 @@ class FamilyMember {
     'relationship': relationship.name,
     'birth_date': birthDate?.toIso8601String().split('T').first,
     'current_size': currentSize,
-    'avatar_url': avatarUrl,
+    'avatar_path': avatarPath,
   };
 
   FamilyMember copyWith({
@@ -65,6 +67,7 @@ class FamilyMember {
     RelationshipType? relationship,
     DateTime? birthDate,
     String? currentSize,
+    String? avatarPath,
     String? avatarUrl,
   }) => FamilyMember(
     id: id,
@@ -72,6 +75,7 @@ class FamilyMember {
     relationship: relationship ?? this.relationship,
     birthDate: birthDate ?? this.birthDate,
     currentSize: currentSize ?? this.currentSize,
+    avatarPath: avatarPath ?? this.avatarPath,
     avatarUrl: avatarUrl ?? this.avatarUrl,
   );
 }
