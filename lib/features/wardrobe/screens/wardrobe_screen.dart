@@ -21,7 +21,16 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
   Widget build(BuildContext context) {
     final garments = ref.watch(garmentsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('My Wardrobe')),
+      appBar: AppBar(
+        title: const Text('My Wardrobe'),
+        actions: <Widget>[
+          IconButton(
+            onPressed: () => context.push('/garments/archived'),
+            icon: const Icon(Icons.archive_outlined),
+            tooltip: 'Archived garments',
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/garments/new'),
         icon: const Icon(Icons.add),

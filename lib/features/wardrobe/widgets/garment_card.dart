@@ -4,9 +4,21 @@ import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_status_wi
 import 'package:flutter/material.dart';
 
 class GarmentCard extends StatelessWidget {
-  const GarmentCard({super.key, required this.garment, required this.onTap});
+  const GarmentCard({
+    super.key,
+    required this.garment,
+    required this.onTap,
+    this.onAction,
+    this.actionIcon,
+    this.actionTooltip,
+    this.showArchivedBadge = false,
+  });
   final Garment garment;
   final VoidCallback onTap;
+  final VoidCallback? onAction;
+  final IconData? actionIcon;
+  final String? actionTooltip;
+  final bool showArchivedBadge;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -26,10 +38,41 @@ class GarmentCard extends StatelessWidget {
               fit: StackFit.expand,
               children: <Widget>[
                 GarmentImage(imageUrl: garment.coverImageUrl),
+                if (showArchivedBadge)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface.withValues(alpha: .9),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        child: Text('Archived'),
+                      ),
+                    ),
+                  ),
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: DecoratedBox(
+                  child: onAction != null && actionIcon != null
+                      ? Material(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: .9),
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      onPressed: onAction,
+                      icon: Icon(actionIcon),
+                      tooltip: actionTooltip,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                      : DecoratedBox(
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,

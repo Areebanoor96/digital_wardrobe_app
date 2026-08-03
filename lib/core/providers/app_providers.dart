@@ -91,6 +91,23 @@ final garmentProvider = FutureProvider.family<Garment, String>((
       .watch(garmentRepositoryProvider)
       .fetchGarment(id: garmentId, memberId: selectedMember.id);
 });
+final FutureProvider<List<Garment>> archivedGarmentsProvider =
+FutureProvider<List<Garment>>((Ref ref) async {
+  final FamilyMember? selectedMember = ref.watch(
+    selectedFamilyMemberProvider,
+  );
+
+  if (selectedMember == null) {
+    return const <Garment>[];
+  }
+
+  return ref
+      .watch(garmentRepositoryProvider)
+      .fetchArchivedGarments(
+    memberId: selectedMember.id,
+  );
+});
+
 
 final FutureProvider<List<Outfit>> outfitsProvider =
     FutureProvider<List<Outfit>>((Ref ref) async {
@@ -240,6 +257,10 @@ final wearOutfitControllerProvider =
     AutoDisposeAsyncNotifierProvider<WearOutfitController, void>(
       WearOutfitController.new,
     );
+final garmentArchiveControllerProvider =
+AutoDisposeAsyncNotifierProvider<GarmentArchiveController, void>(
+  GarmentArchiveController.new,
+);
 
 class WearLogController extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -284,6 +305,79 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
       ref.invalidate(analyticsSummaryProvider);
       ref.invalidate(garmentsProvider);
     }
+  }
+}
+class GarmentArchiveController extends AutoDisposeAsyncNotifier<void> {
+  @override
+  FutureOr<void> build() {}
+
+  Future<void> archive({
+    required String garmentId,
+  }) async {
+    final FamilyMember? selectedMember = ref.read(
+      selectedFamilyMemberProvider,
+    );
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(
+          () => ref
+          .read(garmentRepositoryProvider)
+          .archiveGarment(
+        garmentId: garmentId,
+        memberId: selectedMember.id,
+      ),
+    );
+
+    if (!state.hasError) {
+      _refreshGarmentLists(garmentId);
+    }
+  }
+
+  Future<void> restore({
+    required String garmentId,
+  }) async {
+    final FamilyMember? selectedMember = ref.read(
+      selectedFamilyMemberProvider,
+    );
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(
+          () => ref
+          .read(garmentRepositoryProvider)
+          .restoreGarment(
+        garmentId: garmentId,
+        memberId: selectedMember.id,
+      ),
+    );
+
+    if (!state.hasError) {
+      _refreshGarmentLists(garmentId);
+    }
+  }
+
+  void _refreshGarmentLists(String garmentId) {
+    ref.invalidate(garmentsProvider);
+    ref.invalidate(archivedGarmentsProvider);
+    ref.invalidate(analyticsSummaryProvider);
+    ref.invalidate(garmentProvider(garmentId));
   }
 }
 

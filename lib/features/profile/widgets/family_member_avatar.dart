@@ -23,12 +23,29 @@ class FamilyMemberAvatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: radius,
-      backgroundImage: hasAvatar
-          ? NetworkImage(avatarUrl!)
-          : null,
-      child: hasAvatar
-          ? null
-          : Text(fallbackLetter),
+      child: ClipOval(
+        child: SizedBox(
+          width: radius * 2,
+          height: radius * 2,
+          child: hasAvatar
+              ? Image.network(
+            avatarUrl!,
+            fit: BoxFit.contain,
+            errorBuilder: (
+                BuildContext context,
+                Object error,
+                StackTrace? stackTrace,
+                ) {
+              return Center(
+                child: Text(fallbackLetter),
+              );
+            },
+          )
+              : Center(
+            child: Text(fallbackLetter),
+          ),
+        ),
+      ),
     );
   }
 }

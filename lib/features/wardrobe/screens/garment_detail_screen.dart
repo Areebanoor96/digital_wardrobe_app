@@ -39,6 +39,12 @@ class GarmentDetailScreen extends ConsumerWidget {
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Edit garment',
                 ),
+                if (!garment.isArchived)
+                  IconButton(
+                    onPressed: () => _archive(context, ref, garment),
+                    icon: const Icon(Icons.archive_outlined),
+                    tooltip: 'Archive garment',
+                  ),
                 IconButton(
                   onPressed: () => _archive(context, ref, garment),
                   icon: const Icon(Icons.archive_outlined),
@@ -78,23 +84,59 @@ class GarmentDetailScreen extends ConsumerWidget {
                                 .toList(),
                       ),
                       const SizedBox(height: 20),
-                      FilledButton.icon(
-                        onPressed: wearState.isLoading
-                            ? null
-                            : () => _markAsWorn(context, ref),
-                        icon: wearState.isLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                      if (garment.isArchived)
+                        FilledButton.icon(
+                          onPressed: () async {
+                            await ref
+                                .read(garmentArchiveControllerProvider.notifier)
+                                .restore(garmentId: garment.id);
+
+                            if (!context.mounted) {
+                              return;
+                            }
+
+                            final AsyncValue<void> state = ref.read(
+                              garmentArchiveControllerProvider,
+                            );
+
+                            if (state.hasError) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Could not restore this garment.'),
                                 ),
-                              )
-                            : const Icon(Icons.check_circle_outline),
-                        label: Text(
-                          wearState.isLoading ? 'Recording...' : 'Mark as Worn',
+                              );
+                              return;
+                            }
+
+                            context.pop();
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Garment restored to wardrobe.'),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.unarchive_outlined),
+                          label: const Text('Restore to wardrobe'),
+                        )
+                      else
+                        FilledButton.icon(
+                          onPressed: wearState.isLoading
+                              ? null
+                              : () => _markAsWorn(context, ref),
+                          icon: wearState.isLoading
+                              ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                              : const Icon(Icons.check_circle_outline),
+                          label: Text(
+                            wearState.isLoading ? 'Recording...' : 'Mark as Worn',
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 28),
                       _Section(
                         title: 'Wear statistics',
@@ -269,8 +311,8 @@ class GarmentDetailScreen extends ConsumerWidget {
 
     try {
       await ref
-          .read(garmentRepositoryProvider)
-          .archiveGarment(garmentId: garmentId, memberId: selectedMember.id);
+          .read(garmentArchiveControllerProvider.notifier)
+          .archive(garmentId: garment.id);
 
       ref.invalidate(garmentsProvider);
       ref.invalidate(garmentProvider(garmentId));

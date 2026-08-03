@@ -24,6 +24,23 @@ class GarmentRepository {
       ),
     );
   }
+  Future<List<Garment>> fetchArchivedGarments({
+    required String memberId,
+  }) async {
+    final List<dynamic> rows = await _client
+        .from('garments')
+        .select()
+        .eq('is_archived', true)
+        .eq('member_id', memberId)
+        .order('created_at', ascending: false);
+
+    return Future.wait(
+      rows.map(
+            (dynamic row) =>
+            _withSignedUrls(Map<String, dynamic>.from(row as Map)),
+      ),
+    );
+  }
 
   Future<Garment> fetchGarment({
     required String id,
@@ -110,6 +127,18 @@ class GarmentRepository {
     await _client
         .from('garments')
         .update(<String, bool>{'is_archived': true})
+        .eq('id', garmentId)
+        .eq('member_id', memberId);
+  }
+  Future<void> restoreGarment({
+    required String garmentId,
+    required String memberId,
+  }) async {
+    await _client
+        .from('garments')
+        .update(<String, bool>{
+      'is_archived': false,
+    })
         .eq('id', garmentId)
         .eq('member_id', memberId);
   }

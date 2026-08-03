@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -95,19 +96,35 @@ class FamilyRepository {
     return _addSignedAvatarUrl(member);
   }
 
-  Future<void> deleteFamilyMember(
-      FamilyMember member,
-      ) async {
-    if (member.avatarPath != null) {
-      await _client.storage
-          .from(_avatarBucket)
-          .remove([member.avatarPath!]);
+  Future<void> deleteFamilyMember(FamilyMember member) async {
+    final User? currentUser = _client.auth.currentUser;
+
+    if (currentUser == null) {
+      throw StateError('No authenticated user.');
     }
 
+    // Delete the database record first.
+    // Related wardrobe data is removed by ON DELETE CASCADE.
     await _client
         .from('family_members')
         .delete()
-        .eq('id', member.id);
+        .eq('id', member.id)
+        .eq('user_id', currentUser.id);
+
+    // Avatar cleanup is best-effort and must not undo profile deletion.
+    final String? avatarPath = member.avatarPath?.trim();
+
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return;
+    }
+
+    try {
+      await _client.storage.from(_avatarBucket).remove(<String>[avatarPath]);
+    } on StorageException catch (error) {
+      debugPrint(
+        'Profile deleted, but avatar cleanup failed: ${error.message}',
+      );
+    }
   }
 
   Future<void> updateFamilyMember({

@@ -1,5 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
+import 'package:go_router/go_router.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/widgets/add_family_member_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,12 +55,74 @@ class FamilyScreen extends ConsumerWidget {
                 },
 
                 onDelete: () async {
-                  await ref
-                      .read(familyRepositoryProvider)
-                      .deleteFamilyMember(member);
+                  final bool? confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext dialogContext) {
+                      return AlertDialog(
+                        title: Text('Delete ${member.name}?'),
+                        content: const Text(
+                          'This will permanently delete this profile, including its '
+                              'garments, outfits, wear history and related data. '
+                              'This action cannot be undone.',
+                        ),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(dialogContext, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
 
-                  ref.invalidate(familyMembersProvider);
+                  if (confirmed != true) {
+                    return;
+                  }
+                  final FamilyMember? selectedMember = ref.read(
+                    selectedFamilyMemberProvider,
+                  );
+                  final bool isSelectedProfile = selectedMember?.id == member.id;
+
+
+                  try {
+                    await ref
+                        .read(familyRepositoryProvider)
+                        .deleteFamilyMember(member);
+
+                    ref.invalidate(familyMembersProvider);
+
+                    if (isSelectedProfile) {
+                      ref.read(selectedFamilyMemberProvider.notifier).state = null;
+                      await ProfileSessionService.clearSelectedProfile();
+
+                      if (context.mounted) {
+                        context.go('/profiles');
+                      }
+
+                      return;
+                    }
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${member.name} was deleted.'),
+                        ),
+                      );
+                    }
+                  } catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Could not delete profile: $error'),
+                        ),
+                      );
+                    }
+                  }
                 },
+
               );
             },
           );
@@ -66,5 +130,6 @@ class FamilyScreen extends ConsumerWidget {
       ),
     );
   }
+
 }
 

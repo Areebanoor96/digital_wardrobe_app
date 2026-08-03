@@ -12,6 +12,7 @@ import 'package:digital_wardrobe_app/features/profile/screens/profile_selection_
 import 'package:digital_wardrobe_app/features/shell/screens/app_shell_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/screens/archived_garments_screen.dart';
 import 'package:go_router/go_router.dart';
 
 final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
@@ -78,6 +79,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/garments/new',
         builder: (_, _) => const GarmentFormScreen(),
+      ),
+      GoRoute(
+        path: '/garments/archived',
+        builder: (_, _) => const ArchivedGarmentsScreen(),
       ),
       GoRoute(
         path: '/garments/:id',

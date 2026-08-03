@@ -3,6 +3,7 @@ import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/screens/family_screen.dart';
 import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
+import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,18 +24,16 @@ class ProfileScreen extends ConsumerWidget {
         data: (Profile user) => ListView(
           padding: const EdgeInsets.all(20),
           children: <Widget>[
-            CircleAvatar(
-              radius: 36,
-              child: Text(
-                (user.fullName?.isNotEmpty == true ? user.fullName! : email)
-                    .characters
-                    .first
-                    .toUpperCase(),
-              ),
+            FamilyMemberAvatar(
+              name: selectedMember?.name ??
+                  user.fullName ??
+                  email,
+              avatarUrl: selectedMember?.avatarUrl,
+              radius: 40,
             ),
             const SizedBox(height: 16),
             Text(
-              user.fullName ?? 'Your name',
+                selectedMember?.name ?? user.fullName ?? 'Your name',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall,
             ),

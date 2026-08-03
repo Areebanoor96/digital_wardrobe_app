@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
 import 'package:flutter/material.dart';
 
 class ProfileAvatarCard extends StatelessWidget {
@@ -24,15 +25,11 @@ class ProfileAvatarCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircleAvatar(
+              FamilyMemberAvatar(
                 radius: 36,
-                child: Text(
-                  member.name.characters.first.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                name: member.name,
+                avatarUrl: member.avatarUrl,
+
               ),
 
               const SizedBox(height: 12),

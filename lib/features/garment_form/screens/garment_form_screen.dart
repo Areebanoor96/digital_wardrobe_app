@@ -10,16 +10,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 class GarmentFormScreen extends ConsumerStatefulWidget {
-  const GarmentFormScreen({
-    super.key,
-    this.garment,
-  });
+  const GarmentFormScreen({super.key, this.garment});
 
   final Garment? garment;
 
   @override
-  ConsumerState<GarmentFormScreen> createState() =>
-      _GarmentFormScreenState();
+  ConsumerState<GarmentFormScreen> createState() => _GarmentFormScreenState();
 }
 
 class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
@@ -49,6 +45,15 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     text: widget.garment?.price?.toString(),
   );
 
+  late final TextEditingController _purchaseDateController =
+      TextEditingController(
+        text: widget.garment?.purchaseDate == null
+            ? ''
+            : _formatDate(widget.garment!.purchaseDate!),
+      );
+
+  late DateTime? _purchaseDate = widget.garment?.purchaseDate;
+
   late GarmentCategory _category =
       widget.garment?.category ?? GarmentCategory.top;
 
@@ -63,6 +68,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     _color.dispose();
     _size.dispose();
     _price.dispose();
+    _purchaseDateController.dispose();
     super.dispose();
   }
 
@@ -75,18 +81,12 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
               title: const Text('Take photo'),
-              onTap: () => Navigator.pop(
-                context,
-                ImageSource.camera,
-              ),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(
-                context,
-                ImageSource.gallery,
-              ),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
           ],
         ),
@@ -108,6 +108,37 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     }
   }
 
+  Future<void> _pickPurchaseDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _purchaseDate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _purchaseDate = DateTime(picked.year, picked.month, picked.day);
+      _purchaseDateController.text = _formatDate(_purchaseDate!);
+    });
+  }
+
+  void _clearPurchaseDate() {
+    setState(() {
+      _purchaseDate = null;
+      _purchaseDateController.clear();
+    });
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -117,11 +148,9 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
     if (selectedMember == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No profile selected.'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No profile selected.')));
       }
       return;
     }
@@ -147,17 +176,16 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     try {
       final String id = widget.garment?.id ?? const Uuid().v4();
 
-      List<String> photoPaths =
-          widget.garment?.photoPaths ?? const <String>[];
+      List<String> photoPaths = widget.garment?.photoPaths ?? const <String>[];
 
       if (_image != null) {
         photoPaths = <String>[
-          await ref.read(garmentRepositoryProvider).uploadImage(
-            garmentId: id,
-            bytes: await ref
-                .read(imageServiceProvider)
-                .readBytes(_image!),
-          ),
+          await ref
+              .read(garmentRepositoryProvider)
+              .uploadImage(
+                garmentId: id,
+                bytes: await ref.read(imageServiceProvider).readBytes(_image!),
+              ),
         ];
       }
 
@@ -183,23 +211,19 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         washInstructions: widget.garment?.washInstructions,
         wearCount: widget.garment?.wearCount ?? 0,
         lastWornDate: widget.garment?.lastWornDate,
-        purchaseDate: widget.garment?.purchaseDate,
-        laundryStatus:
-        widget.garment?.laundryStatus ?? LaundryStatus.clean,
+        purchaseDate: _purchaseDate,
+        laundryStatus: widget.garment?.laundryStatus ?? LaundryStatus.clean,
         isArchived: widget.garment?.isArchived ?? false,
       );
 
-      await ref.read(garmentRepositoryProvider).saveGarment(
-        garment,
-        isNew: widget.garment == null,
-      );
+      await ref
+          .read(garmentRepositoryProvider)
+          .saveGarment(garment, isNew: widget.garment == null);
 
       ref.invalidate(garmentsProvider);
 
       if (widget.garment != null) {
-        ref.invalidate(
-          garmentProvider(widget.garment!.id),
-        );
+        ref.invalidate(garmentProvider(widget.garment!.id));
       }
 
       if (mounted) {
@@ -208,9 +232,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save this garment.'),
-          ),
+          const SnackBar(content: Text('Could not save this garment.')),
         );
       }
     } finally {
@@ -231,9 +253,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.garment == null ? 'Add garment' : 'Edit garment',
-        ),
+        title: Text(widget.garment == null ? 'Add garment' : 'Edit garment'),
       ),
       body: Form(
         key: _formKey,
@@ -247,14 +267,12 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: _image == null
-                      ? GarmentImage(
-                    imageUrl: widget.garment?.coverImageUrl,
-                  )
+                      ? GarmentImage(imageUrl: widget.garment?.coverImageUrl)
                       : Image.file(
-                    File(_image!.path),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const SizedBox(),
-                  ),
+                          File(_image!.path),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox(),
+                        ),
                 ),
               ),
             ),
@@ -262,8 +280,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               onPressed: _chooseImage,
               icon: const Icon(Icons.add_a_photo_outlined),
               label: Text(
-                _image == null &&
-                    widget.garment?.coverImageUrl == null
+                _image == null && widget.garment?.coverImageUrl == null
                     ? 'Add a photo'
                     : 'Change photo',
               ),
@@ -271,9 +288,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _name,
-              decoration: const InputDecoration(
-                labelText: 'Name *',
-              ),
+              decoration: const InputDecoration(labelText: 'Name *'),
               validator: (String? value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Enter a name';
@@ -285,17 +300,15 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<GarmentCategory>(
               initialValue: _category,
-              decoration: const InputDecoration(
-                labelText: 'Category *',
-              ),
+              decoration: const InputDecoration(labelText: 'Category *'),
               items: GarmentCategory.values
                   .map(
                     (GarmentCategory category) =>
-                    DropdownMenuItem<GarmentCategory>(
-                      value: category,
-                      child: Text(category.label),
-                    ),
-              )
+                        DropdownMenuItem<GarmentCategory>(
+                          value: category,
+                          child: Text(category.label),
+                        ),
+                  )
                   .toList(),
               onChanged: (GarmentCategory? value) {
                 if (value != null) {
@@ -308,32 +321,25 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _brand,
-              decoration: const InputDecoration(
-                labelText: 'Brand',
-              ),
+              decoration: const InputDecoration(labelText: 'Brand'),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _purchaseStore,
               decoration: const InputDecoration(
                 labelText: 'Store and location',
-                hintText:
-                'For example: Outfitters - Centaurus Mall, Islamabad',
+                hintText: 'For example: Outfitters - Centaurus Mall, Islamabad',
               ),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _color,
-              decoration: const InputDecoration(
-                labelText: 'Color',
-              ),
+              decoration: const InputDecoration(labelText: 'Color'),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _size,
-              decoration: const InputDecoration(
-                labelText: 'Size',
-              ),
+              decoration: const InputDecoration(labelText: 'Size'),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -341,9 +347,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(
-                labelText: 'Price (PKR)',
-              ),
+              decoration: const InputDecoration(labelText: 'Price (PKR)'),
               validator: (String? value) {
                 final String enteredPrice = value?.trim() ?? '';
 
@@ -351,8 +355,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                   return null;
                 }
 
-                final double? parsedPrice =
-                double.tryParse(enteredPrice);
+                final double? parsedPrice = double.tryParse(enteredPrice);
 
                 if (parsedPrice == null) {
                   return 'Enter a valid price';
@@ -365,12 +368,28 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 return null;
               },
             ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _purchaseDateController,
+              readOnly: true,
+              onTap: _saving ? null : _pickPurchaseDate,
+              decoration: InputDecoration(
+                labelText: 'Purchase date',
+                hintText: 'Optional',
+                prefixIcon: const Icon(Icons.calendar_today_outlined),
+                suffixIcon: _purchaseDate == null
+                    ? null
+                    : IconButton(
+                        onPressed: _saving ? null : _clearPurchaseDate,
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Clear purchase date',
+                      ),
+              ),
+            ),
             const SizedBox(height: 28),
             ElevatedButton(
               onPressed: _saving ? null : _save,
-              child: Text(
-                _saving ? 'Saving...' : 'Save garment',
-              ),
+              child: Text(_saving ? 'Saving...' : 'Save garment'),
             ),
           ],
         ),
