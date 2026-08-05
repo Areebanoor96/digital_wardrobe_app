@@ -20,9 +20,7 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Archived Garments'),
-      ),
+      appBar: AppBar(title: const Text('Archived Garments')),
       body: archived.when(
         loading: () => const GarmentGridShimmer(),
         error: (_, _) => WardrobeEmptyState(
@@ -36,7 +34,7 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
             return const WardrobeEmptyState(
               title: 'No archived garments',
               message:
-              'Garments that you archive will appear here and can be restored later.',
+                  'Garments that you archive will appear here and can be restored later.',
             );
           }
 
@@ -48,8 +46,7 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
             child: GridView.builder(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
               itemCount: garments.length,
-              gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
@@ -65,14 +62,8 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
                   actionTooltip: 'Restore garment',
                   onAction: mutationState.isLoading
                       ? null
-                      : () => _restoreGarment(
-                    context,
-                    ref,
-                    garment,
-                  ),
-                  onTap: () => context.push(
-                    '/garments/${garment.id}',
-                  ),
+                      : () => _restoreGarment(context, ref, garment),
+                  onTap: () => context.push('/garments/${garment.id}'),
                 );
               },
             ),
@@ -83,10 +74,10 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
   }
 
   Future<void> _restoreGarment(
-      BuildContext context,
-      WidgetRef ref,
-      Garment garment,
-      ) async {
+    BuildContext context,
+    WidgetRef ref,
+    Garment garment,
+  ) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -121,23 +112,17 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
       return;
     }
 
-    final AsyncValue<void> state = ref.read(
-      garmentArchiveControllerProvider,
-    );
+    final AsyncValue<void> state = ref.read(garmentArchiveControllerProvider);
 
     if (state.hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not restore this garment.'),
-        ),
+        const SnackBar(content: Text('Could not restore this garment.')),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${garment.name} was restored.'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${garment.name} was restored.')));
   }
 }

@@ -20,19 +20,16 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
     initialLocation: '/splash',
 
     redirect: (context, state) {
-      final bool signedIn =
-          SupabaseService.client.auth.currentSession != null;
+      final bool signedIn = SupabaseService.client.auth.currentSession != null;
 
-      final selectedMember = ref.read(
-        selectedFamilyMemberProvider,
-      );
+      final selectedMember = ref.read(selectedFamilyMemberProvider);
 
       final String location = state.matchedLocation;
 
       final bool isPublicRoute =
           location == '/splash' ||
-              location == '/onboarding' ||
-              location == '/auth';
+          location == '/onboarding' ||
+          location == '/auth';
 
       final bool isProfileRoute =
           location == '/profiles' || location == '/setup';
@@ -52,30 +49,15 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
     },
 
     routes: <RouteBase>[
-      GoRoute(
-        path: '/splash',
-        builder: (_, _) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: '/onboarding',
-        builder: (_, _) => const OnboardingScreen(),
-      ),
-      GoRoute(
-        path: '/auth',
-        builder: (_, _) => const AuthScreen(),
-      ),
-      GoRoute(
-        path: '/setup',
-        builder: (_, _) => const SetupWizardScreen(),
-      ),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
+      GoRoute(path: '/auth', builder: (_, _) => const AuthScreen()),
+      GoRoute(path: '/setup', builder: (_, _) => const SetupWizardScreen()),
       GoRoute(
         path: '/profiles',
         builder: (_, _) => const ProfileSelectionScreen(),
       ),
-      GoRoute(
-        path: '/app',
-        builder: (_, _) => const AppShellScreen(),
-      ),
+      GoRoute(path: '/app', builder: (_, _) => const AppShellScreen()),
       GoRoute(
         path: '/garments/new',
         builder: (_, _) => const GarmentFormScreen(),
@@ -87,17 +69,13 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/garments/:id',
         builder: (_, GoRouterState state) {
-          return GarmentDetailScreen(
-            garmentId: state.pathParameters['id']!,
-          );
+          return GarmentDetailScreen(garmentId: state.pathParameters['id']!);
         },
       ),
       GoRoute(
         path: '/garments/:id/edit',
         builder: (_, GoRouterState state) {
-          return GarmentFormScreen(
-            garment: state.extra! as dynamic,
-          );
+          return GarmentFormScreen(garment: state.extra! as dynamic);
         },
       ),
       GoRoute(
@@ -107,17 +85,13 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/outfits/:id',
         builder: (_, GoRouterState state) {
-          return OutfitDetailScreen(
-            outfitId: state.pathParameters['id']!,
-          );
+          return OutfitDetailScreen(outfitId: state.pathParameters['id']!);
         },
       ),
       GoRoute(
         path: '/outfits/:id/edit',
         builder: (_, GoRouterState state) {
-          return OutfitBuilderScreen(
-            outfit: state.extra! as Outfit,
-          );
+          return OutfitBuilderScreen(outfit: state.extra! as Outfit);
         },
       ),
     ],

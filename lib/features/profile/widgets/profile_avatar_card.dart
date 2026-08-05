@@ -29,7 +29,6 @@ class ProfileAvatarCard extends StatelessWidget {
                 radius: 36,
                 name: member.name,
                 avatarUrl: member.avatarUrl,
-
               ),
 
               const SizedBox(height: 12),

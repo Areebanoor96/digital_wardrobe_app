@@ -7,10 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AddFamilyMemberDialog extends ConsumerStatefulWidget {
-  const AddFamilyMemberDialog({
-    super.key,
-    this.member,
-  });
+  const AddFamilyMemberDialog({super.key, this.member});
 
   final FamilyMember? member;
   @override
@@ -18,8 +15,7 @@ class AddFamilyMemberDialog extends ConsumerStatefulWidget {
       _AddFamilyMemberDialogState();
 }
 
-class _AddFamilyMemberDialogState
-    extends ConsumerState<AddFamilyMemberDialog> {
+class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
   final TextEditingController _nameController = TextEditingController();
 
   RelationshipType _relationship = RelationshipType.self;
@@ -31,6 +27,7 @@ class _AddFamilyMemberDialogState
     _nameController.dispose();
     super.dispose();
   }
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +37,7 @@ class _AddFamilyMemberDialogState
       _relationship = widget.member!.relationship;
     }
   }
+
   Future<void> _pickAvatar({required bool fromCamera}) async {
     final imageService = ref.read(imageServiceProvider);
 
@@ -58,10 +56,10 @@ class _AddFamilyMemberDialogState
     }
 
     setState(() {
-
       _selectedAvatarBytes = bytes;
     });
   }
+
   Future<void> _showAvatarOptions() async {
     await showModalBottomSheet<void>(
       context: context,
@@ -113,13 +111,12 @@ class _AddFamilyMemberDialogState
       },
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
-        widget.member == null
-            ? 'Add Family Member'
-            : 'Edit Family Member',
+        widget.member == null ? 'Add Family Member' : 'Edit Family Member',
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -132,14 +129,13 @@ class _AddFamilyMemberDialogState
                 backgroundImage: _selectedAvatarBytes != null
                     ? MemoryImage(_selectedAvatarBytes!)
                     : (widget.member?.avatarUrl != null
-                    ? NetworkImage(widget.member!.avatarUrl!)
-                    : null) as ImageProvider?,
-                child: (_selectedAvatarBytes == null &&
-                    widget.member?.avatarUrl == null)
-                    ? const Icon(
-                  Icons.add_a_photo_outlined,
-                  size: 28,
-                )
+                              ? NetworkImage(widget.member!.avatarUrl!)
+                              : null)
+                          as ImageProvider?,
+                child:
+                    (_selectedAvatarBytes == null &&
+                        widget.member?.avatarUrl == null)
+                    ? const Icon(Icons.add_a_photo_outlined, size: 28)
                     : null,
               ),
             ),
@@ -147,42 +143,34 @@ class _AddFamilyMemberDialogState
             const SizedBox(height: 8),
 
             Text(
-                (_selectedAvatarBytes == null &&
-                    widget.member?.avatarUrl == null)
-                    ? 'Add photo (optional)'
-                    : 'Change photo'
+              (_selectedAvatarBytes == null && widget.member?.avatarUrl == null)
+                  ? 'Add photo (optional)'
+                  : 'Change photo',
             ),
 
             const SizedBox(height: 20),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-              ),
+              decoration: const InputDecoration(labelText: 'Name'),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<RelationshipType>(
               initialValue: _relationship,
-              decoration: const InputDecoration(
-                labelText: 'Relationship',
-              ),
+              decoration: const InputDecoration(labelText: 'Relationship'),
               items: RelationshipType.values.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(type.label),
-                );
+                return DropdownMenuItem(value: type, child: Text(type.label));
               }).toList(),
               onChanged: _isSaving
                   ? null
                   : (value) {
-                if (value == null) {
-                  return;
-                }
+                      if (value == null) {
+                        return;
+                      }
 
-                setState(() {
-                  _relationship = value;
-                });
-              },
+                      setState(() {
+                        _relationship = value;
+                      });
+                    },
             ),
           ],
         ),
@@ -192,20 +180,18 @@ class _AddFamilyMemberDialogState
           onPressed: _isSaving
               ? null
               : () {
-            Navigator.pop(context);
-          },
+                  Navigator.pop(context);
+                },
           child: const Text('Cancel'),
         ),
         FilledButton(
           onPressed: _isSaving ? null : _saveMember,
           child: _isSaving
               ? const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-            ),
-          )
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Text('Save'),
         ),
       ],
@@ -226,25 +212,31 @@ class _AddFamilyMemberDialogState
     try {
       if (widget.member == null) {
         // Add new family member
-        await ref.read(familyRepositoryProvider).addFamilyMember(
-          name: name,
-          relationship: _relationship.name,
-          avatarBytes: _selectedAvatarBytes,
-        );
+        await ref
+            .read(familyRepositoryProvider)
+            .addFamilyMember(
+              name: name,
+              relationship: _relationship.name,
+              avatarBytes: _selectedAvatarBytes,
+            );
       } else {
         // Update existing family member
-        await ref.read(familyRepositoryProvider).updateFamilyMember(
-          id: widget.member!.id,
-          name: name,
-          relationship: _relationship.name,
-        );
+        await ref
+            .read(familyRepositoryProvider)
+            .updateFamilyMember(
+              id: widget.member!.id,
+              name: name,
+              relationship: _relationship.name,
+            );
 
         // Upload new avatar if user selected one
         if (_selectedAvatarBytes != null) {
-          await ref.read(familyRepositoryProvider).updateAvatar(
-            memberId: widget.member!.id,
-            bytes: _selectedAvatarBytes!,
-          );
+          await ref
+              .read(familyRepositoryProvider)
+              .updateAvatar(
+                memberId: widget.member!.id,
+                bytes: _selectedAvatarBytes!,
+              );
         }
       }
 
@@ -253,15 +245,13 @@ class _AddFamilyMemberDialogState
       if (mounted) {
         Navigator.pop(context);
       }
-    }catch (error) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not add family member: $error'),
-        ),
+        SnackBar(content: Text('Could not add family member: $error')),
       );
     } finally {
       if (mounted) {

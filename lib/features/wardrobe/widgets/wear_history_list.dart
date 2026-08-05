@@ -17,11 +17,11 @@ class WearHistoryList extends StatelessWidget {
       children: history
           .map(
             (WearLog entry) => ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.event_available_outlined),
-          title: Text(_formatDate(entry.wornDate)),
-        ),
-      )
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.event_available_outlined),
+              title: Text(_formatDate(entry.wornDate)),
+            ),
+          )
           .toList(),
     );
   }

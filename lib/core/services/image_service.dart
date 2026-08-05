@@ -13,4 +13,6 @@ class ImageService {
   Future<XFile?> takePhoto() => _picker.pickImage(source: ImageSource.camera);
 
   Future<Uint8List> readBytes(XFile image) => image.readAsBytes();
+  Future<List<XFile>> pickMultipleFromGallery() =>
+      _picker.pickMultiImage();
 }

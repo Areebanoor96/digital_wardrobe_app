@@ -41,9 +41,7 @@ class WearLogRepository {
 
     await _client
         .from('garments')
-        .update(<String, dynamic>{
-      'laundry_status': laundryStatusAfter.name,
-    })
+        .update(<String, dynamic>{'laundry_status': laundryStatusAfter.name})
         .eq('id', garmentId)
         .eq('member_id', memberId)
         .eq('user_id', currentUser.id);
@@ -74,21 +72,20 @@ class WearLogRepository {
     final List<Map<String, dynamic>> rows = garmentIds
         .map(
           (String garmentId) => <String, dynamic>{
-        'user_id': currentUser.id,
-        'member_id': memberId,
-        'garment_id': garmentId,
-        'outfit_id': outfitId,
-        'worn_date': wornDate,
-        'event_name':
-        cleanEventName == null || cleanEventName.isEmpty
-            ? null
-            : cleanEventName,
-        'notes': cleanNotes == null || cleanNotes.isEmpty
-            ? null
-            : cleanNotes,
-        'laundry_status_after': laundryStatusAfter?.name,
-      },
-    )
+            'user_id': currentUser.id,
+            'member_id': memberId,
+            'garment_id': garmentId,
+            'outfit_id': outfitId,
+            'worn_date': wornDate,
+            'event_name': cleanEventName == null || cleanEventName.isEmpty
+                ? null
+                : cleanEventName,
+            'notes': cleanNotes == null || cleanNotes.isEmpty
+                ? null
+                : cleanNotes,
+            'laundry_status_after': laundryStatusAfter?.name,
+          },
+        )
         .toList();
 
     await _client.from('wear_log').insert(rows);
@@ -96,9 +93,7 @@ class WearLogRepository {
     if (laundryStatusAfter != null) {
       await _client
           .from('garments')
-          .update(<String, dynamic>{
-        'laundry_status': laundryStatusAfter.name,
-      })
+          .update(<String, dynamic>{'laundry_status': laundryStatusAfter.name})
           .inFilter('id', garmentIds)
           .eq('member_id', memberId)
           .eq('user_id', currentUser.id);
@@ -140,11 +135,7 @@ class WearLogRepository {
     final DateTime start = DateTime(month.year, month.month);
     final DateTime end = DateTime(month.year, month.month + 1);
 
-    return _fetchDateRange(
-      memberId: memberId,
-      start: start,
-      end: end,
-    );
+    return _fetchDateRange(memberId: memberId, start: start, end: end);
   }
 
   Future<List<WearLog>> fetchDayHistory({
@@ -154,11 +145,7 @@ class WearLogRepository {
     final DateTime start = DateTime(day.year, day.month, day.day);
     final DateTime end = start.add(const Duration(days: 1));
 
-    return _fetchDateRange(
-      memberId: memberId,
-      start: start,
-      end: end,
-    );
+    return _fetchDateRange(memberId: memberId, start: start, end: end);
   }
 
   Future<List<WearLog>> _fetchDateRange({
@@ -181,8 +168,8 @@ class WearLogRepository {
     return rows
         .map(
           (dynamic row) =>
-          WearLog.fromJson(Map<String, dynamic>.from(row as Map)),
-    )
+              WearLog.fromJson(Map<String, dynamic>.from(row as Map)),
+        )
         .toList();
   }
 

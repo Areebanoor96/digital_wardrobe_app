@@ -25,15 +25,13 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(20),
           children: <Widget>[
             FamilyMemberAvatar(
-              name: selectedMember?.name ??
-                  user.fullName ??
-                  email,
+              name: selectedMember?.name ?? user.fullName ?? email,
               avatarUrl: selectedMember?.avatarUrl,
               radius: 40,
             ),
             const SizedBox(height: 16),
             Text(
-                selectedMember?.name ?? user.fullName ?? 'Your name',
+              selectedMember?.name ?? user.fullName ?? 'Your name',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall,
             ),

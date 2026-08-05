@@ -48,9 +48,7 @@ class FamilyScreen extends ConsumerWidget {
                 onTap: () {
                   showDialog(
                     context: context,
-                    builder: (_) => AddFamilyMemberDialog(
-                      member: member,
-                    ),
+                    builder: (_) => AddFamilyMemberDialog(member: member),
                   );
                 },
 
@@ -62,12 +60,13 @@ class FamilyScreen extends ConsumerWidget {
                         title: Text('Delete ${member.name}?'),
                         content: const Text(
                           'This will permanently delete this profile, including its '
-                              'garments, outfits, wear history and related data. '
-                              'This action cannot be undone.',
+                          'garments, outfits, wear history and related data. '
+                          'This action cannot be undone.',
                         ),
                         actions: <Widget>[
                           TextButton(
-                            onPressed: () => Navigator.pop(dialogContext, false),
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, false),
                             child: const Text('Cancel'),
                           ),
                           FilledButton(
@@ -85,8 +84,8 @@ class FamilyScreen extends ConsumerWidget {
                   final FamilyMember? selectedMember = ref.read(
                     selectedFamilyMemberProvider,
                   );
-                  final bool isSelectedProfile = selectedMember?.id == member.id;
-
+                  final bool isSelectedProfile =
+                      selectedMember?.id == member.id;
 
                   try {
                     await ref
@@ -96,7 +95,8 @@ class FamilyScreen extends ConsumerWidget {
                     ref.invalidate(familyMembersProvider);
 
                     if (isSelectedProfile) {
-                      ref.read(selectedFamilyMemberProvider.notifier).state = null;
+                      ref.read(selectedFamilyMemberProvider.notifier).state =
+                          null;
                       await ProfileSessionService.clearSelectedProfile();
 
                       if (context.mounted) {
@@ -107,9 +107,7 @@ class FamilyScreen extends ConsumerWidget {
                     }
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${member.name} was deleted.'),
-                        ),
+                        SnackBar(content: Text('${member.name} was deleted.')),
                       );
                     }
                   } catch (error) {
@@ -122,7 +120,6 @@ class FamilyScreen extends ConsumerWidget {
                     }
                   }
                 },
-
               );
             },
           );
@@ -130,6 +127,4 @@ class FamilyScreen extends ConsumerWidget {
       ),
     );
   }
-
 }
-

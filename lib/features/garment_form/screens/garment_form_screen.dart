@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
@@ -57,8 +57,62 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   late GarmentCategory _category =
       widget.garment?.category ?? GarmentCategory.top;
 
-  XFile? _image;
+  static const int _maximumPhotos = 3;
+
+  late final List<String> _existingPhotoPaths = <String>[
+    ...?widget.garment?.photoPaths,
+  ];
+
+  late final List<String> _existingPhotoUrls = <String>[
+    ...?widget.garment?.photoUrls,
+  ];
+
+  final List<XFile> _newImages = <XFile>[];
+  final List<String> _removedPhotoPaths = <String>[];
+
   bool _saving = false;
+  static const List<String> _occasionOptions = <String>[
+    'casual',
+    'work',
+    'formal',
+    'party',
+    'wedding',
+    'college',
+    'sport',
+    'travel',
+    'home',
+    'sleep',
+    'ethnic',
+  ];
+
+  static const List<String> _seasonOptions = <String>[
+    'summer',
+    'winter',
+    'spring',
+    'autumn',
+    'rainy',
+    'all_season',
+  ];
+
+  static const List<String> _moodOptions = <String>[
+    'relaxed',
+    'professional',
+    'cozy',
+    'elegant',
+    'sporty',
+    'minimal',
+    'bold',
+    'party',
+  ];
+  late final Set<String> _selectedOccasions = <String>{
+    ...?widget.garment?.occasions,
+  };
+
+  late final Set<String> _selectedSeasons = <String>{
+    ...?widget.garment?.seasons,
+  };
+
+  late final Set<String> _selectedMoods = <String>{...?widget.garment?.moods};
 
   @override
   void dispose() {
@@ -72,40 +126,103 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     super.dispose();
   }
 
-  Future<void> _chooseImage() async {
+  Future<void> _chooseImages() async {
+    final int remainingSlots =
+        _maximumPhotos - _existingPhotoPaths.length - _newImages.length;
+
+    if (remainingSlots <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can add up to 3 photos.'),
+        ),
+      );
+      return;
+    }
+
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
-      builder: (BuildContext context) => SafeArea(
-        child: Wrap(
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Take photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined),
+                title: const Text('Take photo'),
+                onTap: () {
+                  Navigator.pop(sheetContext, ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Choose from gallery'),
+                onTap: () {
+                  Navigator.pop(sheetContext, ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
 
     if (source == null) {
       return;
     }
 
-    final XFile? image = source == ImageSource.camera
-        ? await ref.read(imageServiceProvider).takePhoto()
-        : await ref.read(imageServiceProvider).pickFromGallery();
+    if (source == ImageSource.camera) {
+      final XFile? image = await ref
+          .read(imageServiceProvider)
+          .takePhoto();
 
-    if (image != null && mounted) {
+      if (image == null || !mounted) {
+        return;
+      }
+
       setState(() {
-        _image = image;
+        _newImages.add(image);
       });
+
+      return;
     }
+
+    final List<XFile> selectedImages = await ref
+        .read(imageServiceProvider)
+        .pickMultipleFromGallery();
+
+    if (!mounted || selectedImages.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _newImages.addAll(
+        selectedImages.take(remainingSlots),
+      );
+    });
+
+    if (selectedImages.length > remainingSlots && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only the first available photos were added.'),
+        ),
+      );
+    }
+  }
+  void _removeExistingPhoto(int index) {
+    setState(() {
+      final String removedPath = _existingPhotoPaths.removeAt(index);
+
+      if (index < _existingPhotoUrls.length) {
+        _existingPhotoUrls.removeAt(index);
+      }
+
+      _removedPhotoPaths.add(removedPath);
+    });
+  }
+
+  void _removeNewPhoto(int index) {
+    setState(() {
+      _newImages.removeAt(index);
+    });
   }
 
   Future<void> _pickPurchaseDate() async {
@@ -176,17 +293,23 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     try {
       final String id = widget.garment?.id ?? const Uuid().v4();
 
-      List<String> photoPaths = widget.garment?.photoPaths ?? const <String>[];
+      final List<String> photoPaths =
+      List<String>.from(_existingPhotoPaths);
 
-      if (_image != null) {
-        photoPaths = <String>[
-          await ref
-              .read(garmentRepositoryProvider)
-              .uploadImage(
-                garmentId: id,
-                bytes: await ref.read(imageServiceProvider).readBytes(_image!),
-              ),
-        ];
+      for (int index = 0; index < _newImages.length; index++) {
+        final Uint8List bytes = await ref
+            .read(imageServiceProvider)
+            .readBytes(_newImages[index]);
+
+        final String uploadedPath = await ref
+            .read(garmentRepositoryProvider)
+            .uploadImage(
+          garmentId: id,
+          bytes: bytes,
+          imageIndex: index,
+        );
+
+        photoPaths.add(uploadedPath);
       }
 
       final Garment garment = Garment(
@@ -204,9 +327,9 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         size: _optional(_size.text),
         price: double.tryParse(_price.text.trim()),
         currency: widget.garment?.currency ?? 'PKR',
-        occasions: widget.garment?.occasions ?? const <String>[],
-        seasons: widget.garment?.seasons ?? const <String>[],
-        moods: widget.garment?.moods ?? const <String>[],
+        occasions: _selectedOccasions.toList(),
+        seasons: _selectedSeasons.toList(),
+        moods: _selectedMoods.toList(),
         fabric: widget.garment?.fabric,
         washInstructions: widget.garment?.washInstructions,
         wearCount: widget.garment?.wearCount ?? 0,
@@ -219,7 +342,15 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       await ref
           .read(garmentRepositoryProvider)
           .saveGarment(garment, isNew: widget.garment == null);
-
+      if (_removedPhotoPaths.isNotEmpty) {
+        try {
+          await ref
+              .read(garmentRepositoryProvider)
+              .deleteImages(_removedPhotoPaths);
+        } catch (error) {
+          debugPrint('Could not remove old garment photos: $error');
+        }
+      }
       ref.invalidate(garmentsProvider);
 
       if (widget.garment != null) {
@@ -229,11 +360,14 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       if (mounted) {
         context.pop();
       }
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint(error.toString());
+      debugPrint(stackTrace.toString());
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save this garment.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
       }
     } finally {
       if (mounted) {
@@ -260,31 +394,54 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: <Widget>[
-            GestureDetector(
-              onTap: _chooseImage,
-              child: AspectRatio(
-                aspectRatio: 1.2,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: _image == null
-                      ? GarmentImage(imageUrl: widget.garment?.coverImageUrl)
-                      : Image.file(
-                          File(_image!.path),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const SizedBox(),
-                        ),
-                ),
+            Text(
+              'Garment photos',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Add up to 3 photos. The first photo will be used as the cover.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              height: 150,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: <Widget>[
+                  for (int index = 0;
+                  index < _existingPhotoUrls.length;
+                  index++)
+                    _GarmentPhotoPreview(
+                      imageUrl: _existingPhotoUrls[index],
+                      isCover: index == 0,
+                      onRemove: _saving
+                          ? null
+                          : () => _removeExistingPhoto(index),
+                    ),
+
+                  for (int index = 0; index < _newImages.length; index++)
+                    _GarmentPhotoPreview(
+                      imageFile: File(_newImages[index].path),
+                      isCover:
+                      _existingPhotoUrls.isEmpty && index == 0,
+                      onRemove: _saving
+                          ? null
+                          : () => _removeNewPhoto(index),
+                    ),
+
+                  if (_existingPhotoPaths.length + _newImages.length <
+                      _maximumPhotos)
+                    _AddPhotoTile(
+                      onTap: _saving ? null : _chooseImages,
+                    ),
+                ],
               ),
             ),
-            TextButton.icon(
-              onPressed: _chooseImage,
-              icon: const Icon(Icons.add_a_photo_outlined),
-              label: Text(
-                _image == null && widget.garment?.coverImageUrl == null
-                    ? 'Add a photo'
-                    : 'Change photo',
-              ),
-            ),
+
+
+
             const SizedBox(height: 12),
             TextFormField(
               controller: _name,
@@ -368,6 +525,105 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 return null;
               },
             ),
+            const SizedBox(height: 20),
+            Text('Occasions', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Choose where this garment can be worn. Optional.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _occasionOptions.map((String occasion) {
+                final bool selected = _selectedOccasions.contains(occasion);
+
+                return FilterChip(
+                  label: Text(
+                    occasion[0].toUpperCase() + occasion.substring(1),
+                  ),
+                  selected: selected,
+                  onSelected: _saving
+                      ? null
+                      : (bool value) {
+                          setState(() {
+                            if (value) {
+                              _selectedOccasions.add(occasion);
+                            } else {
+                              _selectedOccasions.remove(occasion);
+                            }
+                          });
+                        },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            Text('Seasons', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              'Choose the suitable seasons. Optional.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _seasonOptions.map((String season) {
+                final bool selected = _selectedSeasons.contains(season);
+
+                return FilterChip(
+                  label: Text(season[0].toUpperCase() + season.substring(1)),
+                  selected: selected,
+                  onSelected: _saving
+                      ? null
+                      : (bool value) {
+                          setState(() {
+                            if (value) {
+                              _selectedSeasons.add(season);
+                            } else {
+                              _selectedSeasons.remove(season);
+                            }
+                          });
+                        },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Mood and style',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Choose the moods this garment represents. Optional.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _moodOptions.map((String mood) {
+                final bool selected = _selectedMoods.contains(mood);
+
+                return FilterChip(
+                  label: Text(mood[0].toUpperCase() + mood.substring(1)),
+                  selected: selected,
+                  onSelected: _saving
+                      ? null
+                      : (bool value) {
+                          setState(() {
+                            if (value) {
+                              _selectedMoods.add(mood);
+                            } else {
+                              _selectedMoods.remove(mood);
+                            }
+                          });
+                        },
+                );
+              }).toList(),
+            ),
+
             const SizedBox(height: 12),
             TextFormField(
               controller: _purchaseDateController,
@@ -392,6 +648,112 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               child: Text(_saving ? 'Saving...' : 'Save garment'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GarmentPhotoPreview extends StatelessWidget {
+  const _GarmentPhotoPreview({
+    this.imageUrl,
+    this.imageFile,
+    required this.isCover,
+    required this.onRemove,
+  });
+
+  final String? imageUrl;
+  final File? imageFile;
+  final bool isCover;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: SizedBox(
+        width: 130,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: imageFile != null
+                  ? Image.file(
+                imageFile!,
+                fit: BoxFit.cover,
+              )
+                  : Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) {
+                  return const ColoredBox(
+                    color: Colors.black12,
+                    child: Icon(Icons.broken_image_outlined),
+                  );
+                },
+              ),
+            ),
+            if (isCover)
+              Positioned(
+                left: 8,
+                bottom: 8,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: .9),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: Text('Cover'),
+                  ),
+                ),
+              ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton.filledTonal(
+                onPressed: onRemove,
+                icon: const Icon(Icons.close),
+                tooltip: 'Remove photo',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddPhotoTile extends StatelessWidget {
+  const _AddPhotoTile({
+    required this.onTap,
+  });
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 130,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(Icons.add_a_photo_outlined, size: 32),
+              SizedBox(height: 8),
+              Text('Add photo'),
+            ],
+          ),
         ),
       ),
     );

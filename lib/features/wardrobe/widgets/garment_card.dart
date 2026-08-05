@@ -44,7 +44,9 @@ class GarmentCard extends StatelessWidget {
                     left: 8,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: .9),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: .9),
                         borderRadius: BorderRadius.circular(99),
                       ),
                       child: const Padding(
@@ -61,35 +63,35 @@ class GarmentCard extends StatelessWidget {
                   right: 8,
                   child: onAction != null && actionIcon != null
                       ? Material(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: .9),
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      onPressed: onAction,
-                      icon: Icon(actionIcon),
-                      tooltip: actionTooltip,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  )
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surface.withValues(alpha: .9),
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            onPressed: onAction,
+                            icon: Icon(actionIcon),
+                            tooltip: actionTooltip,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        )
                       : DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surface.withValues(alpha: .9),
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      child: Text(
-                        '${garment.wearCount} wears',
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ),
-                  ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surface.withValues(alpha: .9),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              '${garment.wearCount} wears',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ),

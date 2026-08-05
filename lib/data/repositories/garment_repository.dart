@@ -24,6 +24,7 @@ class GarmentRepository {
       ),
     );
   }
+
   Future<List<Garment>> fetchArchivedGarments({
     required String memberId,
   }) async {
@@ -36,8 +37,7 @@ class GarmentRepository {
 
     return Future.wait(
       rows.map(
-            (dynamic row) =>
-            _withSignedUrls(Map<String, dynamic>.from(row as Map)),
+        (dynamic row) => _withSignedUrls(Map<String, dynamic>.from(row as Map)),
       ),
     );
   }
@@ -102,24 +102,34 @@ class GarmentRepository {
   Future<String> uploadImage({
     required String garmentId,
     required Uint8List bytes,
+    required int imageIndex,
   }) async {
     final String userId = _client.auth.currentUser!.id;
-    final String path = '$userId/$garmentId/cover.jpg';
+    final int timestamp = DateTime.now().microsecondsSinceEpoch;
+
+    final String path =
+        '$userId/$garmentId/photo_${timestamp}_$imageIndex.jpg';
 
     await _client.storage
         .from(_bucket)
         .uploadBinary(
-          path,
-          bytes,
-          fileOptions: const FileOptions(
-            contentType: 'image/jpeg',
-            upsert: true,
-          ),
-        );
+      path,
+      bytes,
+      fileOptions: const FileOptions(
+        contentType: 'image/jpeg',
+        upsert: false,
+      ),
+    );
 
     return path;
   }
+  Future<void> deleteImages(List<String> paths) async {
+    if (paths.isEmpty) {
+      return;
+    }
 
+    await _client.storage.from(_bucket).remove(paths);
+  }
   Future<void> archiveGarment({
     required String garmentId,
     required String memberId,
@@ -130,15 +140,14 @@ class GarmentRepository {
         .eq('id', garmentId)
         .eq('member_id', memberId);
   }
+
   Future<void> restoreGarment({
     required String garmentId,
     required String memberId,
   }) async {
     await _client
         .from('garments')
-        .update(<String, bool>{
-      'is_archived': false,
-    })
+        .update(<String, bool>{'is_archived': false})
         .eq('id', garmentId)
         .eq('member_id', memberId);
   }

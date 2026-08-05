@@ -18,14 +18,13 @@ class FamilyRepository {
 
     return Future.wait(
       rows.map(
-            (dynamic row) =>
+        (dynamic row) =>
             _withSignedAvatarUrl(Map<String, dynamic>.from(row as Map)),
       ),
     );
   }
-  Future<FamilyMember> _addSignedAvatarUrl(
-      FamilyMember member,
-      ) async {
+
+  Future<FamilyMember> _addSignedAvatarUrl(FamilyMember member) async {
     final String? avatarPath = member.avatarPath;
 
     if (avatarPath == null || avatarPath.trim().isEmpty) {
@@ -37,20 +36,17 @@ class FamilyRepository {
           .from(_avatarBucket)
           .createSignedUrl(avatarPath, 86400);
 
-      return member.copyWith(
-        avatarUrl: signedUrl,
-      );
+      return member.copyWith(avatarUrl: signedUrl);
     } catch (error) {
       debugPrint(
         'Avatar failed for ${member.name}: '
-            'bucket=$_avatarBucket, path=$avatarPath, error=$error',
+        'bucket=$_avatarBucket, path=$avatarPath, error=$error',
       );
 
-      return member.copyWith(
-        avatarUrl: null,
-      );
+      return member.copyWith(avatarUrl: null);
     }
   }
+
   Future<FamilyMember> addFamilyMember({
     required String name,
     required String relationship,
@@ -86,13 +82,8 @@ class FamilyRepository {
       memberId: member.id,
       bytes: avatarBytes,
     );
-    await updateAvatarPath(
-      memberId: member.id,
-      avatarPath: avatarPath,
-    );
-    member = member.copyWith(
-      avatarPath: avatarPath,
-    );
+    await updateAvatarPath(memberId: member.id, avatarPath: avatarPath);
+    member = member.copyWith(avatarPath: avatarPath);
     return _addSignedAvatarUrl(member);
   }
 
@@ -149,10 +140,9 @@ class FamilyRepository {
       return null;
     }
 
-    return _withSignedAvatarUrl(
-      Map<String, dynamic>.from(response as Map),
-    );
+    return _withSignedAvatarUrl(Map<String, dynamic>.from(response as Map));
   }
+
   Future<String> uploadAvatar({
     required String memberId,
     required Uint8List bytes,
@@ -163,16 +153,17 @@ class FamilyRepository {
     await _client.storage
         .from(_avatarBucket)
         .uploadBinary(
-      path,
-      bytes,
-      fileOptions: const FileOptions(
-        contentType: 'image/jpeg',
-        upsert: true,
-      ),
-    );
+          path,
+          bytes,
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: true,
+          ),
+        );
 
     return path;
   }
+
   Future<void> updateAvatarPath({
     required String memberId,
     required String? avatarPath,
@@ -185,39 +176,27 @@ class FamilyRepository {
         .eq('id', memberId)
         .eq('user_id', userId);
   }
-  Future<FamilyMember> _withSignedAvatarUrl(
-      Map<String, dynamic> row,
-      ) async {
+
+  Future<FamilyMember> _withSignedAvatarUrl(Map<String, dynamic> row) async {
     final FamilyMember member = FamilyMember.fromJson(row);
 
     return _addSignedAvatarUrl(member);
   }
+
   Future<void> updateAvatar({
     required String memberId,
     required Uint8List bytes,
   }) async {
-    final avatarPath = await uploadAvatar(
-      memberId: memberId,
-      bytes: bytes,
-    );
+    final avatarPath = await uploadAvatar(memberId: memberId, bytes: bytes);
 
-    await updateAvatarPath(
-      memberId: memberId,
-      avatarPath: avatarPath,
-    );
+    await updateAvatarPath(memberId: memberId, avatarPath: avatarPath);
   }
-  Future<void> removeAvatar(
-      FamilyMember member,
-      ) async {
+
+  Future<void> removeAvatar(FamilyMember member) async {
     if (member.avatarPath == null) return;
 
-    await _client.storage
-        .from(_avatarBucket)
-        .remove([member.avatarPath!]);
+    await _client.storage.from(_avatarBucket).remove([member.avatarPath!]);
 
-    await updateAvatarPath(
-      memberId: member.id,
-      avatarPath: null,
-    );
+    await updateAvatarPath(memberId: member.id, avatarPath: null);
   }
 }

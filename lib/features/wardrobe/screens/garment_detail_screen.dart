@@ -102,7 +102,9 @@ class GarmentDetailScreen extends ConsumerWidget {
                             if (state.hasError) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Could not restore this garment.'),
+                                  content: Text(
+                                    'Could not restore this garment.',
+                                  ),
                                 ),
                               );
                               return;
@@ -126,15 +128,17 @@ class GarmentDetailScreen extends ConsumerWidget {
                               : () => _markAsWorn(context, ref),
                           icon: wearState.isLoading
                               ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Icon(Icons.check_circle_outline),
                           label: Text(
-                            wearState.isLoading ? 'Recording...' : 'Mark as Worn',
+                            wearState.isLoading
+                                ? 'Recording...'
+                                : 'Mark as Worn',
                           ),
                         ),
                       const SizedBox(height: 28),

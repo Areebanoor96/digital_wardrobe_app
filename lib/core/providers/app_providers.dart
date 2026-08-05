@@ -92,22 +92,19 @@ final garmentProvider = FutureProvider.family<Garment, String>((
       .fetchGarment(id: garmentId, memberId: selectedMember.id);
 });
 final FutureProvider<List<Garment>> archivedGarmentsProvider =
-FutureProvider<List<Garment>>((Ref ref) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+    FutureProvider<List<Garment>>((Ref ref) async {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
 
-  if (selectedMember == null) {
-    return const <Garment>[];
-  }
+      if (selectedMember == null) {
+        return const <Garment>[];
+      }
 
-  return ref
-      .watch(garmentRepositoryProvider)
-      .fetchArchivedGarments(
-    memberId: selectedMember.id,
-  );
-});
-
+      return ref
+          .watch(garmentRepositoryProvider)
+          .fetchArchivedGarments(memberId: selectedMember.id);
+    });
 
 final FutureProvider<List<Outfit>> outfitsProvider =
     FutureProvider<List<Outfit>>((Ref ref) async {
@@ -258,9 +255,9 @@ final wearOutfitControllerProvider =
       WearOutfitController.new,
     );
 final garmentArchiveControllerProvider =
-AutoDisposeAsyncNotifierProvider<GarmentArchiveController, void>(
-  GarmentArchiveController.new,
-);
+    AutoDisposeAsyncNotifierProvider<GarmentArchiveController, void>(
+      GarmentArchiveController.new,
+    );
 
 class WearLogController extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -307,16 +304,13 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
     }
   }
 }
+
 class GarmentArchiveController extends AutoDisposeAsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
-  Future<void> archive({
-    required String garmentId,
-  }) async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+  Future<void> archive({required String garmentId}) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -329,12 +323,9 @@ class GarmentArchiveController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref
+      () => ref
           .read(garmentRepositoryProvider)
-          .archiveGarment(
-        garmentId: garmentId,
-        memberId: selectedMember.id,
-      ),
+          .archiveGarment(garmentId: garmentId, memberId: selectedMember.id),
     );
 
     if (!state.hasError) {
@@ -342,12 +333,8 @@ class GarmentArchiveController extends AutoDisposeAsyncNotifier<void> {
     }
   }
 
-  Future<void> restore({
-    required String garmentId,
-  }) async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+  Future<void> restore({required String garmentId}) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -360,12 +347,9 @@ class GarmentArchiveController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref
+      () => ref
           .read(garmentRepositoryProvider)
-          .restoreGarment(
-        garmentId: garmentId,
-        memberId: selectedMember.id,
-      ),
+          .restoreGarment(garmentId: garmentId, memberId: selectedMember.id),
     );
 
     if (!state.hasError) {

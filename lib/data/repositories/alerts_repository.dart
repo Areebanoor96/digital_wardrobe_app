@@ -13,7 +13,6 @@ class AlertsRepository {
     final List<dynamic> rows = await _client
         .from('alerts')
         .select()
-
         .eq('user_id', userId)
         .eq('member_id', memberId)
         .eq('is_dismissed', false)
@@ -49,7 +48,6 @@ class AlertsRepository {
   Future<int> generateAndInsertAlerts({required String memberId}) async {
     final String userId = _client.auth.currentUser!.id;
 
-
     final List<dynamic> existingRows = await _client
         .from('alerts')
         .select('type, garment_id')
@@ -79,21 +77,9 @@ class AlertsRepository {
     final List<Map<String, dynamic>> newAlerts = <Map<String, dynamic>>[];
 
     for (final Garment garment in garments) {
-      _addUnusedAlert(
-        garment,
-        userId,
-        memberId,
-        existingKeys,
-        newAlerts,
-      );
+      _addUnusedAlert(garment, userId, memberId, existingKeys, newAlerts);
 
-      _addLaundryAlert(
-        garment,
-        userId,
-        memberId,
-        existingKeys,
-        newAlerts,
-      );
+      _addLaundryAlert(garment, userId, memberId, existingKeys, newAlerts);
     }
 
     if (newAlerts.isEmpty) return 0;
@@ -102,12 +88,12 @@ class AlertsRepository {
   }
 
   void _addUnusedAlert(
-      Garment garment,
-      String userId,
-      String memberId,
-      Set<String> existingKeys,
-      List<Map<String, dynamic>> newAlerts,
-      ){
+    Garment garment,
+    String userId,
+    String memberId,
+    Set<String> existingKeys,
+    List<Map<String, dynamic>> newAlerts,
+  ) {
     final String key = 'unused_${garment.id}';
     if (existingKeys.contains(key)) return;
 
@@ -149,13 +135,14 @@ class AlertsRepository {
       }
     }
   }
+
   void _addLaundryAlert(
-      Garment garment,
-      String userId,
-      String memberId,
-      Set<String> existingKeys,
-      List<Map<String, dynamic>> newAlerts,
-      ) {
+    Garment garment,
+    String userId,
+    String memberId,
+    Set<String> existingKeys,
+    List<Map<String, dynamic>> newAlerts,
+  ) {
     final String key = 'laundry_${garment.id}';
     if (existingKeys.contains(key)) return;
 

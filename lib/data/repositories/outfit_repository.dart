@@ -6,19 +6,14 @@ class OutfitRepository {
 
   final SupabaseClient _client;
 
-  Future<List<Outfit>> fetchOutfits({
-    required String memberId,
-  }) async {
+  Future<List<Outfit>> fetchOutfits({required String memberId}) async {
     final List<dynamic> rows = await _client
         .from('outfits')
         .select()
         .eq('member_id', memberId)
         .order('created_at', ascending: false);
 
-    return _withLastWorn(
-      rows,
-      memberId: memberId,
-    );
+    return _withLastWorn(rows, memberId: memberId);
   }
 
   Future<Outfit> fetchOutfit({
@@ -27,18 +22,17 @@ class OutfitRepository {
   }) async {
     final Map<String, dynamic> row = Map<String, dynamic>.from(
       await _client
-          .from('outfits')
-          .select()
-          .eq('id', outfitId)
-          .eq('member_id', memberId)
-          .single()
-      as Map,
+              .from('outfits')
+              .select()
+              .eq('id', outfitId)
+              .eq('member_id', memberId)
+              .single()
+          as Map,
     );
 
-    final List<Outfit> outfits = await _withLastWorn(
-      <dynamic>[row],
-      memberId: memberId,
-    );
+    final List<Outfit> outfits = await _withLastWorn(<dynamic>[
+      row,
+    ], memberId: memberId);
 
     return outfits.single;
   }
@@ -61,17 +55,17 @@ class OutfitRepository {
   }
 
   Future<void> updateOutfit(
-      Outfit outfit, {
-        required String name,
-        required List<String> garmentIds,
-      }) async {
+    Outfit outfit, {
+    required String name,
+    required List<String> garmentIds,
+  }) async {
     await _client
         .from('outfits')
         .update(<String, dynamic>{
-      'name': name,
-      'garment_ids': garmentIds,
-      'cover_photo_url': outfit.coverPhotoUrl,
-    })
+          'name': name,
+          'garment_ids': garmentIds,
+          'cover_photo_url': outfit.coverPhotoUrl,
+        })
         .eq('id', outfit.id)
         .eq('member_id', outfit.memberId);
   }
@@ -90,24 +84,22 @@ class OutfitRepository {
   Future<void> incrementWearCount(Outfit outfit) async {
     await _client
         .from('outfits')
-        .update(<String, int>{
-      'times_worn': outfit.timesWorn + 1,
-    })
+        .update(<String, int>{'times_worn': outfit.timesWorn + 1})
         .eq('id', outfit.id)
         .eq('member_id', outfit.memberId);
   }
 
   Future<List<Outfit>> _withLastWorn(
-      List<dynamic> rows, {
-        required String memberId,
-      }) async {
+    List<dynamic> rows, {
+    required String memberId,
+  }) async {
     if (rows.isEmpty) return const <Outfit>[];
 
     final List<Outfit> outfits = rows
         .map(
           (dynamic row) =>
-          Outfit.fromJson(Map<String, dynamic>.from(row as Map)),
-    )
+              Outfit.fromJson(Map<String, dynamic>.from(row as Map)),
+        )
         .toList();
 
     final List<dynamic> wearRows = await _client
@@ -115,31 +107,27 @@ class OutfitRepository {
         .select('outfit_id,worn_date')
         .eq('member_id', memberId)
         .inFilter(
-      'outfit_id',
-      outfits.map((Outfit outfit) => outfit.id).toList(),
-    )
+          'outfit_id',
+          outfits.map((Outfit outfit) => outfit.id).toList(),
+        )
         .order('worn_date', ascending: false);
 
     final Map<String, DateTime> lastWorn = <String, DateTime>{};
 
     for (final dynamic row in wearRows) {
-      final Map<String, dynamic> value =
-      Map<String, dynamic>.from(row as Map);
+      final Map<String, dynamic> value = Map<String, dynamic>.from(row as Map);
 
       final String? outfitId = value['outfit_id'] as String?;
 
       if (outfitId != null && !lastWorn.containsKey(outfitId)) {
-        lastWorn[outfitId] =
-            DateTime.parse(value['worn_date'] as String);
+        lastWorn[outfitId] = DateTime.parse(value['worn_date'] as String);
       }
     }
 
     return outfits
         .map(
-          (Outfit outfit) => outfit.copyWith(
-        lastWornDate: lastWorn[outfit.id],
-      ),
-    )
+          (Outfit outfit) => outfit.copyWith(lastWornDate: lastWorn[outfit.id]),
+        )
         .toList();
   }
 }

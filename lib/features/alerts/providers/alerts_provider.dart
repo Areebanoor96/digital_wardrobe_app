@@ -6,35 +6,28 @@ import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/repositories/alerts_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final FutureProvider<List<Alert>> alertsProvider =
-FutureProvider<List<Alert>>((Ref ref) async {
-  final FamilyMember? selectedMember = ref.watch(
-    selectedFamilyMemberProvider,
-  );
+final FutureProvider<List<Alert>> alertsProvider = FutureProvider<List<Alert>>((
+  Ref ref,
+) async {
+  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
 
   if (selectedMember == null) {
     return const <Alert>[];
   }
 
-  final AlertsRepository repository = ref.watch(
-    alertsRepositoryProvider,
-  );
+  final AlertsRepository repository = ref.watch(alertsRepositoryProvider);
 
-  await repository.generateAndInsertAlerts(
-    memberId: selectedMember.id,
-  );
+  await repository.generateAndInsertAlerts(memberId: selectedMember.id);
 
   ref.keepAlive();
 
-  return repository.fetchAlerts(
-    memberId: selectedMember.id,
-  );
+  return repository.fetchAlerts(memberId: selectedMember.id);
 });
 
 final alertMutationControllerProvider =
-AutoDisposeAsyncNotifierProvider<AlertMutationController, void>(
-  AlertMutationController.new,
-);
+    AutoDisposeAsyncNotifierProvider<AlertMutationController, void>(
+      AlertMutationController.new,
+    );
 
 class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
   @override
@@ -44,7 +37,7 @@ class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref.read(alertsRepositoryProvider).markAsRead(alertId),
+      () => ref.read(alertsRepositoryProvider).markAsRead(alertId),
     );
 
     if (!state.hasError) {
@@ -56,7 +49,7 @@ class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref.read(alertsRepositoryProvider).dismissAlert(alertId),
+      () => ref.read(alertsRepositoryProvider).dismissAlert(alertId),
     );
 
     if (!state.hasError) {
@@ -65,9 +58,7 @@ class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
   }
 
   Future<void> regenerateAlerts() async {
-    final FamilyMember? selectedMember = ref.read(
-      selectedFamilyMemberProvider,
-    );
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
       state = AsyncError<void>(
@@ -80,11 +71,9 @@ class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(
-          () => ref
+      () => ref
           .read(alertsRepositoryProvider)
-          .generateAndInsertAlerts(
-        memberId: selectedMember.id,
-      ),
+          .generateAndInsertAlerts(memberId: selectedMember.id),
     );
 
     if (!state.hasError) {

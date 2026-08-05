@@ -25,8 +25,7 @@ class WearLog {
   final LaundryStatus? laundryStatusAfter;
 
   factory WearLog.fromJson(Map<String, dynamic> json) {
-    final String? laundryStatusValue =
-    json['laundry_status_after'] as String?;
+    final String? laundryStatusValue = json['laundry_status_after'] as String?;
 
     return WearLog(
       id: json['id'] as String,

@@ -14,8 +14,7 @@ class FamilyMemberAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasAvatar =
-        avatarUrl != null && avatarUrl!.trim().isNotEmpty;
+    final bool hasAvatar = avatarUrl != null && avatarUrl!.trim().isNotEmpty;
 
     final String fallbackLetter = name.trim().isNotEmpty
         ? name.trim().characters.first.toUpperCase()
@@ -29,21 +28,18 @@ class FamilyMemberAvatar extends StatelessWidget {
           height: radius * 2,
           child: hasAvatar
               ? Image.network(
-            avatarUrl!,
-            fit: BoxFit.contain,
-            errorBuilder: (
-                BuildContext context,
-                Object error,
-                StackTrace? stackTrace,
-                ) {
-              return Center(
-                child: Text(fallbackLetter),
-              );
-            },
-          )
-              : Center(
-            child: Text(fallbackLetter),
-          ),
+                  avatarUrl!,
+                  fit: BoxFit.contain,
+                  errorBuilder:
+                      (
+                        BuildContext context,
+                        Object error,
+                        StackTrace? stackTrace,
+                      ) {
+                        return Center(child: Text(fallbackLetter));
+                      },
+                )
+              : Center(child: Text(fallbackLetter)),
         ),
       ),
     );
