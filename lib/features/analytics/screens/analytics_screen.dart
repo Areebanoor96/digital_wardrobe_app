@@ -51,7 +51,7 @@ class AnalyticsScreen extends ConsumerWidget {
                       value: '${data.activeGarments}',
                     ),
                     StatCard(
-                      label: 'Archived garments',
+                      label: 'In Closet Vault',
                       value: '${data.archivedGarments}',
                     ),
                     StatCard(label: 'Total wears', value: '${data.totalWears}'),

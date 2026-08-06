@@ -270,7 +270,7 @@ class _DayWearTile extends StatelessWidget {
         child: GarmentImage(imageUrl: garment?.coverImageUrl),
       ),
     ),
-    title: Text(garment?.name ?? 'Archived garment'),
+    title: Text(garment?.name ?? 'In Closet Vault'),
     subtitle: Text(
       outfit == null
           ? 'Worn ${_formatShortDate(wornDate)}'

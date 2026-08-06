@@ -37,9 +37,35 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     text: widget.garment?.colorName,
   );
 
-  late final TextEditingController _size = TextEditingController(
-    text: widget.garment?.size,
-  );
+  static const List<String> _sizeOptions = <String>[
+    'XS',
+    'S',
+    'M',
+    'L',
+    'XL',
+    'XXL',
+    '3XL',
+    'Free Size',
+    'One Size',
+  ];
+
+  late String? _selectedSize = widget.garment?.size?.trim().isEmpty == true
+      ? null
+      : widget.garment?.size?.trim();
+
+  late final List<String> _sizeDropdownItems = _buildSizeDropdownItems();
+
+  List<String> _buildSizeDropdownItems() {
+    final String? savedSize = widget.garment?.size?.trim();
+
+    if (savedSize == null || savedSize.isEmpty) {
+      return _sizeOptions;
+    }
+
+    return _sizeOptions.contains(savedSize)
+        ? _sizeOptions
+        : <String>[..._sizeOptions, savedSize];
+  }
 
   late final TextEditingController _price = TextEditingController(
     text: widget.garment?.price?.toString(),
@@ -69,6 +95,12 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
   final List<XFile> _newImages = <XFile>[];
   final List<String> _removedPhotoPaths = <String>[];
+
+  late String? _selectedExistingCoverPath = _existingPhotoPaths.isEmpty
+      ? null
+      : _existingPhotoPaths.first;
+
+  String? _selectedNewCoverPath;
 
   bool _saving = false;
   static const List<String> _occasionOptions = <String>[
@@ -120,7 +152,6 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     _brand.dispose();
     _purchaseStore.dispose();
     _color.dispose();
-    _size.dispose();
     _price.dispose();
     _purchaseDateController.dispose();
     super.dispose();
@@ -132,9 +163,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
     if (remainingSlots <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You can add up to 3 photos.'),
-        ),
+        const SnackBar(content: Text('You can add up to 3 photos.')),
       );
       return;
     }
@@ -170,9 +199,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     }
 
     if (source == ImageSource.camera) {
-      final XFile? image = await ref
-          .read(imageServiceProvider)
-          .takePhoto();
+      final XFile? image = await ref.read(imageServiceProvider).takePhoto();
 
       if (image == null || !mounted) {
         return;
@@ -180,6 +207,11 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
       setState(() {
         _newImages.add(image);
+
+        if (_selectedExistingCoverPath == null &&
+            _selectedNewCoverPath == null) {
+          _selectedNewCoverPath = image.path;
+        }
       });
 
       return;
@@ -187,25 +219,33 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
     final List<XFile> selectedImages = await ref
         .read(imageServiceProvider)
-        .pickMultipleFromGallery();
+        .pickMultipleFromGallery(limit: remainingSlots);
 
     if (!mounted || selectedImages.isEmpty) {
       return;
     }
 
-    setState(() {
-      _newImages.addAll(
-        selectedImages.take(remainingSlots),
-      );
-    });
-
-    if (selectedImages.length > remainingSlots && mounted) {
+    if (selectedImages.length > remainingSlots) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Only the first available photos were added.'),
+        SnackBar(
+          content: Text(
+            'You can only add $remainingSlots more '
+            '${remainingSlots == 1 ? 'photo' : 'photos'}.',
+          ),
         ),
       );
+      return;
     }
+
+    setState(() {
+      _newImages.addAll(selectedImages);
+
+      if (_selectedExistingCoverPath == null &&
+          _selectedNewCoverPath == null &&
+          _newImages.isNotEmpty) {
+        _selectedNewCoverPath = _newImages.first.path;
+      }
+    });
   }
   void _removeExistingPhoto(int index) {
     setState(() {
@@ -216,12 +256,51 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       }
 
       _removedPhotoPaths.add(removedPath);
+
+      if (_selectedExistingCoverPath == removedPath) {
+        _selectFirstAvailableCover();
+      }
     });
   }
 
   void _removeNewPhoto(int index) {
     setState(() {
-      _newImages.removeAt(index);
+      final XFile removedImage = _newImages.removeAt(index);
+
+      if (_selectedNewCoverPath == removedImage.path) {
+        _selectFirstAvailableCover();
+      }
+    });
+  }
+
+  void _selectFirstAvailableCover() {
+    if (_existingPhotoPaths.isNotEmpty) {
+      _selectedExistingCoverPath = _existingPhotoPaths.first;
+      _selectedNewCoverPath = null;
+      return;
+    }
+
+    if (_newImages.isNotEmpty) {
+      _selectedExistingCoverPath = null;
+      _selectedNewCoverPath = _newImages.first.path;
+      return;
+    }
+
+    _selectedExistingCoverPath = null;
+    _selectedNewCoverPath = null;
+  }
+
+  void _setExistingPhotoAsCover(String path) {
+    setState(() {
+      _selectedExistingCoverPath = path;
+      _selectedNewCoverPath = null;
+    });
+  }
+
+  void _setNewPhotoAsCover(XFile image) {
+    setState(() {
+      _selectedNewCoverPath = image.path;
+      _selectedExistingCoverPath = null;
     });
   }
 
@@ -293,25 +372,34 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     try {
       final String id = widget.garment?.id ?? const Uuid().v4();
 
-      final List<String> photoPaths =
-      List<String>.from(_existingPhotoPaths);
+      final List<String> photoPaths = List<String>.from(_existingPhotoPaths);
+
+      String? uploadedNewCoverPath;
 
       for (int index = 0; index < _newImages.length; index++) {
+        final XFile image = _newImages[index];
+
         final Uint8List bytes = await ref
             .read(imageServiceProvider)
-            .readBytes(_newImages[index]);
+            .readAndCompressBytes(image);
 
         final String uploadedPath = await ref
             .read(garmentRepositoryProvider)
-            .uploadImage(
-          garmentId: id,
-          bytes: bytes,
-          imageIndex: index,
-        );
+            .uploadImage(garmentId: id, bytes: bytes, imageIndex: index);
 
         photoPaths.add(uploadedPath);
+
+        if (_selectedNewCoverPath == image.path) {
+          uploadedNewCoverPath = uploadedPath;
+        }
       }
 
+      final String? selectedCoverPath =
+          uploadedNewCoverPath ?? _selectedExistingCoverPath;
+
+      if (selectedCoverPath != null && photoPaths.remove(selectedCoverPath)) {
+        photoPaths.insert(0, selectedCoverPath);
+      }
       final Garment garment = Garment(
         id: id,
         name: _name.text.trim(),
@@ -324,7 +412,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         purchaseStore: _optional(_purchaseStore.text),
         colorName: _optional(_color.text),
         colorHex: widget.garment?.colorHex,
-        size: _optional(_size.text),
+        size: _selectedSize,
         price: double.tryParse(_price.text.trim()),
         currency: widget.garment?.currency ?? 'PKR',
         occasions: _selectedOccasions.toList(),
@@ -410,12 +498,21 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: <Widget>[
-                  for (int index = 0;
-                  index < _existingPhotoUrls.length;
-                  index++)
+                  for (
+                    int index = 0;
+                    index < _existingPhotoUrls.length;
+                    index++
+                  )
                     _GarmentPhotoPreview(
                       imageUrl: _existingPhotoUrls[index],
-                      isCover: index == 0,
+                      isCover:
+                          _selectedExistingCoverPath ==
+                          _existingPhotoPaths[index],
+                      onSetCover: _saving
+                          ? null
+                          : () => _setExistingPhotoAsCover(
+                              _existingPhotoPaths[index],
+                            ),
                       onRemove: _saving
                           ? null
                           : () => _removeExistingPhoto(index),
@@ -424,23 +521,19 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                   for (int index = 0; index < _newImages.length; index++)
                     _GarmentPhotoPreview(
                       imageFile: File(_newImages[index].path),
-                      isCover:
-                      _existingPhotoUrls.isEmpty && index == 0,
-                      onRemove: _saving
+                      isCover: _selectedNewCoverPath == _newImages[index].path,
+                      onSetCover: _saving
                           ? null
-                          : () => _removeNewPhoto(index),
+                          : () => _setNewPhotoAsCover(_newImages[index]),
+                      onRemove: _saving ? null : () => _removeNewPhoto(index),
                     ),
 
                   if (_existingPhotoPaths.length + _newImages.length <
                       _maximumPhotos)
-                    _AddPhotoTile(
-                      onTap: _saving ? null : _chooseImages,
-                    ),
+                    _AddPhotoTile(onTap: _saving ? null : _chooseImages),
                 ],
               ),
             ),
-
-
 
             const SizedBox(height: 12),
             TextFormField(
@@ -494,9 +587,28 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               decoration: const InputDecoration(labelText: 'Color'),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _size,
-              decoration: const InputDecoration(labelText: 'Size'),
+            DropdownButtonFormField<String>(
+              initialValue: _selectedSize,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Size',
+                hintText: 'Select a size (optional)',
+              ),
+              items: _sizeDropdownItems
+                  .map(
+                    (String size) => DropdownMenuItem<String>(
+                      value: size,
+                      child: Text(size),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (String? value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedSize = value;
+                  });
+                }
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -659,12 +771,14 @@ class _GarmentPhotoPreview extends StatelessWidget {
     this.imageUrl,
     this.imageFile,
     required this.isCover,
+    required this.onSetCover,
     required this.onRemove,
   });
 
   final String? imageUrl;
   final File? imageFile;
   final bool isCover;
+  final VoidCallback? onSetCover;
   final VoidCallback? onRemove;
 
   @override
@@ -676,22 +790,23 @@ class _GarmentPhotoPreview extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            ClipRRect(
+            InkWell(
+              onTap: isCover ? null : onSetCover,
               borderRadius: BorderRadius.circular(16),
-              child: imageFile != null
-                  ? Image.file(
-                imageFile!,
-                fit: BoxFit.cover,
-              )
-                  : Image.network(
-                imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) {
-                  return const ColoredBox(
-                    color: Colors.black12,
-                    child: Icon(Icons.broken_image_outlined),
-                  );
-                },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: imageFile != null
+                    ? Image.file(imageFile!, fit: BoxFit.cover)
+                    : Image.network(
+                        imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) {
+                          return const ColoredBox(
+                            color: Colors.black12,
+                            child: Icon(Icons.broken_image_outlined),
+                          );
+                        },
+                      ),
               ),
             ),
             if (isCover)
@@ -700,17 +815,13 @@ class _GarmentPhotoPreview extends StatelessWidget {
                 bottom: 8,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: .9),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: .9),
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: Text('Cover'),
                   ),
                 ),
@@ -732,9 +843,7 @@ class _GarmentPhotoPreview extends StatelessWidget {
 }
 
 class _AddPhotoTile extends StatelessWidget {
-  const _AddPhotoTile({
-    required this.onTap,
-  });
+  const _AddPhotoTile({required this.onTap});
 
   final VoidCallback? onTap;
 

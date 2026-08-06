@@ -107,22 +107,22 @@ class GarmentRepository {
     final String userId = _client.auth.currentUser!.id;
     final int timestamp = DateTime.now().microsecondsSinceEpoch;
 
-    final String path =
-        '$userId/$garmentId/photo_${timestamp}_$imageIndex.jpg';
+    final String path = '$userId/$garmentId/photo_${timestamp}_$imageIndex.jpg';
 
     await _client.storage
         .from(_bucket)
         .uploadBinary(
-      path,
-      bytes,
-      fileOptions: const FileOptions(
-        contentType: 'image/jpeg',
-        upsert: false,
-      ),
-    );
+          path,
+          bytes,
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: false,
+          ),
+        );
 
     return path;
   }
+
   Future<void> deleteImages(List<String> paths) async {
     if (paths.isEmpty) {
       return;
@@ -130,6 +130,7 @@ class GarmentRepository {
 
     await _client.storage.from(_bucket).remove(paths);
   }
+
   Future<void> archiveGarment({
     required String garmentId,
     required String memberId,

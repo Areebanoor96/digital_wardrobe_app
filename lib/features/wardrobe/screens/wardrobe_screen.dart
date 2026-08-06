@@ -54,7 +54,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
           IconButton(
             onPressed: () => context.push('/garments/archived'),
             icon: const Icon(Icons.archive_outlined),
-            tooltip: 'Archived garments',
+            tooltip: 'Closet Vault',
           ),
         ],
       ),

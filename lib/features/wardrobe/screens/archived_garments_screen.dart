@@ -20,11 +20,11 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Archived Garments')),
+      appBar: AppBar(title: const Text('Closet Vault')),
       body: archived.when(
         loading: () => const GarmentGridShimmer(),
         error: (_, _) => WardrobeEmptyState(
-          title: 'Could not load archived garments',
+          title: 'Could not load Closet Vault',
           message: 'Check your connection and try again.',
           actionLabel: 'Retry',
           onAction: () => ref.invalidate(archivedGarmentsProvider),
@@ -32,9 +32,10 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
         data: (List<Garment> garments) {
           if (garments.isEmpty) {
             return const WardrobeEmptyState(
-              title: 'No archived garments',
+              title: 'Closet Vault is empty',
               message:
-                  'Garments that you archive will appear here and can be restored later.',
+                  'Garments that you move to Closet Vault will appear here '
+                  'and can be restored to your wardrobe later.',
             );
           }
 
@@ -59,7 +60,7 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
                   garment: garment,
                   showArchivedBadge: true,
                   actionIcon: Icons.unarchive_outlined,
-                  actionTooltip: 'Restore garment',
+                  actionTooltip: 'Restore to Wardrobe',
                   onAction: mutationState.isLoading
                       ? null
                       : () => _restoreGarment(context, ref, garment),

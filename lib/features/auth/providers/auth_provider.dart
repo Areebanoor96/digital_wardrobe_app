@@ -24,21 +24,27 @@ class AuthController {
     return SupabaseService.client.auth.signUp(
       email: email,
       password: password,
-      data: <String, dynamic>{'full_name': name},
+      emailRedirectTo:
+      'com.example.digital_wardrobe_app://login-callback/',
+      data: <String, dynamic>{
+        'full_name': name,
+      },
     );
   }
 
   Future<void> signInWithProvider(OAuthProvider provider) {
     return SupabaseService.client.auth.signInWithOAuth(
       provider,
-      redirectTo: 'io.supabase.digitalwardrobe://login-callback/',
+      redirectTo:
+      'com.example.digital_wardrobe_app://login-callback/',
     );
   }
 
   Future<void> sendPasswordReset(String email) {
     return SupabaseService.client.auth.resetPasswordForEmail(
       email,
-      redirectTo: 'io.supabase.digitalwardrobe://login-callback/',
+      redirectTo:
+      'com.example.digital_wardrobe_app://login-callback/',
     );
   }
 }

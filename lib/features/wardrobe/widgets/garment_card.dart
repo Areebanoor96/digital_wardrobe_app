@@ -54,7 +54,7 @@ class GarmentCard extends StatelessWidget {
                           horizontal: 8,
                           vertical: 4,
                         ),
-                        child: Text('Archived'),
+                        child: Text('In Closet Vault'),
                       ),
                     ),
                   ),

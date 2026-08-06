@@ -2,6 +2,7 @@ import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_photo_carousel.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_status_widgets.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wear_history_list.dart';
 import 'package:flutter/material.dart';
@@ -43,22 +44,20 @@ class GarmentDetailScreen extends ConsumerWidget {
                   IconButton(
                     onPressed: () => _archive(context, ref, garment),
                     icon: const Icon(Icons.archive_outlined),
-                    tooltip: 'Archive garment',
+                    tooltip: 'Move to Closet Vault',
+                  )
+                else
+                  IconButton(
+                    onPressed: () => _restore(context, ref, garment),
+                    icon: const Icon(Icons.unarchive_outlined),
+                    tooltip: 'Return to Wardrobe',
                   ),
-                IconButton(
-                  onPressed: () => _archive(context, ref, garment),
-                  icon: const Icon(Icons.archive_outlined),
-                  tooltip: 'Archive garment',
-                ),
               ],
             ),
             body: ListView(
               padding: const EdgeInsets.only(bottom: 32),
               children: <Widget>[
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: GarmentImage(imageUrl: garment.coverImageUrl),
-                ),
+                GarmentPhotoCarousel(photoUrls: garment.photoUrls),
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -86,38 +85,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 20),
                       if (garment.isArchived)
                         FilledButton.icon(
-                          onPressed: () async {
-                            await ref
-                                .read(garmentArchiveControllerProvider.notifier)
-                                .restore(garmentId: garment.id);
-
-                            if (!context.mounted) {
-                              return;
-                            }
-
-                            final AsyncValue<void> state = ref.read(
-                              garmentArchiveControllerProvider,
-                            );
-
-                            if (state.hasError) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Could not restore this garment.',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            context.pop();
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Garment restored to wardrobe.'),
-                              ),
-                            );
-                          },
+                          onPressed: () => _restore(context, ref, garment),
                           icon: const Icon(Icons.unarchive_outlined),
                           label: const Text('Restore to wardrobe'),
                         )
@@ -267,10 +235,10 @@ class GarmentDetailScreen extends ConsumerWidget {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Archive this garment?'),
+        title: const Text('Move to Closet Vault?'),
         content: const Text(
           'It will be removed from your wardrobe but kept safely '
-          'in your account.',
+          'in your Closet Vault.',
         ),
         actions: <Widget>[
           TextButton(
@@ -279,7 +247,7 @@ class GarmentDetailScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Archive'),
+            child: const Text('Move to Closet Vault'),
           ),
         ],
       ),
@@ -324,17 +292,48 @@ class GarmentDetailScreen extends ConsumerWidget {
       if (context.mounted) {
         context.pop();
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Garment archived.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Garment moved to Closet Vault.')),
+        );
       }
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not archive this garment.')),
+          const SnackBar(
+            content: Text('Could not move this garment to Closet Vault.'),
+          ),
         );
       }
     }
+  }
+
+  Future<void> _restore(
+    BuildContext context,
+    WidgetRef ref,
+    Garment garment,
+  ) async {
+    await ref
+        .read(garmentArchiveControllerProvider.notifier)
+        .restore(garmentId: garment.id);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final AsyncValue<void> state = ref.read(garmentArchiveControllerProvider);
+
+    if (state.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not restore this garment.')),
+      );
+      return;
+    }
+
+    context.pop();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Garment restored to wardrobe.')),
+    );
   }
 
   String _formatDate(DateTime date) {
