@@ -45,3 +45,32 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ============================================
+# Environment variables / Secrets
+# ============================================
+.env
+.env.*
+!.env.example
+
+# Private keys / certificates
+*.pem
+*.key
+*.p12
+*.jks
+
+# ============================================
+# Supabase local temporary files
+# ============================================
+supabase/.temp/
+
+# ============================================
+# Local machine files
+# ============================================
+Thumbs.db
+
+# ============================================
+# Optional VS Code local configuration
+# ============================================
+.vscode/
+
