@@ -15,8 +15,6 @@ Future<void> main() async {
       publishableKey: SupabaseConfig.anonKey,
     );
   }
-  void main() async {
-    WidgetsFlutterBinding.ensureInitialized();
 
     final ImagePickerPlatform pickerImplementation =
         ImagePickerPlatform.instance;
@@ -24,6 +22,7 @@ Future<void> main() async {
     if (pickerImplementation is ImagePickerAndroid) {
       pickerImplementation.useAndroidPhotoPicker = true;
     }
-  }
+
   runApp(const ProviderScope(child: DigitalWardrobeApp()));
 }
+
