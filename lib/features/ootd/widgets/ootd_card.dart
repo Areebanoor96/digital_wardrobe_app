@@ -9,12 +9,13 @@ class OotdCard extends StatelessWidget {
     super.key,
     required this.recommendation,
     required this.onRefresh,
+    required this.outfitContext,
+    required this.onContextChanged,
     this.onSave,
     this.onWear,
     this.isSaving = false,
     this.isWearing = false,
   });
-
 
   final OutfitRecommendation recommendation;
   final VoidCallback onRefresh;
@@ -22,8 +23,8 @@ class OotdCard extends StatelessWidget {
   final VoidCallback? onWear;
   final bool isSaving;
   final bool isWearing;
-
-
+  final OutfitContext outfitContext;
+  final ValueChanged<OutfitContext> onContextChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +84,12 @@ class OotdCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
+                IconButton(
+                  onPressed: () => _showPersonalizeSheet(context),
+                  icon: const Icon(Icons.tune),
+                  tooltip: 'Personalize outfit',
+                  visualDensity: VisualDensity.compact,
+                ),
                 IconButton(
                   onPressed: onRefresh,
                   icon: const Icon(Icons.refresh),
@@ -237,5 +244,197 @@ class OotdCard extends StatelessWidget {
         ),
       ),
     );
+  }
+  Future<void> _showPersonalizeSheet(BuildContext context) async {
+    String? selectedOccasion = outfitContext.occasion;
+    String? selectedSeason = outfitContext.season;
+    String? selectedMood = outfitContext.mood;
+
+    final OutfitContext? updatedContext =
+    await showModalBottomSheet<OutfitContext>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (BuildContext sheetContext) {
+        return StatefulBuilder(
+          builder: (
+              BuildContext context,
+              StateSetter setModalState,
+              ) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  8,
+                  20,
+                  20 + MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Personalize today\'s outfit',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Choose an occasion, season and mood.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 20),
+
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedOccasion,
+                      decoration: const InputDecoration(
+                        labelText: 'Occasion',
+                      ),
+                      items: const <String>[
+                        'casual',
+                        'work',
+                        'formal',
+                        'party',
+                        'wedding',
+                        'college',
+                        'sport',
+                        'travel',
+                        'home',
+                        'sleep',
+                        'ethnic',
+                      ]
+                          .map(
+                            (String value) =>
+                            DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value[0].toUpperCase() +
+                                    value.substring(1),
+                              ),
+                            ),
+                      )
+                          .toList(),
+                      onChanged: (String? value) {
+                        setModalState(() {
+                          selectedOccasion = value;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedSeason,
+                      decoration: const InputDecoration(
+                        labelText: 'Season',
+                      ),
+                      items: const <String>[
+                        'summer',
+                        'winter',
+                        'spring',
+                        'autumn',
+                        'rainy',
+                        'all_season',
+                      ]
+                          .map(
+                            (String value) =>
+                            DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value
+                                    .replaceAll('_', ' ')
+                                    .split(' ')
+                                    .map(
+                                      (String word) =>
+                                  word[0].toUpperCase() +
+                                      word.substring(1),
+                                )
+                                    .join(' '),
+                              ),
+                            ),
+                      )
+                          .toList(),
+                      onChanged: (String? value) {
+                        setModalState(() {
+                          selectedSeason = value;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedMood,
+                      decoration: const InputDecoration(
+                        labelText: 'Mood',
+                      ),
+                      items: const <String>[
+                        'relaxed',
+                        'professional',
+                        'cozy',
+                        'elegant',
+                        'sporty',
+                        'minimal',
+                        'bold',
+                        'party',
+                      ]
+                          .map(
+                            (String value) =>
+                            DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(
+                                value[0].toUpperCase() +
+                                    value.substring(1),
+                              ),
+                            ),
+                      )
+                          .toList(),
+                      onChanged: (String? value) {
+                        setModalState(() {
+                          selectedMood = value;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(
+                              sheetContext,
+                              const OutfitContext(),
+                            );
+                          },
+                          child: const Text('Clear'),
+                        ),
+                        const Spacer(),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.pop(
+                              sheetContext,
+                              OutfitContext(
+                                occasion: selectedOccasion,
+                                season: selectedSeason,
+                                mood: selectedMood,
+                              ),
+                            );
+                          },
+                          child: const Text('Apply'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (updatedContext != null) {
+      onContextChanged(updatedContext);
+    }
   }
 }

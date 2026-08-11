@@ -3,6 +3,7 @@ import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/features/ootd/providers/ootd_provider.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
+import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:digital_wardrobe_app/features/ootd/widgets/ootd_card.dart';
 import 'package:digital_wardrobe_app/features/outfits/widgets/outfit_card.dart';
 import 'package:flutter/material.dart';
@@ -62,6 +63,10 @@ class OutfitsScreen extends ConsumerWidget {
                     child: OotdCard(
                       recommendation: rec,
                       onRefresh: () => ref.invalidate(ootdProvider),
+                      outfitContext: ref.watch(ootdContextProvider),
+                      onContextChanged: (OutfitContext value) {
+                        ref.read(ootdContextProvider.notifier).state = value;
+                      },
                       onSave: actionState.isLoading
                           ? null
                           : () => ref

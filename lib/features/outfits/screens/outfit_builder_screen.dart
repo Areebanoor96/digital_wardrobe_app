@@ -179,8 +179,9 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) =>
             const Center(child: Text('Could not load your wardrobe.')),
-        data: (List<Garment> items) => Column(
-          children: <Widget>[
+        data: (List<Garment> items) => SingleChildScrollView(
+          child: Column(
+            children: <Widget>[
             Padding(
               padding: const EdgeInsets.all(20),
               child: TextField(
@@ -621,9 +622,10 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
               ),
             ],
             const SizedBox(height: 8),
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 itemCount: items.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
@@ -659,7 +661,6 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                   );
                 },
               ),
-            ),
             Padding(
               padding: const EdgeInsets.all(20),
               child: ElevatedButton(
@@ -669,6 +670,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

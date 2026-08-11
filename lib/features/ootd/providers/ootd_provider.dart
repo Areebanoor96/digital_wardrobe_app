@@ -4,21 +4,34 @@ import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
+import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final StateProvider<OutfitContext> ootdContextProvider =
+StateProvider<OutfitContext>(
+      (Ref ref) => const OutfitContext(),
+);
 
 final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
   final List<Garment> garments =
       ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
+
   final List<WearLog> recentLogs =
-      ref.watch(recentWearActivityProvider).valueOrNull ?? const <WearLog>[];
+      ref.watch(recentWearActivityProvider).valueOrNull ??
+          const <WearLog>[];
+
+  final OutfitContext context = ref.watch(
+    ootdContextProvider,
+  );
 
   final Set<String> recentlyWornIds = recentLogs
       .map((WearLog log) => log.garmentId)
       .toSet();
 
-  return OutfitRecommendationService().recommend(
+  return const OutfitRecommendationService().recommend(
     allGarments: garments,
     recentlyWornGarmentIds: recentlyWornIds,
+    context: context,
   );
 });
 

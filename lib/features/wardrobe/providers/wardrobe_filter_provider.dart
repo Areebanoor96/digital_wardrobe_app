@@ -185,8 +185,12 @@ void _sortGarments(List<Garment> garments, WardrobeSortOption option) {
 
     case WardrobeSortOption.recentlyWorn:
       garments.sort(
-        (Garment a, Garment b) =>
-            _compareNullableDates(b.lastWornDate, a.lastWornDate),
+        (Garment a, Garment b) {
+          if (a.lastWornDate == null && b.lastWornDate == null) return 0;
+          if (a.lastWornDate == null) return -1;
+          if (b.lastWornDate == null) return 1;
+          return b.lastWornDate!.compareTo(a.lastWornDate!);
+        },
       );
 
     case WardrobeSortOption.leastRecentlyWorn:
@@ -208,8 +212,12 @@ void _sortGarments(List<Garment> garments, WardrobeSortOption option) {
 
     case WardrobeSortOption.purchaseNewest:
       garments.sort(
-        (Garment a, Garment b) =>
-            _compareNullableDates(b.purchaseDate, a.purchaseDate),
+        (Garment a, Garment b) {
+          if (a.purchaseDate == null && b.purchaseDate == null) return 0;
+          if (a.purchaseDate == null) return -1;
+          if (b.purchaseDate == null) return 1;
+          return b.purchaseDate!.compareTo(a.purchaseDate!);
+        },
       );
 
     case WardrobeSortOption.purchaseOldest:
