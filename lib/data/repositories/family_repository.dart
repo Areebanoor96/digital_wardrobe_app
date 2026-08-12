@@ -1,6 +1,4 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -55,6 +53,7 @@ class FamilyRepository {
     double? heightCm,
     double? weightKg,
     String? currentSize,
+    String? shoeSize,
   }) async {
     final String userId = _client.auth.currentUser!.id;
 
@@ -69,6 +68,7 @@ class FamilyRepository {
                 'height_cm': heightCm,
                 'weight_kg': weightKg,
                 'current_size': currentSize,
+                'shoe_size': shoeSize,
               })
               .select()
               .single()

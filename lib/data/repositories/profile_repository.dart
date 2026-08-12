@@ -19,4 +19,18 @@ class ProfileRepository {
       .from('profiles')
       .update(<String, String>{'full_name': name})
       .eq('id', _client.auth.currentUser!.id);
+  Future<void> updateAlertPreferences({
+    required bool unusedAlertsEnabled,
+    required bool laundryAlertsEnabled,
+    required bool ootdAlertsEnabled,
+  }) {
+    return _client
+        .from('profiles')
+        .update(<String, bool>{
+      'unused_alerts_enabled': unusedAlertsEnabled,
+      'laundry_alerts_enabled': laundryAlertsEnabled,
+      'ootd_alerts_enabled': ootdAlertsEnabled,
+    })
+        .eq('id', _client.auth.currentUser!.id);
+  }
 }

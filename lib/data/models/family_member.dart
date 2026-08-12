@@ -31,6 +31,9 @@ class FamilyMember {
     required this.relationship,
     this.birthDate,
     this.currentSize,
+    this.heightCm,
+    this.weightKg,
+    this.shoeSize,
     this.avatarPath,
     this.avatarUrl,
   });
@@ -40,6 +43,9 @@ class FamilyMember {
   final RelationshipType relationship;
   final DateTime? birthDate;
   final String? currentSize;
+  final double? heightCm;
+  final double? weightKg;
+  final String? shoeSize;
   final String? avatarPath;
   final String? avatarUrl;
 

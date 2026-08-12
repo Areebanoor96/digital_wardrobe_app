@@ -2,6 +2,7 @@ import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:digital_wardrobe_app/features/profile/Family/screens/family_member_detail_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/widgets/add_family_member_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,9 +47,13 @@ class FamilyScreen extends ConsumerWidget {
                 member: member,
 
                 onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AddFamilyMemberDialog(member: member),
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) =>
+                          FamilyMemberDetailScreen(
+                            member: member,
+                          ),
+                    ),
                   );
                 },
 

@@ -5,6 +5,7 @@ import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
@@ -16,6 +17,7 @@ import 'package:digital_wardrobe_app/data/repositories/garment_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/outfit_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/wear_log_repository.dart';
+import 'package:digital_wardrobe_app/data/repositories/growth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -56,6 +58,24 @@ final Provider<WearLogRepository> wearLogRepositoryProvider =
     Provider<WearLogRepository>(
       (Ref ref) => WearLogRepository(SupabaseService.client),
     );
+final Provider<GrowthRepository> growthRepositoryProvider =
+    Provider<GrowthRepository>(
+      (Ref ref) => GrowthRepository(SupabaseService.client),
+    );
+final FutureProviderFamily<FamilyMember?, String> familyMemberProvider =
+    FutureProvider.family<FamilyMember?, String>((Ref ref, String memberId) {
+      return ref.watch(familyRepositoryProvider).getFamilyMemberById(memberId);
+    });
+final FutureProviderFamily<List<GrowthMeasurement>, String>
+growthMeasurementsProvider =
+    FutureProvider.family<List<GrowthMeasurement>, String>((
+      Ref ref,
+      String memberId,
+    ) {
+      return ref
+          .watch(growthRepositoryProvider)
+          .fetchMeasurements(memberId: memberId);
+    });
 
 final Provider<AlertsRepository> alertsRepositoryProvider =
     Provider<AlertsRepository>(

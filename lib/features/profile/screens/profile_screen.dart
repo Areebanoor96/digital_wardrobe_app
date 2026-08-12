@@ -64,6 +64,67 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const Divider(),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Alert preferences',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+
+            SwitchListTile(
+              secondary: const Icon(Icons.watch_later_outlined),
+              title: const Text('Unused garment alerts'),
+              subtitle: const Text(
+                'Remind me about clothes I have not worn recently.',
+              ),
+              value: user.unusedAlertsEnabled,
+              onChanged: (bool value) async {
+                await _updateAlertPreferences(
+                  ref,
+                  user,
+                  unusedAlertsEnabled: value,
+                );
+              },
+            ),
+
+            SwitchListTile(
+              secondary: const Icon(Icons.local_laundry_service_outlined),
+              title: const Text('Laundry alerts'),
+              subtitle: const Text(
+                'Remind me when garments need washing.',
+              ),
+              value: user.laundryAlertsEnabled,
+              onChanged: (bool value) async {
+                await _updateAlertPreferences(
+                  ref,
+                  user,
+                  laundryAlertsEnabled: value,
+                );
+              },
+            ),
+
+            SwitchListTile(
+              secondary: const Icon(Icons.auto_awesome_outlined),
+              title: const Text('Outfit of the Day'),
+              subtitle: const Text(
+                'Receive Outfit of the Day reminders.',
+              ),
+              value: user.ootdAlertsEnabled,
+              onChanged: (bool value) async {
+                await _updateAlertPreferences(
+                  ref,
+                  user,
+                  ootdAlertsEnabled: value,
+                );
+              },
+            ),
+
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Log out'),
@@ -116,6 +177,24 @@ class ProfileScreen extends ConsumerWidget {
     );
     if (name == null || name.isEmpty) return;
     await ref.read(profileRepositoryProvider).updateName(name);
+    ref.invalidate(profileProvider);
+  }
+  Future<void> _updateAlertPreferences(
+      WidgetRef ref,
+      Profile profile, {
+        bool? unusedAlertsEnabled,
+        bool? laundryAlertsEnabled,
+        bool? ootdAlertsEnabled,
+      }) async {
+    await ref.read(profileRepositoryProvider).updateAlertPreferences(
+      unusedAlertsEnabled:
+      unusedAlertsEnabled ?? profile.unusedAlertsEnabled,
+      laundryAlertsEnabled:
+      laundryAlertsEnabled ?? profile.laundryAlertsEnabled,
+      ootdAlertsEnabled:
+      ootdAlertsEnabled ?? profile.ootdAlertsEnabled,
+    );
+
     ref.invalidate(profileProvider);
   }
 }
