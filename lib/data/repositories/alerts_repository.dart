@@ -1,6 +1,8 @@
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
+import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/features/alerts/services/alert_rule_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -56,8 +58,36 @@ class AlertsRepository {
     required String memberId,
   }) async {
     final String userId = _client.auth.currentUser!.id;
+    final Map<String, dynamic>? memberRow =
+    await _client
+        .from('family_members')
+        .select()
+        .eq('id', memberId)
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    // Used for the once-per-day OOTD rule.
+    final FamilyMember? familyMember =
+    memberRow == null
+        ? null
+        : FamilyMember.fromJson(memberRow);
+
+    final List<dynamic> measurementRows =
+    await _client
+        .from('growth_measurements')
+        .select()
+        .eq('user_id', userId)
+        .eq('member_id', memberId)
+        .order('recorded_at', ascending: false);
+
+    final List<GrowthMeasurement> growthMeasurements =
+    measurementRows
+        .map(
+          (dynamic row) => GrowthMeasurement.fromJson(
+        Map<String, dynamic>.from(row as Map),
+      ),
+    )
+        .toList();
+
     final DateTime now = DateTime.now();
     final DateTime startOfToday = DateTime(
       now.year,
@@ -73,7 +103,8 @@ class AlertsRepository {
         'id, '
             'unused_alerts_enabled, '
             'laundry_alerts_enabled, '
-            'ootd_alerts_enabled',
+            'ootd_alerts_enabled, '
+            'growth_alerts_enabled',
       )
           .eq('id', userId)
           .single()
@@ -82,20 +113,6 @@ class AlertsRepository {
 
     final Profile profile = Profile.fromJson(profileRow);
 
-    // Active alerts are used to prevent duplicate garment alerts.
-    final List<dynamic> existingRows = await _client
-        .from('alerts')
-        .select('type, garment_id')
-        .eq('user_id', userId)
-        .eq('member_id', memberId)
-        .eq('is_dismissed', false);
-
-    final Set<String> existingKeys = existingRows.map((dynamic row) {
-      final Map<String, dynamic> value =
-      Map<String, dynamic>.from(row as Map);
-
-      return '${value['type']}_${value['garment_id']}';
-    }).toSet();
 
     // OOTD has a separate once-per-day duplicate rule.
     // Dismissed OOTD alerts still count for the current day.
@@ -134,11 +151,32 @@ class AlertsRepository {
       memberId: memberId,
       garments: garments,
     );
+    if (familyMember != null) {
+      await _resolveGrowthAlert(
+        userId: userId,
+        member: familyMember,
+        measurements: growthMeasurements,
+        enabled: profile.growthAlertsEnabled,
+      );
+    }
+    // Active alerts are used to prevent duplicate garment alerts.
+    final List<dynamic> existingRows = await _client
+        .from('alerts')
+        .select('type, garment_id')
+        .eq('user_id', userId)
+        .eq('member_id', memberId)
+        .eq('is_dismissed', false);
 
+    final Set<String> existingKeys = existingRows.map((dynamic row) {
+      final Map<String, dynamic> value =
+      Map<String, dynamic>.from(row as Map);
+
+      return '${value['type']}_${value['garment_id']}';
+    }).toSet();
     final List<Map<String, dynamic>> newAlerts =
     <Map<String, dynamic>>[];
 
-    // Generate garment-specific alerts.
+
     for (final Garment garment in garments) {
       newAlerts.addAll(
         ruleService.buildGarmentAlerts(
@@ -163,6 +201,21 @@ class AlertsRepository {
 
     if (ootdAlert != null) {
       newAlerts.add(ootdAlert);
+    }
+
+    if (familyMember != null) {
+      final Map<String, dynamic>? growthAlert =
+      ruleService.buildGrowthAlert(
+        member: familyMember,
+        measurements: growthMeasurements,
+        userId: userId,
+        existingKeys: existingKeys,
+        enabled: profile.growthAlertsEnabled,
+      );
+
+      if (growthAlert != null) {
+        newAlerts.add(growthAlert);
+      }
     }
 
     if (newAlerts.isEmpty) {
@@ -208,5 +261,32 @@ class AlertsRepository {
             .eq('is_dismissed', false);
       }
     }
+  }
+  Future<void> _resolveGrowthAlert({
+    required String userId,
+    required FamilyMember member,
+    required List<GrowthMeasurement> measurements,
+    required bool enabled,
+  }) async {
+    final bool shouldExist =
+        enabled &&
+            ruleService.shouldHaveGrowthAlert(
+              member: member,
+              measurements: measurements,
+            );
+
+    if (shouldExist) {
+      return;
+    }
+
+    await _client
+        .from('alerts')
+        .update(<String, bool>{
+      'is_dismissed': true,
+    })
+        .eq('user_id', userId)
+        .eq('member_id', member.id)
+        .eq('type', 'growth')
+        .eq('is_dismissed', false);
   }
 }

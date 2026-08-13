@@ -1,6 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_photo_carousel.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_status_widgets.dart';
@@ -134,7 +135,11 @@ class GarmentDetailScreen extends ConsumerWidget {
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry loading wear history'),
                           ),
-                          data: (history) => WearHistoryList(history: history),
+                          data: (history) => WearHistoryList(
+                            history: history,
+                            onDelete: (WearLog entry) =>
+                                _deleteWear(context, ref, garment, entry),
+                          ),
                         ),
                       ),
                       if (garment.price != null ||
@@ -197,6 +202,7 @@ class GarmentDetailScreen extends ConsumerWidget {
         .read(wearLogControllerProvider.notifier)
         .markAsWorn(
           garmentId,
+          wornDate: wearEntry.wornDate,
           eventName: wearEntry.eventName,
           notes: wearEntry.notes,
           laundryStatusAfter: wearEntry.laundryStatusAfter,
@@ -224,6 +230,34 @@ class GarmentDetailScreen extends ConsumerWidget {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Wear recorded successfully.')),
+    );
+  }
+
+  Future<void> _deleteWear(
+    BuildContext context,
+    WidgetRef ref,
+    Garment garment,
+    WearLog entry,
+  ) async {
+    await ref
+        .read(wearLogControllerProvider.notifier)
+        .deleteWear(garmentId: garment.id, wearLogId: entry.id);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final AsyncValue<void> state = ref.read(wearLogControllerProvider);
+
+    if (state.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete this wear record.')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Wear record deleted.')),
     );
   }
 
@@ -345,12 +379,14 @@ class GarmentDetailScreen extends ConsumerWidget {
 
 class _WearEntryData {
   const _WearEntryData({
-    required this.eventName,
+    required this.wornDate,
     required this.laundryStatusAfter,
+    this.eventName,
     this.notes,
   });
 
-  final String eventName;
+  final DateTime wornDate;
+  final String? eventName;
   final String? notes;
   final LaundryStatus laundryStatusAfter;
 }
@@ -369,6 +405,8 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
 
   final TextEditingController _notesController = TextEditingController();
 
+  DateTime _selectedWornDate = DateTime.now();
+
   LaundryStatus _selectedLaundryStatus = LaundryStatus.dirty;
 
   @override
@@ -378,17 +416,42 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
     super.dispose();
   }
 
+  Future<void> _pickDate() async {
+    final DateTime today = DateTime.now();
+    final DateTime nowDate = DateTime(today.year, today.month, today.day);
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedWornDate.isAfter(nowDate)
+          ? nowDate
+          : _selectedWornDate,
+      firstDate: DateTime(today.year - 5),
+      lastDate: nowDate,
+      helpText: 'When was this garment worn?',
+    );
+
+    if (picked == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedWornDate = DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
+    final String eventName = _eventController.text.trim();
     final String notes = _notesController.text.trim();
 
     Navigator.pop(
       context,
       _WearEntryData(
-        eventName: _eventController.text.trim(),
+        wornDate: _selectedWornDate,
+        eventName: eventName.isEmpty ? null : eventName,
         notes: notes.isEmpty ? null : notes,
         laundryStatusAfter: _selectedLaundryStatus,
       ),
@@ -405,22 +468,26 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
+              InkWell(
+                onTap: _pickDate,
+                borderRadius: BorderRadius.circular(4),
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Worn on',
+                    prefixIcon: Icon(Icons.calendar_today_outlined),
+                  ),
+                  child: Text(_formatWornDate(_selectedWornDate)),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _eventController,
-                autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
-                  labelText: 'Event *',
-                  hintText: 'For example: University, Work or Wedding',
+                  labelText: 'Event',
+                  hintText: 'Optional. For example: University, Work or Wedding',
                   prefixIcon: Icon(Icons.event_outlined),
                 ),
-                validator: (String? value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter an event';
-                  }
-
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -476,6 +543,10 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
       ],
     );
   }
+
+  String _formatWornDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/'
+      '${date.month.toString().padLeft(2, '0')}/${date.year}';
 
   String _laundryStatusLabel(LaundryStatus status) {
     switch (status) {

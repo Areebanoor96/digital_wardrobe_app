@@ -63,7 +63,6 @@ class OotdCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-
                         'Outfit of the Day',
 
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -74,9 +73,8 @@ class OotdCard extends StatelessWidget {
                       if (recommendation.score > 0) ...<Widget>[
                         Text(
                           '${recommendation.score}% match',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(width: 8),
                       ],
@@ -118,8 +116,7 @@ class OotdCard extends StatelessWidget {
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
                   itemBuilder: (BuildContext context, int index) {
                     final Garment g = items[index];
-                    final bool isHero =
-                        g.id == recommendation.heroGarment?.id;
+                    final bool isHero = g.id == recommendation.heroGarment?.id;
                     return SizedBox(
                       width: 72,
                       child: Column(
@@ -141,10 +138,7 @@ class OotdCard extends StatelessWidget {
                                     right: 4,
                                     child: CircleAvatar(
                                       radius: 10,
-                                      child: Icon(
-                                        Icons.star,
-                                        size: 12,
-                                      ),
+                                      child: Icon(Icons.star, size: 12),
                                     ),
                                   ),
                               ],
@@ -175,34 +169,33 @@ class OotdCard extends StatelessWidget {
 
                 Text(
                   'Why this works',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
                 ),
 
                 const SizedBox(height: 4),
 
-                ...recommendation.reasons.take(3).map(
+                ...recommendation.reasons
+                    .take(3)
+                    .map(
                       (String reason) => Padding(
-                    padding: const EdgeInsets.only(bottom: 3),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Icon(
-                          Icons.check_circle_outline,
-                          size: 16,
+                        padding: const EdgeInsets.only(bottom: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Icon(Icons.check_circle_outline, size: 16),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                reason,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            reason,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
               ],
               const SizedBox(height: 12),
               Row(
@@ -245,22 +238,20 @@ class OotdCard extends StatelessWidget {
       ),
     );
   }
+
   Future<void> _showPersonalizeSheet(BuildContext context) async {
     String? selectedOccasion = outfitContext.occasion;
     String? selectedSeason = outfitContext.season;
     String? selectedMood = outfitContext.mood;
 
-    final OutfitContext? updatedContext =
-    await showModalBottomSheet<OutfitContext>(
+    final OutfitContext?
+    updatedContext = await showModalBottomSheet<OutfitContext>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
       builder: (BuildContext sheetContext) {
         return StatefulBuilder(
-          builder: (
-              BuildContext context,
-              StateSetter setModalState,
-              ) {
+          builder: (BuildContext context, StateSetter setModalState) {
             return SafeArea(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -286,33 +277,30 @@ class OotdCard extends StatelessWidget {
 
                     DropdownButtonFormField<String>(
                       initialValue: selectedOccasion,
-                      decoration: const InputDecoration(
-                        labelText: 'Occasion',
-                      ),
-                      items: const <String>[
-                        'casual',
-                        'work',
-                        'formal',
-                        'party',
-                        'wedding',
-                        'college',
-                        'sport',
-                        'travel',
-                        'home',
-                        'sleep',
-                        'ethnic',
-                      ]
-                          .map(
-                            (String value) =>
-                            DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(
-                                value[0].toUpperCase() +
-                                    value.substring(1),
-                              ),
-                            ),
-                      )
-                          .toList(),
+                      decoration: const InputDecoration(labelText: 'Occasion'),
+                      items:
+                          const <String>[
+                                'casual',
+                                'work',
+                                'formal',
+                                'party',
+                                'wedding',
+                                'college',
+                                'sport',
+                                'travel',
+                                'home',
+                                'sleep',
+                                'ethnic',
+                              ]
+                              .map(
+                                (String value) => DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(
+                                    value[0].toUpperCase() + value.substring(1),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (String? value) {
                         setModalState(() {
                           selectedOccasion = value;
@@ -324,35 +312,33 @@ class OotdCard extends StatelessWidget {
 
                     DropdownButtonFormField<String>(
                       initialValue: selectedSeason,
-                      decoration: const InputDecoration(
-                        labelText: 'Season',
-                      ),
-                      items: const <String>[
-                        'summer',
-                        'winter',
-                        'spring',
-                        'autumn',
-                        'rainy',
-                        'all_season',
-                      ]
-                          .map(
-                            (String value) =>
-                            DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(
-                                value
-                                    .replaceAll('_', ' ')
-                                    .split(' ')
-                                    .map(
-                                      (String word) =>
-                                  word[0].toUpperCase() +
-                                      word.substring(1),
-                                )
-                                    .join(' '),
-                              ),
-                            ),
-                      )
-                          .toList(),
+                      decoration: const InputDecoration(labelText: 'Season'),
+                      items:
+                          const <String>[
+                                'summer',
+                                'winter',
+                                'spring',
+                                'autumn',
+                                'rainy',
+                                'all',
+                              ]
+                              .map(
+                                (String value) => DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(
+                                    value
+                                        .replaceAll('_', ' ')
+                                        .split(' ')
+                                        .map(
+                                          (String word) =>
+                                              word[0].toUpperCase() +
+                                              word.substring(1),
+                                        )
+                                        .join(' '),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (String? value) {
                         setModalState(() {
                           selectedSeason = value;
@@ -364,30 +350,27 @@ class OotdCard extends StatelessWidget {
 
                     DropdownButtonFormField<String>(
                       initialValue: selectedMood,
-                      decoration: const InputDecoration(
-                        labelText: 'Mood',
-                      ),
-                      items: const <String>[
-                        'relaxed',
-                        'professional',
-                        'cozy',
-                        'elegant',
-                        'sporty',
-                        'minimal',
-                        'bold',
-                        'party',
-                      ]
-                          .map(
-                            (String value) =>
-                            DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(
-                                value[0].toUpperCase() +
-                                    value.substring(1),
-                              ),
-                            ),
-                      )
-                          .toList(),
+                      decoration: const InputDecoration(labelText: 'Mood'),
+                      items:
+                          const <String>[
+                                'relaxed',
+                                'professional',
+                                'cozy',
+                                'elegant',
+                                'sporty',
+                                'minimal',
+                                'bold',
+                                'party',
+                              ]
+                              .map(
+                                (String value) => DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(
+                                    value[0].toUpperCase() + value.substring(1),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (String? value) {
                         setModalState(() {
                           selectedMood = value;
@@ -401,10 +384,7 @@ class OotdCard extends StatelessWidget {
                       children: <Widget>[
                         TextButton(
                           onPressed: () {
-                            Navigator.pop(
-                              sheetContext,
-                              const OutfitContext(),
-                            );
+                            Navigator.pop(sheetContext, const OutfitContext());
                           },
                           child: const Text('Clear'),
                         ),

@@ -40,7 +40,22 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (int value) => setState(() => _index = value),
-        destinations:  <NavigationDestination>[
+        destinations: <NavigationDestination>[
+          const NavigationDestination(
+            icon: Icon(Icons.checkroom_outlined),
+            selectedIcon: Icon(Icons.checkroom),
+            label: 'Wardrobe',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: 'Outfits',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Calendar',
+          ),
           NavigationDestination(
             icon: Badge(
               isLabelVisible: unreadCount > 0,
@@ -58,27 +73,12 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
             ),
             label: 'Alerts',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: 'Outfits',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Calendar',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications),
-            label: 'Alerts',
-          ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.insights_outlined),
             selectedIcon: Icon(Icons.insights),
             label: 'Analytics',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',

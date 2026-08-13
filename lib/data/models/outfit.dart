@@ -33,13 +33,17 @@ class Outfit {
     timesWorn: json['times_worn'] as int? ?? 0,
   );
 
-  Outfit copyWith({DateTime? lastWornDate, int? timesWorn}) => Outfit(
+  Outfit copyWith({
+    DateTime? lastWornDate,
+    int? timesWorn,
+    String? coverPhotoUrl,
+  }) => Outfit(
     id: id,
     garmentIds: garmentIds,
     memberId: memberId,
     name: name,
     occasion: occasion,
-    coverPhotoUrl: coverPhotoUrl,
+    coverPhotoUrl: coverPhotoUrl ?? this.coverPhotoUrl,
     createdAt: createdAt,
     lastWornDate: lastWornDate ?? this.lastWornDate,
     timesWorn: timesWorn ?? this.timesWorn,

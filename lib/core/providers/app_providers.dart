@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:digital_wardrobe_app/core/services/image_service.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
-import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
@@ -18,6 +17,8 @@ import 'package:digital_wardrobe_app/data/repositories/outfit_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/wear_log_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/growth_repository.dart';
+import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart'
+    as alerts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -214,20 +215,6 @@ final analyticsSummaryProvider = FutureProvider<AnalyticsSummary>((
       .fetchSummary(memberId: selectedMember.id);
 });
 
-final FutureProvider<List<Alert>> alertsProvider = FutureProvider<List<Alert>>((
-  Ref ref,
-) async {
-  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
-
-  if (selectedMember == null) {
-    return const <Alert>[];
-  }
-
-  return ref
-      .watch(alertsRepositoryProvider)
-      .fetchAlerts(memberId: selectedMember.id);
-});
-
 final calendarMonthProvider = FutureProvider.family<List<WearLog>, DateTime>((
   Ref ref,
   DateTime month,
@@ -285,9 +272,10 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
 
   Future<void> markAsWorn(
     String garmentId, {
-    String eventName = 'General wear',
-    LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
+    DateTime? wornDate,
+    String? eventName,
     String? notes,
+    LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
   }) async {
     final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
@@ -307,6 +295,7 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
           .createWearLog(
             memberId: selectedMember.id,
             garmentId: garmentId,
+            wornDate: wornDate,
             eventName: eventName,
             laundryStatusAfter: laundryStatusAfter,
             notes: notes,
@@ -314,14 +303,50 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
     );
 
     if (!state.hasError) {
-      ref.invalidate(garmentWearHistoryProvider(garmentId));
-      ref.invalidate(garmentProvider(garmentId));
-      ref.invalidate(recentWearActivityProvider);
-      ref.invalidate(calendarMonthProvider);
-      ref.invalidate(selectedDayWearHistoryProvider);
-      ref.invalidate(analyticsSummaryProvider);
-      ref.invalidate(garmentsProvider);
+      _invalidateAfterWearChange(garmentId);
     }
+  }
+
+  Future<void> deleteWear({
+    required String garmentId,
+    required String wearLogId,
+  }) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(
+      () => ref
+          .read(wearLogRepositoryProvider)
+          .deleteWearLog(
+            memberId: selectedMember.id,
+            garmentId: garmentId,
+            wearLogId: wearLogId,
+          ),
+    );
+
+    if (!state.hasError) {
+      _invalidateAfterWearChange(garmentId);
+    }
+  }
+
+  void _invalidateAfterWearChange(String garmentId) {
+    ref.invalidate(garmentWearHistoryProvider(garmentId));
+    ref.invalidate(garmentProvider(garmentId));
+    ref.invalidate(garmentsProvider);
+    ref.invalidate(recentWearActivityProvider);
+    ref.invalidate(calendarMonthProvider);
+    ref.invalidate(selectedDayWearHistoryProvider);
+    ref.invalidate(analyticsSummaryProvider);
+    ref.invalidate(alerts.alertsProvider);
   }
 }
 
@@ -526,12 +551,15 @@ class WearOutfitController extends AutoDisposeAsyncNotifier<void> {
       ref.invalidate(outfitsProvider);
       ref.invalidate(outfitProvider(outfit.id));
       ref.invalidate(recentWearActivityProvider);
+      ref.invalidate(calendarMonthProvider);
       ref.invalidate(selectedDayWearHistoryProvider);
       ref.invalidate(analyticsSummaryProvider);
       ref.invalidate(garmentsProvider);
+      ref.invalidate(alerts.alertsProvider);
 
       for (final String garmentId in outfit.garmentIds) {
         ref.invalidate(garmentWearHistoryProvider(garmentId));
+        ref.invalidate(garmentProvider(garmentId));
       }
     }
   }

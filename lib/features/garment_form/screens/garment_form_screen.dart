@@ -123,7 +123,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     'spring',
     'autumn',
     'rainy',
-    'all_season',
+    'all',
   ];
 
   static const List<String> _moodOptions = <String>[
@@ -247,6 +247,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       }
     });
   }
+
   void _removeExistingPhoto(int index) {
     setState(() {
       final String removedPath = _existingPhotoPaths.removeAt(index);
@@ -440,6 +441,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         }
       }
       ref.invalidate(garmentsProvider);
+      ref.invalidate(analyticsSummaryProvider);
 
       if (widget.garment != null) {
         ref.invalidate(garmentProvider(widget.garment!.id));

@@ -16,8 +16,7 @@ class OutfitBuilderScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<OutfitBuilderScreen> createState() =>
-      _OutfitBuilderScreenState(
-      );
+      _OutfitBuilderScreenState();
 }
 
 class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
@@ -33,6 +32,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
     _name.dispose();
     super.dispose();
   }
+
   Future<void> _showSwapOptions({
     required Garment currentGarment,
     required List<Garment> allGarments,
@@ -87,11 +87,9 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                 const SizedBox(height: 12),
 
                 ...alternatives.map(
-                      (Garment garment) => ListTile(
+                  (Garment garment) => ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.swap_horiz),
-                    ),
+                    leading: const CircleAvatar(child: Icon(Icons.swap_horiz)),
                     title: Text(garment.name),
                     subtitle: Text(garment.category.label),
                     onTap: () {
@@ -118,6 +116,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
       }
     });
   }
+
   Future<void> _save(List<Garment> garments) async {
     if (_selectedIds.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -166,11 +165,10 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
   Widget build(BuildContext context) {
     final garments = ref.watch(garmentsProvider);
     final bool saving = ref.watch(outfitMutationControllerProvider).isLoading;
-    final OutfitContext outfitContext = ref.watch(
-      outfitContextProvider,
+    final OutfitContext outfitContext = ref.watch(outfitContextProvider);
+    final OutfitIntelligenceRecommendation? recommendation = ref.watch(
+      outfitRecommendationProvider,
     );
-    final OutfitIntelligenceRecommendation? recommendation =
-    ref.watch(outfitRecommendationProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.outfit == null ? 'Build outfit' : 'Edit outfit'),
@@ -182,450 +180,458 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
         data: (List<Garment> items) => SingleChildScrollView(
           child: Column(
             children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: TextField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Outfit name'),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: TextField(
+                  controller: _name,
+                  decoration: const InputDecoration(labelText: 'Outfit name'),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SegmentedButton<bool>(
-                segments: const <ButtonSegment<bool>>[
-                  ButtonSegment<bool>(
-                    value: false,
-                    icon: Icon(Icons.touch_app_outlined),
-                    label: Text('Manual'),
-                  ),
-                  ButtonSegment<bool>(
-                    value: true,
-                    icon: Icon(Icons.auto_awesome_outlined),
-                    label: Text('Smart Build'),
-                  ),
-                ],
-                selected: <bool>{_smartBuild},
-                onSelectionChanged: (Set<bool> value) {
-                  setState(() {
-                    _smartBuild = value.first;
-                  });
-                },
-              ),
-            ),
-            if (_smartBuild)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Build around a hero piece',
-                      style: Theme.of(context).textTheme.titleMedium,
+                child: SegmentedButton<bool>(
+                  segments: const <ButtonSegment<bool>>[
+                    ButtonSegment<bool>(
+                      value: false,
+                      icon: Icon(Icons.touch_app_outlined),
+                      label: Text('Manual'),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Choose one garment, then add occasion, season and mood.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    ButtonSegment<bool>(
+                      value: true,
+                      icon: Icon(Icons.auto_awesome_outlined),
+                      label: Text('Smart Build'),
                     ),
-                    if (_smartBuild && recommendation != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                  ],
+                  selected: <bool>{_smartBuild},
+                  onSelectionChanged: (Set<bool> value) {
+                    setState(() {
+                      _smartBuild = value.first;
+                    });
+                  },
+                ),
+              ),
+              if (_smartBuild)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Build around a hero piece',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Choose one garment, then add occasion, season and mood.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (_smartBuild && recommendation != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Row(
+                                    children: <Widget>[
+                                      const Icon(Icons.auto_awesome_outlined),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Recommended Outfit',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${recommendation.score}% match',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  if (recommendation.garments.isEmpty)
+                                    Text(
+                                      'No suitable outfit could be created from the available garments.',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
+                                    )
+                                  else ...<Widget>[
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: recommendation.garments
+                                          .map(
+                                            (Garment garment) => Chip(
+                                              avatar:
+                                                  garment.id ==
+                                                      outfitContext
+                                                          .heroGarment
+                                                          ?.id
+                                                  ? const Icon(
+                                                      Icons.star_outline,
+                                                      size: 18,
+                                                    )
+                                                  : null,
+                                              label: Text(garment.name),
+                                            ),
+                                          )
+                                          .toList(),
+                                    ),
+
+                                    if (recommendation
+                                        .reasons
+                                        .isNotEmpty) ...<Widget>[
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Why this works',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                      ...recommendation.reasons.map(
+                                        (String reason) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 4,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: <Widget>[
+                                              const Icon(
+                                                Icons.check_circle_outline,
+                                                size: 18,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(child: Text(reason)),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+
+                                    const SizedBox(height: 16),
+
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: FilledButton.icon(
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedIds
+                                              ..clear()
+                                              ..addAll(
+                                                recommendation.garments
+                                                    .map(
+                                                      (Garment garment) =>
+                                                          garment.id,
+                                                    )
+                                                    .take(6),
+                                              );
+                                          });
+
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Recommended outfit added to your selection.',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        icon: const Icon(Icons.check),
+                                        label: const Text('Use this outfit'),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: outfitContext.heroGarment?.id,
+                        decoration: const InputDecoration(
+                          labelText: 'Hero garment',
+                        ),
+                        items: items
+                            .map(
+                              (Garment garment) => DropdownMenuItem<String>(
+                                value: garment.id,
+                                child: Text(garment.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (String? garmentId) {
+                          final Garment? selectedGarment = items
+                              .where(
+                                (Garment garment) => garment.id == garmentId,
+                              )
+                              .firstOrNull;
+
+                          ref
+                              .read(outfitContextProvider.notifier)
+                              .state = outfitContext.copyWith(
+                            heroGarment: selectedGarment,
+                            clearHeroGarment: selectedGarment == null,
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: outfitContext.occasion,
+                        decoration: const InputDecoration(
+                          labelText: 'Occasion',
+                        ),
+                        items:
+                            const <String>[
+                                  'casual',
+                                  'work',
+                                  'formal',
+                                  'party',
+                                  'wedding',
+                                  'college',
+                                  'sport',
+                                  'travel',
+                                  'home',
+                                  'sleep',
+                                  'ethnic',
+                                ]
+                                .map(
+                                  (String value) => DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(
+                                      value[0].toUpperCase() +
+                                          value.substring(1),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (String? value) {
+                          ref
+                              .read(outfitContextProvider.notifier)
+                              .state = value == null
+                              ? outfitContext.copyWith(clearOccasion: true)
+                              : outfitContext.copyWith(occasion: value);
+                        },
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: outfitContext.season,
+                        decoration: const InputDecoration(labelText: 'Season'),
+                        items:
+                            const <String>[
+                                  'summer',
+                                  'winter',
+                                  'spring',
+                                  'autumn',
+                                  'rainy',
+                                  'all',
+                                ]
+                                .map(
+                                  (String value) => DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value.replaceAll('_', ' ')),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (String? value) {
+                          ref
+                              .read(outfitContextProvider.notifier)
+                              .state = value == null
+                              ? outfitContext.copyWith(clearSeason: true)
+                              : outfitContext.copyWith(season: value);
+                        },
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      DropdownButtonFormField<String>(
+                        initialValue: outfitContext.mood,
+                        decoration: const InputDecoration(labelText: 'Mood'),
+                        items:
+                            const <String>[
+                                  'relaxed',
+                                  'professional',
+                                  'cozy',
+                                  'elegant',
+                                  'sporty',
+                                  'minimal',
+                                  'bold',
+                                  'party',
+                                ]
+                                .map(
+                                  (String value) => DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(
+                                      value[0].toUpperCase() +
+                                          value.substring(1),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (String? value) {
+                          ref
+                              .read(outfitContextProvider.notifier)
+                              .state = value == null
+                              ? outfitContext.copyWith(clearMood: true)
+                              : outfitContext.copyWith(mood: value);
+                        },
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${_selectedIds.length} selected · select 2–6 pieces',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ),
+              if (_selectedIds.isNotEmpty) ...<Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          'Your Outfit',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      Text(
+                        '${_selectedIds.length} pieces',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(
+                  height: 110,
+                  child: ReorderableListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: _selectedIds.length,
+                    onReorderItem: (int oldIndex, int newIndex) {
+                      setState(() {
+                        final String garmentId = _selectedIds.removeAt(
+                          oldIndex,
+                        );
+                        _selectedIds.insert(newIndex, garmentId);
+                      });
+                    },
+                    itemBuilder: (BuildContext context, int index) {
+                      final Garment? garment = items
+                          .where(
+                            (Garment item) => item.id == _selectedIds[index],
+                          )
+                          .firstOrNull;
+
+                      if (garment == null) {
+                        return const SizedBox.shrink(
+                          key: ValueKey<String>('missing-garment'),
+                        );
+                      }
+
+                      final List<Garment> currentOutfit = _selectedIds
+                          .map(
+                            (String id) => items
+                                .where((Garment item) => item.id == id)
+                                .firstOrNull,
+                          )
+                          .whereType<Garment>()
+                          .toList();
+
+                      return Container(
+                        key: ValueKey<String>(garment.id),
+                        width: 190,
+                        margin: const EdgeInsets.only(right: 10),
                         child: Card(
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(10),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: <Widget>[
+                                Text(
+                                  garment.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  garment.category.label,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const Spacer(),
                                 Row(
                                   children: <Widget>[
-                                    const Icon(Icons.auto_awesome_outlined),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Recommended Outfit',
-                                        style: Theme.of(context).textTheme.titleMedium,
+                                    TextButton.icon(
+                                      onPressed: !_smartBuild
+                                          ? null
+                                          : () => _showSwapOptions(
+                                              currentGarment: garment,
+                                              allGarments: items,
+                                              currentOutfit: currentOutfit,
+                                              outfitContext: outfitContext,
+                                            ),
+                                      icon: const Icon(
+                                        Icons.swap_horiz,
+                                        size: 18,
                                       ),
+                                      label: const Text('Swap'),
                                     ),
-                                    Text(
-                                      '${recommendation.score}% match',
-                                      style: Theme.of(context).textTheme.titleSmall,
+                                    const Spacer(),
+                                    IconButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedIds.remove(garment.id);
+                                        });
+                                      },
+                                      icon: const Icon(Icons.close),
+                                      tooltip: 'Remove',
                                     ),
                                   ],
                                 ),
-
-                                const SizedBox(height: 12),
-
-                                if (recommendation.garments.isEmpty)
-                                  Text(
-                                    'No suitable outfit could be created from the available garments.',
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  )
-                                else ...<Widget>[
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: recommendation.garments
-                                        .map(
-                                          (Garment garment) => Chip(
-                                        avatar: garment.id ==
-                                            outfitContext.heroGarment?.id
-                                            ? const Icon(
-                                          Icons.star_outline,
-                                          size: 18,
-                                        )
-                                            : null,
-                                        label: Text(garment.name),
-                                      ),
-                                    )
-                                        .toList(),
-                                  ),
-
-                                  if (recommendation.reasons.isNotEmpty) ...<Widget>[
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Why this works',
-                                      style: Theme.of(context).textTheme.titleSmall,
-                                    ),
-                                    const SizedBox(height: 8),
-
-                                    ...recommendation.reasons.map(
-                                          (String reason) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 4),
-                                        child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            const Icon(
-                                              Icons.check_circle_outline,
-                                              size: 18,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(reason),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-
-                                  const SizedBox(height: 16),
-
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: FilledButton.icon(
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedIds
-                                            ..clear()
-                                            ..addAll(
-                                              recommendation.garments
-                                                  .map(
-                                                    (Garment garment) => garment.id,
-                                              )
-                                                  .take(6),
-                                            );
-                                        });
-
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Recommended outfit added to your selection.',
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.check),
-                                      label: const Text('Use this outfit'),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),
                         ),
-                      ),
-                    const SizedBox(height: 16),
-
-                    DropdownButtonFormField<String>(
-                      initialValue: outfitContext.heroGarment?.id,
-                      decoration: const InputDecoration(
-                        labelText: 'Hero garment',
-                      ),
-                      items: items
-                          .map(
-                            (Garment garment) => DropdownMenuItem<String>(
-                          value: garment.id,
-                          child: Text(garment.name),
-                        ),
-                      )
-                          .toList(),
-                      onChanged: (String? garmentId) {
-                        final Garment? selectedGarment = items
-                            .where(
-                              (Garment garment) => garment.id == garmentId,
-                        )
-                            .firstOrNull;
-
-                        ref.read(outfitContextProvider.notifier).state =
-                            outfitContext.copyWith(
-                              heroGarment: selectedGarment,
-                              clearHeroGarment: selectedGarment == null,
-                            );
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    DropdownButtonFormField<String>(
-                      initialValue : outfitContext.occasion,
-                      decoration: const InputDecoration(
-                        labelText: 'Occasion',
-                      ),
-                      items: const <String>[
-                        'casual',
-                        'work',
-                        'formal',
-                        'party',
-                        'wedding',
-                        'college',
-                        'sport',
-                        'travel',
-                        'home',
-                        'sleep',
-                        'ethnic',
-                      ]
-                          .map(
-                            (String value) => DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(
-                            value[0].toUpperCase() + value.substring(1),
-                          ),
-                        ),
-                      )
-                          .toList(),
-                      onChanged: (String? value) {
-                        ref.read(outfitContextProvider.notifier).state =
-                        value == null
-                            ? outfitContext.copyWith(
-                          clearOccasion: true,
-                        )
-                            : outfitContext.copyWith(
-                          occasion: value,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    DropdownButtonFormField<String>(
-                      initialValue:  outfitContext.season,
-                      decoration: const InputDecoration(
-                        labelText: 'Season',
-                      ),
-                      items: const <String>[
-                        'summer',
-                        'winter',
-                        'spring',
-                        'autumn',
-                        'rainy',
-                        'all_season',
-                      ]
-                          .map(
-                            (String value) => DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(
-                            value.replaceAll('_', ' '),
-                          ),
-                        ),
-                      )
-                          .toList(),
-                      onChanged: (String? value) {
-                        ref.read(outfitContextProvider.notifier).state =
-                        value == null
-                            ? outfitContext.copyWith(
-                          clearSeason: true,
-                        )
-                            : outfitContext.copyWith(
-                          season: value,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    DropdownButtonFormField<String>(
-                      initialValue:outfitContext.mood,
-                      decoration: const InputDecoration(
-                        labelText: 'Mood',
-                      ),
-                      items: const <String>[
-                        'relaxed',
-                        'professional',
-                        'cozy',
-                        'elegant',
-                        'sporty',
-                        'minimal',
-                        'bold',
-                        'party',
-                      ]
-                          .map(
-                            (String value) => DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(
-                            value[0].toUpperCase() + value.substring(1),
-                          ),
-                        ),
-                      )
-                          .toList(),
-                      onChanged: (String? value) {
-                        ref.read(outfitContextProvider.notifier).state =
-                        value == null
-                            ? outfitContext.copyWith(
-                          clearMood: true,
-                        )
-                            : outfitContext.copyWith(
-                          mood: value,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '${_selectedIds.length} selected · select 2–6 pieces',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-            ),
-            if (_selectedIds.isNotEmpty) ...<Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        'Your Outfit',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    Text(
-                      '${_selectedIds.length} pieces',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(
-                height: 110,
-                child: ReorderableListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _selectedIds.length,
-                  onReorderItem: (int oldIndex, int newIndex) {
-                    setState(() {
-                      final String garmentId = _selectedIds.removeAt(oldIndex);
-                      _selectedIds.insert(newIndex, garmentId);
-                    });
-                  },
-                  itemBuilder: (BuildContext context, int index) {
-                    final Garment? garment = items
-                        .where(
-                          (Garment item) => item.id == _selectedIds[index],
-                    )
-                        .firstOrNull;
-
-                    if (garment == null) {
-                      return const SizedBox.shrink(
-                        key: ValueKey<String>('missing-garment'),
                       );
-                    }
-
-                    final List<Garment> currentOutfit = _selectedIds
-                        .map(
-                          (String id) => items
-                          .where(
-                            (Garment item) => item.id == id,
-                      )
-                          .firstOrNull,
-                    )
-                        .whereType<Garment>()
-                        .toList();
-
-                    return Container(
-                      key: ValueKey<String>(garment.id),
-                      width: 190,
-                      margin: const EdgeInsets.only(right: 10),
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                garment.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                garment.category.label,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              const Spacer(),
-                              Row(
-                                children: <Widget>[
-                                  TextButton.icon(
-                                    onPressed: !_smartBuild
-                                        ? null
-                                        : () => _showSwapOptions(
-                                      currentGarment: garment,
-                                      allGarments: items,
-                                      currentOutfit: currentOutfit,
-                                      outfitContext: outfitContext,
-                                    ),
-                                    icon: const Icon(
-                                      Icons.swap_horiz,
-                                      size: 18,
-                                    ),
-                                    label: const Text('Swap'),
-                                  ),
-                                  const Spacer(),
-                                  IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedIds.remove(garment.id);
-                                      });
-                                    },
-                                    icon: const Icon(Icons.close),
-                                    tooltip: 'Remove',
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                    },
+                  ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              ],
+              const SizedBox(height: 8),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 itemCount: items.length,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
@@ -661,16 +667,16 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                   );
                 },
               ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: ElevatedButton(
-                onPressed: saving ? null : () => _save(items),
-                child: Text(saving ? 'Saving...' : 'Save outfit'),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: ElevatedButton(
+                  onPressed: saving ? null : () => _save(items),
+                  child: Text(saving ? 'Saving...' : 'Save outfit'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

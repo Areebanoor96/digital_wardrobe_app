@@ -1,7 +1,15 @@
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
+import 'package:digital_wardrobe_app/features/profile/Family/services/growth_intelligence_service.dart';
 
 class AlertRuleService {
-  const AlertRuleService();
+  const AlertRuleService({
+    this.growthIntelligenceService =
+    const GrowthIntelligenceService(),
+  });
+
+  final GrowthIntelligenceService growthIntelligenceService;
 
   List<Map<String, dynamic>> buildGarmentAlerts({
     required Garment garment,
@@ -147,6 +155,126 @@ class AlertRuleService {
       'is_read': false,
       'is_dismissed': false,
     };
+  }
+
+  Map<String, dynamic>? buildGrowthAlert({
+    required FamilyMember member,
+    required List<GrowthMeasurement> measurements,
+    required String userId,
+    required Set<String> existingKeys,
+    required bool enabled,
+  }) {
+    if (!enabled) {
+      return null;
+    }
+
+    if (!growthIntelligenceService.isEligibleForGrowthTracking(member)) {
+      return null;
+    }
+
+    const String key = 'growth_null';
+
+    if (existingKeys.contains(key)) {
+      return null;
+    }
+
+    final bool needsReminder =
+    growthIntelligenceService.needsMeasurementReminder(
+      member: member,
+      measurements: measurements,
+    );
+
+    if (needsReminder) {
+      return <String, dynamic>{
+        'user_id': userId,
+        'member_id': member.id,
+        'type': 'growth',
+        'garment_id': null,
+        'title': 'Time for a growth check',
+        'body':
+        'Update ${member.name}\'s measurements to keep their wardrobe sizes current.',
+        'is_read': false,
+        'is_dismissed': false,
+      };
+    }
+
+    final GrowthComparison? comparison =
+    growthIntelligenceService.compare(
+      measurements: measurements,
+    );
+
+    if (comparison == null || !comparison.hasGrowthChange) {
+      return null;
+    }
+
+    final List<String> changes = <String>[];
+
+    final double? heightChange = comparison.heightChangeCm;
+
+    if (heightChange != null && heightChange > 0) {
+      changes.add(
+        'grown ${heightChange.toStringAsFixed(1)} cm',
+      );
+    }
+
+    if (comparison.clothingSizeChanged) {
+      changes.add('changed clothing size');
+    }
+
+    if (comparison.shoeSizeChanged) {
+      changes.add('changed shoe size');
+    }
+
+    if (changes.isEmpty) {
+      return null;
+    }
+
+    return <String, dynamic>{
+      'user_id': userId,
+      'member_id': member.id,
+      'type': 'growth',
+      'garment_id': null,
+      'title': 'Growth detected',
+      'body':
+      '${member.name} has ${_joinChanges(changes)}. '
+          'Review their wardrobe to see what still fits.',
+      'is_read': false,
+      'is_dismissed': false,
+    };
+  }
+  bool shouldHaveGrowthAlert({
+    required FamilyMember member,
+    required List<GrowthMeasurement> measurements,
+  }) {
+    if (!growthIntelligenceService.isEligibleForGrowthTracking(member)) {
+      return false;
+    }
+
+    if (growthIntelligenceService.needsMeasurementReminder(
+      member: member,
+      measurements: measurements,
+    )) {
+      return true;
+    }
+
+    final GrowthComparison? comparison =
+    growthIntelligenceService.compare(
+      measurements: measurements,
+    );
+
+    return comparison?.hasGrowthChange ?? false;
+  }
+  String _joinChanges(List<String> changes) {
+    if (changes.length == 1) {
+      return changes.first;
+    }
+
+    if (changes.length == 2) {
+      return '${changes[0]} and ${changes[1]}';
+    }
+
+    return '${changes.sublist(0, changes.length - 1).join(', ')}, '
+        'and ${changes.last}';
   }
   bool shouldHaveUnusedAlert(Garment garment) {
     final DateTime now = DateTime.now();

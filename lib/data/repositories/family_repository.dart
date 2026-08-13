@@ -12,6 +12,7 @@ class FamilyRepository {
     final List<dynamic> rows = await _client
         .from('family_members')
         .select()
+        .eq('user_id', _requireUserId())
         .order('created_at');
 
     return Future.wait(
@@ -126,7 +127,8 @@ class FamilyRepository {
     await _client
         .from('family_members')
         .update({'name': name, 'relationship': relationship})
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', _requireUserId());
   }
 
   Future<FamilyMember?> getFamilyMemberById(String id) async {
@@ -134,6 +136,7 @@ class FamilyRepository {
         .from('family_members')
         .select()
         .eq('id', id)
+        .eq('user_id', _requireUserId())
         .maybeSingle();
 
     if (response == null) {
@@ -181,6 +184,16 @@ class FamilyRepository {
     final FamilyMember member = FamilyMember.fromJson(row);
 
     return _addSignedAvatarUrl(member);
+  }
+
+  String _requireUserId() {
+    final User? currentUser = _client.auth.currentUser;
+
+    if (currentUser == null) {
+      throw StateError('No authenticated user.');
+    }
+
+    return currentUser.id;
   }
 
   Future<void> updateAvatar({

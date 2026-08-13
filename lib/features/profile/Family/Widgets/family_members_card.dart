@@ -41,15 +41,6 @@ class FamilyMemberCard extends StatelessWidget {
                 onDelete?.call();
                 break;
             }
-            switch (value) {
-              case "edit":
-                onTap?.call();
-                break;
-
-              case "delete":
-                onDelete?.call();
-                break;
-            }
           },
 
           itemBuilder: (context) => [

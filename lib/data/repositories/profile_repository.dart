@@ -15,6 +15,17 @@ class ProfileRepository {
           as Map,
     ),
   );
+  Future<void> updateGrowthAlertsEnabled(bool enabled) =>
+      _client
+          .from('profiles')
+          .update(<String, bool>{
+        'growth_alerts_enabled': enabled,
+      })
+          .eq('id', _client.auth.currentUser!.id);
+  Future<void> updateLocationCity(String? city) => _client
+      .from('profiles')
+      .update(<String, String?>{'location_city': city})
+      .eq('id', _client.auth.currentUser!.id);
   Future<void> updateName(String name) => _client
       .from('profiles')
       .update(<String, String>{'full_name': name})
@@ -23,13 +34,16 @@ class ProfileRepository {
     required bool unusedAlertsEnabled,
     required bool laundryAlertsEnabled,
     required bool ootdAlertsEnabled,
+    bool? growthAlertsEnabled,
   }) {
     return _client
         .from('profiles')
-        .update(<String, bool>{
+        .update(<String, dynamic>{
       'unused_alerts_enabled': unusedAlertsEnabled,
       'laundry_alerts_enabled': laundryAlertsEnabled,
       'ootd_alerts_enabled': ootdAlertsEnabled,
+      if (growthAlertsEnabled != null)
+        'growth_alerts_enabled': growthAlertsEnabled,
     })
         .eq('id', _client.auth.currentUser!.id);
   }

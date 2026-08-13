@@ -1,5 +1,6 @@
-import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
+
 class GrowthComparison {
   const GrowthComparison({
     this.heightChangeCm,
@@ -59,6 +60,63 @@ class GrowthIntelligenceService {
     );
   }
 
+  bool isEligibleForGrowthTracking(FamilyMember member) {
+    if (member.relationship != RelationshipType.child) {
+      return false;
+    }
+
+    final DateTime? birthDate = member.birthDate;
+
+    if (birthDate == null) {
+      return false;
+    }
+
+    return _ageInYears(birthDate) < 18;
+  }
+
+  bool needsMeasurementReminder({
+    required FamilyMember member,
+    required List<GrowthMeasurement> measurements,
+    DateTime? now,
+  }) {
+    if (!isEligibleForGrowthTracking(member)) {
+      return false;
+    }
+
+    if (measurements.isEmpty) {
+      return true;
+    }
+
+    final List<GrowthMeasurement> sorted =
+    List<GrowthMeasurement>.from(measurements)
+      ..sort(
+            (GrowthMeasurement a, GrowthMeasurement b) =>
+            b.recordedAt.compareTo(a.recordedAt),
+      );
+
+    final DateTime today = now ?? DateTime.now();
+    final GrowthMeasurement latest = sorted.first;
+
+    return today.difference(latest.recordedAt).inDays >= 90;
+  }
+
+  int _ageInYears(DateTime birthDate) {
+    final DateTime today = DateTime.now();
+
+    int age = today.year - birthDate.year;
+
+    final bool birthdayPassed =
+        today.month > birthDate.month ||
+            (today.month == birthDate.month &&
+                today.day >= birthDate.day);
+
+    if (!birthdayPassed) {
+      age--;
+    }
+
+    return age;
+  }
+
   double? _difference(double? latest, double? previous) {
     if (latest == null || previous == null) {
       return null;
@@ -75,59 +133,4 @@ class GrowthIntelligenceService {
     return latest.trim().toLowerCase() !=
         previous.trim().toLowerCase();
   }
-}
-bool isEligibleForGrowthTracking(FamilyMember member) {
-  if (member.relationship != RelationshipType.child) {
-    return false;
-  }
-
-  final DateTime? birthDate = member.birthDate;
-
-  if (birthDate == null) {
-    return false;
-  }
-
-  return _ageInYears(birthDate) < 18;
-}
-
-int _ageInYears(DateTime birthDate) {
-  final DateTime today = DateTime.now();
-
-  int age = today.year - birthDate.year;
-
-  final bool birthdayPassed =
-      today.month > birthDate.month ||
-          (today.month == birthDate.month &&
-              today.day >= birthDate.day);
-
-  if (!birthdayPassed) {
-    age--;
-  }
-
-  return age;
-}
-bool needsMeasurementReminder({
-  required FamilyMember member,
-  required List<GrowthMeasurement> measurements,
-  DateTime? now,
-}) {
-  if (!isEligibleForGrowthTracking(member)) {
-    return false;
-  }
-
-  if (measurements.isEmpty) {
-    return true;
-  }
-
-  final List<GrowthMeasurement> sorted =
-  List<GrowthMeasurement>.from(measurements)
-    ..sort(
-          (GrowthMeasurement a, GrowthMeasurement b) =>
-          b.recordedAt.compareTo(a.recordedAt),
-    );
-
-  final DateTime today = now ?? DateTime.now();
-  final GrowthMeasurement latest = sorted.first;
-
-  return today.difference(latest.recordedAt).inDays >= 90;
 }

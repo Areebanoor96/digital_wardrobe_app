@@ -6,12 +6,13 @@ class Profile {
     this.unusedAlertsEnabled = true,
     this.laundryAlertsEnabled = true,
     this.ootdAlertsEnabled = true,
+    this.growthAlertsEnabled = true,
   });
 
   final String id;
   final String? fullName;
   final String? locationCity;
-
+  final bool growthAlertsEnabled;
   final bool unusedAlertsEnabled;
   final bool laundryAlertsEnabled;
   final bool ootdAlertsEnabled;
@@ -26,5 +27,7 @@ class Profile {
     json['laundry_alerts_enabled'] as bool? ?? true,
     ootdAlertsEnabled:
     json['ootd_alerts_enabled'] as bool? ?? true,
+    growthAlertsEnabled:
+    json['growth_alerts_enabled'] as bool? ?? true,
   );
 }

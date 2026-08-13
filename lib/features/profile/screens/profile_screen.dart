@@ -1,6 +1,8 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
+
 import 'package:digital_wardrobe_app/data/models/profile.dart';
+import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/screens/family_screen.dart';
 import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
@@ -121,6 +123,22 @@ class ProfileScreen extends ConsumerWidget {
                   user,
                   ootdAlertsEnabled: value,
                 );
+              },
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.trending_up),
+              title: const Text('Kids growth alerts'),
+              subtitle: const Text(
+                'Remind me about measurements and important size changes.',
+              ),
+              value: user.growthAlertsEnabled,
+              onChanged: (bool value) async {
+                await ref
+                    .read(profileRepositoryProvider)
+                    .updateGrowthAlertsEnabled(value);
+
+                ref.invalidate(profileProvider);
+                ref.invalidate(alertsProvider);
               },
             ),
 

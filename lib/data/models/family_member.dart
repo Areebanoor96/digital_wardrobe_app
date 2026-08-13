@@ -57,6 +57,9 @@ class FamilyMember {
     ),
     birthDate: DateTime.tryParse(json['birth_date'] as String? ?? ''),
     currentSize: json['current_size'] as String?,
+    heightCm: (json['height_cm'] as num?)?.toDouble(),
+    weightKg: (json['weight_kg'] as num?)?.toDouble(),
+    shoeSize: json['shoe_size'] as String?,
     avatarPath: json['avatar_path'] as String?,
   );
 
@@ -65,6 +68,9 @@ class FamilyMember {
     'relationship': relationship.name,
     'birth_date': birthDate?.toIso8601String().split('T').first,
     'current_size': currentSize,
+    'height_cm': heightCm,
+    'weight_kg': weightKg,
+    'shoe_size': shoeSize,
     'avatar_path': avatarPath,
   };
 
@@ -73,6 +79,9 @@ class FamilyMember {
     RelationshipType? relationship,
     DateTime? birthDate,
     String? currentSize,
+    double? heightCm,
+    double? weightKg,
+    String? shoeSize,
     String? avatarPath,
     String? avatarUrl,
   }) => FamilyMember(
@@ -81,6 +90,9 @@ class FamilyMember {
     relationship: relationship ?? this.relationship,
     birthDate: birthDate ?? this.birthDate,
     currentSize: currentSize ?? this.currentSize,
+    heightCm: heightCm ?? this.heightCm,
+    weightKg: weightKg ?? this.weightKg,
+    shoeSize: shoeSize ?? this.shoeSize,
     avatarPath: avatarPath ?? this.avatarPath,
     avatarUrl: avatarUrl ?? this.avatarUrl,
   );

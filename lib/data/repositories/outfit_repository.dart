@@ -6,6 +6,8 @@ class OutfitRepository {
 
   final SupabaseClient _client;
 
+  static const String _bucket = 'garments';
+
   Future<List<Outfit>> fetchOutfits({required String memberId}) async {
     final List<dynamic> rows = await _client
         .from('outfits')
@@ -95,12 +97,12 @@ class OutfitRepository {
   }) async {
     if (rows.isEmpty) return const <Outfit>[];
 
-    final List<Outfit> outfits = rows
-        .map(
-          (dynamic row) =>
-              Outfit.fromJson(Map<String, dynamic>.from(row as Map)),
-        )
-        .toList();
+    final List<Outfit> outfits = await Future.wait(
+      rows.map(
+        (dynamic row) =>
+            _signCover(Outfit.fromJson(Map<String, dynamic>.from(row as Map))),
+      ),
+    );
 
     final List<dynamic> wearRows = await _client
         .from('wear_log')
@@ -129,5 +131,23 @@ class OutfitRepository {
           (Outfit outfit) => outfit.copyWith(lastWornDate: lastWorn[outfit.id]),
         )
         .toList();
+  }
+
+  Future<Outfit> _signCover(Outfit outfit) async {
+    if (outfit.coverPhotoUrl == null ||
+        outfit.coverPhotoUrl!.startsWith('http')) {
+      return outfit;
+    }
+
+    final String? signedUrl =
+        (await _client.storage.from(_bucket).createSignedUrlsResult(<String>[
+          outfit.coverPhotoUrl!,
+        ], 3600)).whereType<SignedUrlSuccess>().firstOrNull?.signedUrl;
+
+    if (signedUrl == null) {
+      return outfit;
+    }
+
+    return outfit.copyWith(coverPhotoUrl: signedUrl);
   }
 }

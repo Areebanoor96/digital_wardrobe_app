@@ -87,26 +87,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   data: (List<WearLog> dayLogs) => dayLogs.isEmpty
                       ? const Text('No garments were worn on this day.')
                       : Column(
-                          children: dayLogs.map((WearLog log) {
-                            final Garment? garment = garments
-                                .where(
-                                  (Garment item) => item.id == log.garmentId,
-                                )
-                                .firstOrNull;
-                            final Outfit? outfit = log.outfitId == null
-                                ? null
-                                : outfits
-                                      .where(
-                                        (Outfit item) =>
-                                            item.id == log.outfitId,
-                                      )
-                                      .firstOrNull;
-                            return _DayWearTile(
-                              garment: garment,
-                              outfit: outfit,
-                              wornDate: log.wornDate,
-                            );
-                          }).toList(),
+                          children: _buildWearTiles(
+                            dayLogs,
+                            garments,
+                            outfits,
+                          ),
                         ),
                 ),
             ],
@@ -114,6 +99,72 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ),
       ),
     );
+  }
+
+  /// Renders the day's wear records, grouping all garments that belong to the
+  /// same outfit under one outfit tile instead of repeating it per garment.
+  List<Widget> _buildWearTiles(
+    List<WearLog> logs,
+    List<Garment> garments,
+    List<Outfit> outfits,
+  ) {
+    final List<WearLog> soloLogs = <WearLog>[];
+    final Map<String, List<WearLog>> byOutfit = <String, List<WearLog>>{};
+
+    for (final WearLog log in logs) {
+      if (log.outfitId == null) {
+        soloLogs.add(log);
+      } else {
+        byOutfit.putIfAbsent(log.outfitId!, () => <WearLog>[]).add(log);
+      }
+    }
+
+    final List<Widget> tiles = <Widget>[
+      for (final WearLog log in soloLogs)
+        _DayWearTile(
+          garment: garments
+              .where((Garment item) => item.id == log.garmentId)
+              .firstOrNull,
+          wornDate: log.wornDate,
+        ),
+    ];
+
+    for (final MapEntry<String, List<WearLog>> entry in byOutfit.entries) {
+      final Outfit? outfit = outfits
+          .where((Outfit item) => item.id == entry.key)
+          .firstOrNull;
+
+      if (outfit == null) {
+        tiles.addAll(
+          entry.value.map(
+            (WearLog log) => _DayWearTile(
+              garment: garments
+                  .where((Garment item) => item.id == log.garmentId)
+                  .firstOrNull,
+              wornDate: log.wornDate,
+            ),
+          ),
+        );
+        continue;
+      }
+
+      tiles.add(
+        _OutfitWearTile(
+          outfit: outfit,
+          garments: entry.value
+              .map(
+                (WearLog log) => garments
+                    .where((Garment item) => item.id == log.garmentId)
+                    .firstOrNull,
+              )
+              .whereType<Garment>()
+              .toList(),
+          wornDate: entry.value.first.wornDate,
+        ),
+      );
+    }
+
+    return tiles;
   }
 }
 
@@ -249,14 +300,70 @@ class _MonthGrid extends StatelessWidget {
       first.day == second.day;
 }
 
+class _OutfitWearTile extends StatelessWidget {
+  const _OutfitWearTile({
+    required this.outfit,
+    required this.garments,
+    required this.wornDate,
+  });
+  final Outfit outfit;
+  final List<Garment> garments;
+  final DateTime wornDate;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: SizedBox(
+          width: 48,
+          height: 48,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: GarmentImage(imageUrl: outfit.coverPhotoUrl),
+          ),
+        ),
+        title: Text(outfit.name ?? 'Untitled outfit'),
+        subtitle: Text(
+          'Outfit worn ${_formatShortDate(wornDate)}'
+          '${garments.isEmpty ? '' : ' \u00b7 ${garments.length} garment${garments.length == 1 ? '' : 's'}'}',
+        ),
+      ),
+      if (garments.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12, left: 56),
+          child: SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: garments.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (BuildContext context, int index) {
+                final Garment garment = garments[index];
+                return SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: GarmentImage(imageUrl: garment.coverImageUrl),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
 class _DayWearTile extends StatelessWidget {
   const _DayWearTile({
     required this.garment,
-    required this.outfit,
     required this.wornDate,
   });
   final Garment? garment;
-  final Outfit? outfit;
   final DateTime wornDate;
 
   @override
@@ -271,11 +378,7 @@ class _DayWearTile extends StatelessWidget {
       ),
     ),
     title: Text(garment?.name ?? 'In Closet Vault'),
-    subtitle: Text(
-      outfit == null
-          ? 'Worn ${_formatShortDate(wornDate)}'
-          : 'Outfit: ${outfit!.name ?? 'Untitled outfit'} · ${_formatShortDate(wornDate)}',
-    ),
+    subtitle: Text('Worn ${_formatShortDate(wornDate)}'),
   );
 }
 

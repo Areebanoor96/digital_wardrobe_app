@@ -45,7 +45,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           _passwordController.text,
         );
       }
-      if (mounted) context.go('/setup');
+      if (mounted) {
+        // Signups complete the setup wizard; returning sign-ins resume via
+        // splash, which restores the persisted profile selection.
+        context.go(_isSignUp ? '/setup' : '/splash');
+      }
     } on AuthException catch (error) {
       _showError(error.message);
     } catch (_) {

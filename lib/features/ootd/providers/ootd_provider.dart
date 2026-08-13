@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
+import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart'
+    as alerts;
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
 import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -105,7 +107,10 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
     if (!state.hasError) {
       ref.invalidate(garmentsProvider);
       ref.invalidate(recentWearActivityProvider);
+      ref.invalidate(calendarMonthProvider);
+      ref.invalidate(selectedDayWearHistoryProvider);
       ref.invalidate(analyticsSummaryProvider);
+      ref.invalidate(alerts.alertsProvider);
 
       for (final Garment garment in garments) {
         ref.invalidate(garmentProvider(garment.id));
