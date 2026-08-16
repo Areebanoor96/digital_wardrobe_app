@@ -160,13 +160,20 @@ class GarmentRepository {
       return garment;
     }
 
-    final List<String> urls =
-        (await _client.storage
-                .from(_bucket)
-                .createSignedUrlsResult(garment.photoPaths, 3600))
-            .whereType<SignedUrlSuccess>()
-            .map((SignedUrlSuccess result) => result.signedUrl)
-            .toList();
+    final List<String> urls = await Future.wait(
+      garment.photoPaths.map((String path) async {
+        try {
+          final String signedUrl = await _client.storage
+              .from(_bucket)
+              .createSignedUrl(path, 3600);
+
+          return signedUrl;
+        } catch (_) {
+          // Preserve list order/index alignment even if one image fails.
+          return '';
+        }
+      }),
+    );
 
     return garment.copyWith(photoUrls: urls);
   }

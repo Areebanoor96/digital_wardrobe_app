@@ -101,7 +101,6 @@ class WardrobeFilterSheet extends ConsumerWidget {
                       initialValue: filters.sortOption,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.sort),
-                        labelText: 'Sort garments',
                       ),
                       items: WardrobeSortOption.values
                           .map(

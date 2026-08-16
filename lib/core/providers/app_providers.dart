@@ -157,14 +157,15 @@ final outfitProvider = FutureProvider.family<Outfit, String>((
       .fetchOutfit(outfitId: outfitId, memberId: selectedMember.id);
 });
 
-final FutureProvider<Profile> profileProvider = FutureProvider<Profile>(
-  (Ref ref) => ref.watch(profileRepositoryProvider).fetchProfile(),
+final profileProvider = FutureProvider.autoDispose<Profile>(
+      (Ref ref) => ref.watch(profileRepositoryProvider).fetchProfile(),
 );
 
-final FutureProvider<List<FamilyMember>> familyMembersProvider =
-    FutureProvider<List<FamilyMember>>(
-      (Ref ref) => ref.watch(familyRepositoryProvider).fetchFamilyMembers(),
-    );
+final familyMembersProvider =
+FutureProvider.autoDispose<List<FamilyMember>>(
+      (Ref ref) =>
+      ref.watch(familyRepositoryProvider).fetchFamilyMembers(),
+);
 
 final garmentWearHistoryProvider = FutureProvider.family<List<WearLog>, String>(
   (Ref ref, String garmentId) async {
@@ -538,13 +539,10 @@ class WearOutfitController extends AutoDisposeAsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await ref
           .read(wearLogRepositoryProvider)
-          .createWearLogsForOutfit(
-            memberId: selectedMember.id,
-            outfitId: outfit.id,
-            garmentIds: outfit.garmentIds,
-          );
-
-      await ref.read(outfitRepositoryProvider).incrementWearCount(outfit);
+          .wearOutfitAtomically(
+        memberId: selectedMember.id,
+        outfitId: outfit.id,
+      );
     });
 
     if (!state.hasError) {

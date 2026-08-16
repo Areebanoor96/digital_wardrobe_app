@@ -18,6 +18,16 @@ enum AlertType {
     AlertType.expiry => 'Expiry',
     AlertType.sale => 'Sale',
   };
+  String get dbValue => switch (this) {
+    AlertType.unused => 'unused',
+    AlertType.laundry => 'laundry',
+    AlertType.ootd => 'ootd',
+    AlertType.growth => 'growth',
+    AlertType.lendReturn => 'lend_return',
+    AlertType.handMeDown => 'hand_me_down',
+    AlertType.expiry => 'expiry',
+    AlertType.sale => 'sale',
+  };
 }
 
 class Alert {
@@ -49,7 +59,7 @@ class Alert {
     id: json['id'] as String,
     memberId: json['member_id'] as String,
     userId: json['user_id'] as String,
-    type: AlertType.values.byName(json['type'] as String),
+    type: _alertTypeFromJson(json['type'] as String),
     garmentId: json['garment_id'] as String?,
     title: json['title'] as String,
     body: json['body'] as String?,
@@ -57,4 +67,17 @@ class Alert {
     isDismissed: json['is_dismissed'] as bool? ?? false,
     createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
   );
+}
+AlertType _alertTypeFromJson(String value) {
+  return switch (value) {
+    'unused' => AlertType.unused,
+    'laundry' => AlertType.laundry,
+    'ootd' => AlertType.ootd,
+    'growth' => AlertType.growth,
+    'lend_return' => AlertType.lendReturn,
+    'hand_me_down' => AlertType.handMeDown,
+    'expiry' => AlertType.expiry,
+    'sale' => AlertType.sale,
+    _ => throw ArgumentError('Unknown alert type: $value'),
+  };
 }

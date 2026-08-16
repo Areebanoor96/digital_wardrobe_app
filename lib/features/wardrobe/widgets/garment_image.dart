@@ -11,19 +11,21 @@ class GarmentImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null) {
-      return const ColoredBox(
-        color: Color(0xFFF4F4F8),
-        child: Center(child: Icon(Icons.checkroom_outlined, size: 36)),
+    if (imageUrl == null || imageUrl!.trim().isEmpty) {
+
+        return const ColoredBox(
+          color: Color(0xFFF4F4F8),
+          child: Center(child: Icon(Icons.checkroom_outlined, size: 36)),
+        );
+      }
+      return Image.network(
+        imageUrl!,
+        fit: fit,
+        errorBuilder: (_, _, _) =>
+        const ColoredBox(
+          color: Color(0xFFF4F4F8),
+          child: Center(child: Icon(Icons.broken_image_outlined)),
+        ),
       );
     }
-    return Image.network(
-      imageUrl!,
-      fit: fit,
-      errorBuilder: (_, _, _) => const ColoredBox(
-        color: Color(0xFFF4F4F8),
-        child: Center(child: Icon(Icons.broken_image_outlined)),
-      ),
-    );
   }
-}

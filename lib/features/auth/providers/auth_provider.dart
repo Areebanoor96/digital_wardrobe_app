@@ -20,7 +20,11 @@ class AuthController {
     );
   }
 
-  Future<void> signUp(String name, String email, String password) {
+  Future<AuthResponse> signUp(
+      String name,
+      String email,
+      String password,
+      ) {
     return SupabaseService.client.auth.signUp(
       email: email,
       password: password,

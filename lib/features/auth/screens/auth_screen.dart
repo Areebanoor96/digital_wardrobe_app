@@ -1,6 +1,7 @@
 import 'package:digital_wardrobe_app/core/config/supabase_config.dart';
 import 'package:digital_wardrobe_app/features/auth/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,21 +35,47 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     try {
       final auth = ref.read(authControllerProvider);
       if (_isSignUp) {
-        await auth.signUp(
+        final AuthResponse response = await auth.signUp(
           _nameController.text.trim(),
           _emailController.text.trim(),
           _passwordController.text,
         );
+
+        if (!mounted) return;
+
+        if (response.session == null) {
+          await showDialog<void>(
+            context: context,
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                title: const Text('Check your email'),
+                content: const Text(
+                  'We sent you a confirmation link. '
+                      'Confirm your email to finish creating your account.',
+                ),
+                actions: <Widget>[
+                  FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+
+          return;
+        }
+
+        context.go('/setup');
       } else {
         await auth.signInWithEmail(
           _emailController.text.trim(),
           _passwordController.text,
         );
-      }
-      if (mounted) {
-        // Signups complete the setup wizard; returning sign-ins resume via
-        // splash, which restores the persisted profile selection.
-        context.go(_isSignUp ? '/setup' : '/splash');
+
+        if (mounted) {
+          context.go('/splash');
+        }
       }
     } on AuthException catch (error) {
       _showError(error.message);
@@ -65,6 +92,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AsyncValue<AuthState>>(
+      authStateProvider,
+          (AsyncValue<AuthState>? previous, AsyncValue<AuthState> next) {
+        final AuthState? authState = next.valueOrNull;
+
+        if (authState?.session != null && mounted) {
+          context.go('/splash');
+        }
+      },
+    );
     if (!SupabaseConfig.isConfigured) return const _SupabaseSetupNotice();
     return Scaffold(
       appBar: AppBar(title: const Text('Digital Wardrobe')),

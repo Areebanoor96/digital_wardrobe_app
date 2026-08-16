@@ -258,4 +258,32 @@ class WearLogRepository {
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
   }
+  Future<void> wearOutfitAtomically({
+    required String memberId,
+    required String outfitId,
+    DateTime? wornDate,
+    String? eventName,
+    String? notes,
+    LaundryStatus? laundryStatusAfter,
+  }) async {
+    final User? currentUser = _client.auth.currentUser;
+
+    if (currentUser == null) {
+      throw StateError('No authenticated user.');
+    }
+
+    final DateTime resolvedWornDate = resolveWornDate(wornDate);
+
+    await _client.rpc(
+      'wear_outfit',
+      params: <String, dynamic>{
+        'p_outfit_id': outfitId,
+        'p_member_id': memberId,
+        'p_worn_date': _dateOnly(resolvedWornDate),
+        'p_event_name': eventName,
+        'p_notes': notes,
+        'p_laundry_status_after': laundryStatusAfter?.name,
+      },
+    );
+  }
 }

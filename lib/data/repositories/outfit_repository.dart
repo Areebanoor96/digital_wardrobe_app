@@ -66,7 +66,6 @@ class OutfitRepository {
         .update(<String, dynamic>{
           'name': name,
           'garment_ids': garmentIds,
-          'cover_photo_url': outfit.coverPhotoUrl,
         })
         .eq('id', outfit.id)
         .eq('member_id', outfit.memberId);
