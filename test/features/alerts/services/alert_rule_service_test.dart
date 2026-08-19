@@ -59,6 +59,70 @@ void main() {
       expect(alert, isNull);
     });
 
+    test('does not recreate reminder when one exists for the latest cycle', () {
+      final FamilyMember child = _makeChild();
+
+      final List<GrowthMeasurement> measurements = <GrowthMeasurement>[
+        GrowthMeasurement(
+          id: 'measurement-old',
+          memberId: child.id,
+          heightCm: 140,
+          recordedAt: DateTime.now().subtract(const Duration(days: 90)),
+        ),
+      ];
+
+      final Map<String, dynamic>? alert = service.buildGrowthAlert(
+        member: child,
+        measurements: measurements,
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+        hasReminderForLatestCycle: true,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('creates reminder when none exists for the latest cycle', () {
+      final FamilyMember child = _makeChild();
+
+      final List<GrowthMeasurement> measurements = <GrowthMeasurement>[
+        GrowthMeasurement(
+          id: 'measurement-old',
+          memberId: child.id,
+          heightCm: 140,
+          recordedAt: DateTime.now().subtract(const Duration(days: 90)),
+        ),
+      ];
+
+      final Map<String, dynamic>? alert = service.buildGrowthAlert(
+        member: child,
+        measurements: measurements,
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+        hasReminderForLatestCycle: false,
+      );
+
+      expect(alert, isNotNull);
+      expect(alert!['title'], 'Time for a growth check');
+    });
+
+    test('does not recreate reminder when no measurements exist yet', () {
+      final FamilyMember child = _makeChild();
+
+      final Map<String, dynamic>? alert = service.buildGrowthAlert(
+        member: child,
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+        hasReminderForLatestCycle: true,
+      );
+
+      expect(alert, isNull);
+    });
+
     test('creates measurement reminder when child has no measurements', () {
       final FamilyMember child = _makeChild();
 
@@ -91,9 +155,7 @@ void main() {
           id: 'measurement-old',
           memberId: child.id,
           heightCm: 140,
-          recordedAt: DateTime.now().subtract(
-            const Duration(days: 30),
-          ),
+          recordedAt: DateTime.now().subtract(const Duration(days: 30)),
         ),
       ];
 
@@ -124,9 +186,7 @@ void main() {
           id: 'measurement-old',
           memberId: child.id,
           clothingSize: 'S',
-          recordedAt: DateTime.now().subtract(
-            const Duration(days: 30),
-          ),
+          recordedAt: DateTime.now().subtract(const Duration(days: 30)),
         ),
       ];
 
@@ -157,9 +217,7 @@ void main() {
           id: 'measurement-old',
           memberId: child.id,
           shoeSize: '34',
-          recordedAt: DateTime.now().subtract(
-            const Duration(days: 30),
-          ),
+          recordedAt: DateTime.now().subtract(const Duration(days: 30)),
         ),
       ];
 
@@ -192,17 +250,19 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('shouldHaveGrowthAlert returns true for child needing measurement',
-            () {
-          final FamilyMember child = _makeChild();
+    test(
+      'shouldHaveGrowthAlert returns true for child needing measurement',
+      () {
+        final FamilyMember child = _makeChild();
 
-          final bool result = service.shouldHaveGrowthAlert(
-            member: child,
-            measurements: const <GrowthMeasurement>[],
-          );
+        final bool result = service.shouldHaveGrowthAlert(
+          member: child,
+          measurements: const <GrowthMeasurement>[],
+        );
 
-          expect(result, isTrue);
-        });
+        expect(result, isTrue);
+      },
+    );
   });
 
   // ============================================================
@@ -211,25 +271,15 @@ void main() {
 
   group('AlertRuleService - Laundry Alerts', () {
     test('dirty garment needs laundry alert', () {
-      final Garment garment = _makeGarment(
-        laundryStatus: LaundryStatus.dirty,
-      );
+      final Garment garment = _makeGarment(laundryStatus: LaundryStatus.dirty);
 
-      expect(
-        service.shouldHaveLaundryAlert(garment),
-        isTrue,
-      );
+      expect(service.shouldHaveLaundryAlert(garment), isTrue);
     });
 
     test('clean garment does not need laundry alert', () {
-      final Garment garment = _makeGarment(
-        laundryStatus: LaundryStatus.clean,
-      );
+      final Garment garment = _makeGarment(laundryStatus: LaundryStatus.clean);
 
-      expect(
-        service.shouldHaveLaundryAlert(garment),
-        isFalse,
-      );
+      expect(service.shouldHaveLaundryAlert(garment), isFalse);
     });
 
     test('washing garment does not need dirty laundry alert', () {
@@ -237,10 +287,7 @@ void main() {
         laundryStatus: LaundryStatus.washing,
       );
 
-      expect(
-        service.shouldHaveLaundryAlert(garment),
-        isFalse,
-      );
+      expect(service.shouldHaveLaundryAlert(garment), isFalse);
     });
 
     test('ironing garment does not need dirty laundry alert', () {
@@ -248,19 +295,13 @@ void main() {
         laundryStatus: LaundryStatus.ironing,
       );
 
-      expect(
-        service.shouldHaveLaundryAlert(garment),
-        isFalse,
-      );
+      expect(service.shouldHaveLaundryAlert(garment), isFalse);
     });
 
     test('buildGarmentAlerts creates laundry alert for dirty garment', () {
-      final Garment garment = _makeGarment(
-        laundryStatus: LaundryStatus.dirty,
-      );
+      final Garment garment = _makeGarment(laundryStatus: LaundryStatus.dirty);
 
-      final List<Map<String, dynamic>> alerts =
-      service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -276,12 +317,9 @@ void main() {
     });
 
     test('does not create laundry alert when preference is disabled', () {
-      final Garment garment = _makeGarment(
-        laundryStatus: LaundryStatus.dirty,
-      );
+      final Garment garment = _makeGarment(laundryStatus: LaundryStatus.dirty);
 
-      final List<Map<String, dynamic>> alerts =
-      service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -299,8 +337,7 @@ void main() {
         laundryStatus: LaundryStatus.dirty,
       );
 
-      final List<Map<String, dynamic>> alerts =
-      service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -321,80 +358,52 @@ void main() {
     test('unworn garment purchased more than 7 days ago needs alert', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(
-          const Duration(days: 8),
-        ),
+        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
       );
 
-      expect(
-        service.shouldHaveUnusedAlert(garment),
-        isTrue,
-      );
+      expect(service.shouldHaveUnusedAlert(garment), isTrue);
     });
 
     test('recently purchased unworn garment does not need alert', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(
-          const Duration(days: 3),
-        ),
+        purchaseDate: DateTime.now().subtract(const Duration(days: 3)),
       );
 
-      expect(
-        service.shouldHaveUnusedAlert(garment),
-        isFalse,
-      );
+      expect(service.shouldHaveUnusedAlert(garment), isFalse);
     });
 
     test('unworn garment without purchase date does not need alert', () {
-      final Garment garment = _makeGarment(
-        wearCount: 0,
-      );
+      final Garment garment = _makeGarment(wearCount: 0);
 
-      expect(
-        service.shouldHaveUnusedAlert(garment),
-        isFalse,
-      );
+      expect(service.shouldHaveUnusedAlert(garment), isFalse);
     });
 
     test('garment not worn for more than 30 days needs alert', () {
       final Garment garment = _makeGarment(
         wearCount: 5,
-        lastWornDate: DateTime.now().subtract(
-          const Duration(days: 31),
-        ),
+        lastWornDate: DateTime.now().subtract(const Duration(days: 31)),
       );
 
-      expect(
-        service.shouldHaveUnusedAlert(garment),
-        isTrue,
-      );
+      expect(service.shouldHaveUnusedAlert(garment), isTrue);
     });
 
     test('recently worn garment does not need unused alert', () {
       final Garment garment = _makeGarment(
         wearCount: 5,
-        lastWornDate: DateTime.now().subtract(
-          const Duration(days: 5),
-        ),
+        lastWornDate: DateTime.now().subtract(const Duration(days: 5)),
       );
 
-      expect(
-        service.shouldHaveUnusedAlert(garment),
-        isFalse,
-      );
+      expect(service.shouldHaveUnusedAlert(garment), isFalse);
     });
 
     test('buildGarmentAlerts creates unused alert when condition is met', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(
-          const Duration(days: 8),
-        ),
+        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
       );
 
-      final List<Map<String, dynamic>> alerts =
-      service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -412,13 +421,10 @@ void main() {
     test('does not create unused alert when preference is disabled', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(
-          const Duration(days: 8),
-        ),
+        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
       );
 
-      final List<Map<String, dynamic>> alerts =
-      service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -434,13 +440,10 @@ void main() {
       final Garment garment = _makeGarment(
         id: 'shirt-1',
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(
-          const Duration(days: 8),
-        ),
+        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
       );
 
-      final List<Map<String, dynamic>> alerts =
-      service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -464,6 +467,7 @@ void main() {
         memberId: 'member-1',
         enabled: true,
         hasOotdAlertToday: false,
+        isOotdEligible: true,
       );
 
       expect(alert, isNotNull);
@@ -479,6 +483,7 @@ void main() {
         memberId: 'member-1',
         enabled: false,
         hasOotdAlertToday: false,
+        isOotdEligible: true,
       );
 
       expect(alert, isNull);
@@ -490,9 +495,43 @@ void main() {
         memberId: 'member-1',
         enabled: true,
         hasOotdAlertToday: true,
+        isOotdEligible: true,
       );
 
       expect(alert, isNull);
+    });
+
+    test('does not create OOTD alert when wardrobe is not eligible', () {
+      final Map<String, dynamic>? alert = service.buildOotdAlert(
+        userId: 'user-1',
+        memberId: 'member-1',
+        enabled: true,
+        hasOotdAlertToday: false,
+        isOotdEligible: false,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('shouldHaveOotdAlert returns true when enabled and eligible', () {
+      expect(
+        service.shouldHaveOotdAlert(enabled: true, isOotdEligible: true),
+        isTrue,
+      );
+    });
+
+    test('shouldHaveOotdAlert returns false when disabled', () {
+      expect(
+        service.shouldHaveOotdAlert(enabled: false, isOotdEligible: true),
+        isFalse,
+      );
+    });
+
+    test('shouldHaveOotdAlert returns false when wardrobe is not eligible', () {
+      expect(
+        service.shouldHaveOotdAlert(enabled: true, isOotdEligible: false),
+        isFalse,
+      );
     });
   });
 }

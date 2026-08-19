@@ -34,7 +34,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:scheme="com.example.digital_wardrobe_app"
+                    android:scheme="com.example.digitalwardrobeapp"
                     android:host="login-callback" />
             </intent-filter>
         </activity>

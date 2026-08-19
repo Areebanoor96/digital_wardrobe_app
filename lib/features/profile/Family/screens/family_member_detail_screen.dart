@@ -13,96 +13,113 @@ class FamilyMemberDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<GrowthMeasurement>> measurements = ref.watch(
-      growthMeasurementsProvider(member.id),
-    );
-
     final AsyncValue<FamilyMember?> updatedMember = ref.watch(
       familyMemberProvider(member.id),
     );
 
     final FamilyMember currentMember = updatedMember.valueOrNull ?? member;
 
+    final bool isChild = currentMember.relationship == RelationshipType.child;
+
     return Scaffold(
       appBar: AppBar(title: Text(member.name)),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(growthMeasurementsProvider(member.id));
           ref.invalidate(familyMemberProvider(member.id));
           ref.invalidate(familyMembersProvider);
 
-          await ref.read(growthMeasurementsProvider(member.id).future);
+          if (isChild) {
+            ref.invalidate(growthMeasurementsProvider(member.id));
+            await ref.read(growthMeasurementsProvider(member.id).future);
+          }
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20),
           children: <Widget>[
             _MemberHeader(member: currentMember),
-            const SizedBox(height: 28),
-            Text(
-              'Current measurements',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            _CurrentMeasurementsCard(member: currentMember),
-            const SizedBox(height: 28),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    'Growth history',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: () async {
-                    await showDialog<bool>(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AddGrowthMeasurementDialog(
-                          member: currentMember,
-                        );
-                      },
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            measurements.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (Object error, StackTrace stackTrace) => const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text(
-                    'Could not load growth history.',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-              data: (List<GrowthMeasurement> items) {
-                if (items.isEmpty) {
-                  return const _EmptyGrowthHistory();
-                }
-
-                return Column(
-                  children: items
-                      .map(
-                        (GrowthMeasurement measurement) =>
-                            _MeasurementCard(measurement: measurement),
-                      )
-                      .toList(),
-                );
-              },
-            ),
+            if (isChild) _GrowthSection(member: currentMember),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _GrowthSection extends ConsumerWidget {
+  const _GrowthSection({required this.member});
+
+  final FamilyMember member;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<GrowthMeasurement>> measurements = ref.watch(
+      growthMeasurementsProvider(member.id),
+    );
+
+    return Column(
+      children: <Widget>[
+        const SizedBox(height: 28),
+        Text(
+          'Current measurements',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        _CurrentMeasurementsCard(member: member),
+        const SizedBox(height: 28),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                'Growth history',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: () async {
+                await showDialog<bool>(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AddGrowthMeasurementDialog(member: member);
+                  },
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        measurements.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (Object error, StackTrace stackTrace) => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
+                'Could not load growth history.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          data: (List<GrowthMeasurement> items) {
+            if (items.isEmpty) {
+              return const _EmptyGrowthHistory();
+            }
+
+            return Column(
+              children: items
+                  .map(
+                    (GrowthMeasurement measurement) =>
+                        _MeasurementCard(measurement: measurement),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -192,6 +209,14 @@ class _CurrentMeasurementsCard extends StatelessWidget {
             ),
             const Divider(),
             _MeasurementRow(
+              icon: Icons.straighten_outlined,
+              label: 'Foot length',
+              value: member.footLengthCm == null
+                  ? 'Not recorded'
+                  : '${member.footLengthCm!.toStringAsFixed(1)} cm',
+            ),
+            const Divider(),
+            _MeasurementRow(
               icon: Icons.directions_walk_outlined,
               label: 'Shoe size',
               value: member.shoeSize ?? 'Not recorded',
@@ -270,6 +295,11 @@ class _MeasurementCard extends StatelessWidget {
                   _HistoryValue(
                     label: 'Clothing',
                     value: measurement.clothingSize!,
+                  ),
+                if (measurement.footLengthCm != null)
+                  _HistoryValue(
+                    label: 'Foot length',
+                    value: '${measurement.footLengthCm!.toStringAsFixed(1)} cm',
                   ),
                 if (measurement.shoeSize != null)
                   _HistoryValue(label: 'Shoes', value: measurement.shoeSize!),

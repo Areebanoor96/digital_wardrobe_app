@@ -19,6 +19,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isSignUp = false;
+  bool _obscurePassword = true;
   bool _submitting = false;
 
   @override
@@ -42,25 +43,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         );
 
         if (!mounted) return;
-
         if (response.session == null) {
           await showDialog<void>(
             context: context,
             builder: (BuildContext dialogContext) {
               return AlertDialog(
-                title: const Text('Check your email'),
-                content: const Text(
-                  'We sent you a confirmation link. '
-                      'Confirm your email to finish creating your account.',
+                title: const Text('Verification code sent'),
+                content: Text(
+                  'A verification code has been sent to '
+                      '${_emailController.text.trim()}. '
+                      'Please enter the code to verify your email address.',
                 ),
                 actions: <Widget>[
                   FilledButton(
                     onPressed: () => Navigator.of(dialogContext).pop(),
-                    child: const Text('OK'),
+                    child: const Text('Continue'),
                   ),
                 ],
               );
             },
+          );
+
+          if (!mounted) return;
+
+          context.go(
+            '/verify-email',
+            extra: _emailController.text.trim(),
           );
 
           return;
@@ -174,10 +182,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword =
+                            !_obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                      ),
+                    ),
                     validator: (String? value) =>
-                        value == null || value.length < 6
+                    value == null || value.length < 6
                         ? 'Use at least 6 characters'
                         : null,
                   ),
@@ -187,7 +210,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: _sendPasswordReset,
+                onPressed: () {
+                  context.push('/forgot-password');
+                },
                 child: const Text('Forgot password?'),
               ),
             ),
@@ -211,26 +236,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _sendPasswordReset() async {
-    final String email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      _showError('Enter your email address first.');
-      return;
-    }
-    try {
-      await ref.read(authControllerProvider).sendPasswordReset(email);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset instructions have been sent.'),
-          ),
-        );
-      }
-    } on AuthException catch (error) {
-      _showError(error.message);
-    }
   }
 }
 

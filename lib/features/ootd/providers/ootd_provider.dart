@@ -10,27 +10,35 @@ import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final StateProvider<OutfitContext> ootdContextProvider =
-StateProvider<OutfitContext>(
-      (Ref ref) => const OutfitContext(),
-);
+    StateProvider<OutfitContext>((Ref ref) => const OutfitContext());
 
 final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
   final List<Garment> garments =
       ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
 
   final List<WearLog> recentLogs =
-      ref.watch(recentWearActivityProvider).valueOrNull ??
-          const <WearLog>[];
+      ref.watch(recentWearActivityProvider).valueOrNull ?? const <WearLog>[];
 
-  final OutfitContext context = ref.watch(
-    ootdContextProvider,
-  );
+  final OutfitContext context = ref.watch(ootdContextProvider);
 
   final Set<String> recentlyWornIds = recentLogs
       .map((WearLog log) => log.garmentId)
       .toSet();
 
-  return const OutfitRecommendationService().recommend(
+  const OutfitRecommendationService service = OutfitRecommendationService();
+
+  final String? memberId = ref.watch(selectedFamilyMemberProvider)?.id;
+
+  if (!service.isEligibleForRecommendation(garments, memberId: memberId)) {
+    return const OutfitRecommendation(
+      garments: <Garment>[],
+      reason:
+          'Add at least 5 garments including a top, bottom and shoes '
+          'to get an outfit suggestion.',
+    );
+  }
+
+  return service.recommend(
     allGarments: garments,
     recentlyWornGarmentIds: recentlyWornIds,
     context: context,

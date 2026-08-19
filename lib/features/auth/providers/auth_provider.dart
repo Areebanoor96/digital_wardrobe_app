@@ -28,8 +28,6 @@ class AuthController {
     return SupabaseService.client.auth.signUp(
       email: email,
       password: password,
-      emailRedirectTo:
-      'com.example.digital_wardrobe_app://login-callback/',
       data: <String, dynamic>{
         'full_name': name,
       },
@@ -40,15 +38,48 @@ class AuthController {
     return SupabaseService.client.auth.signInWithOAuth(
       provider,
       redirectTo:
-      'com.example.digital_wardrobe_app://login-callback/',
+      'com.example.digitalwardrobeapp://login-callback/',
     );
   }
 
-  Future<void> sendPasswordReset(String email) {
+  Future<void> sendPasswordResetOtp(String email) {
     return SupabaseService.client.auth.resetPasswordForEmail(
       email,
-      redirectTo:
-      'com.example.digital_wardrobe_app://login-callback/',
+    );
+  }
+  Future<AuthResponse> verifyPasswordResetOtp(
+      String email,
+      String token,
+      ) {
+    return SupabaseService.client.auth.verifyOTP(
+      email: email,
+      token: token,
+      type: OtpType.recovery,
+    );
+  }
+  Future<UserResponse> updatePassword(String newPassword) {
+    return SupabaseService.client.auth.updateUser(
+      UserAttributes(
+        password: newPassword,
+      ),
+    );
+  }
+
+  Future<AuthResponse> verifyEmailOtp(
+      String email,
+      String token,
+      ) {
+    return SupabaseService.client.auth.verifyOTP(
+      email: email,
+      token: token,
+      type: OtpType.email,
+    );
+  }
+
+  Future<ResendResponse> resendSignupOtp(String email) {
+    return SupabaseService.client.auth.resend(
+      type: OtpType.signup,
+      email: email,
     );
   }
 }

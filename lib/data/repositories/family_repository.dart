@@ -123,10 +123,22 @@ class FamilyRepository {
     required String id,
     required String name,
     required String relationship,
+    DateTime? birthDate,
   }) async {
+    final Map<String, dynamic> values = <String, dynamic>{
+      'name': name,
+      'relationship': relationship,
+    };
+
+    // Only write the birth date when the caller provides one so that
+    // existing dates are preserved when it is not being changed.
+    if (birthDate != null) {
+      values['birth_date'] = birthDate.toIso8601String().split('T').first;
+    }
+
     await _client
         .from('family_members')
-        .update({'name': name, 'relationship': relationship})
+        .update(values)
         .eq('id', id)
         .eq('user_id', _requireUserId());
   }

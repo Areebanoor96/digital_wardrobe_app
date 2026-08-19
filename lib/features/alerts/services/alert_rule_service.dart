@@ -5,8 +5,7 @@ import 'package:digital_wardrobe_app/features/profile/Family/services/growth_int
 
 class AlertRuleService {
   const AlertRuleService({
-    this.growthIntelligenceService =
-    const GrowthIntelligenceService(),
+    this.growthIntelligenceService = const GrowthIntelligenceService(),
   });
 
   final GrowthIntelligenceService growthIntelligenceService;
@@ -19,8 +18,7 @@ class AlertRuleService {
     required bool unusedAlertsEnabled,
     required bool laundryAlertsEnabled,
   }) {
-    final List<Map<String, dynamic>> alerts =
-    <Map<String, dynamic>>[];
+    final List<Map<String, dynamic>> alerts = <Map<String, dynamic>>[];
 
     if (unusedAlertsEnabled) {
       _addUnusedAlert(
@@ -61,9 +59,7 @@ class AlertRuleService {
     if (garment.wearCount == 0) {
       final int daysSincePurchase = garment.purchaseDate == null
           ? 0
-          : DateTime.now()
-          .difference(garment.purchaseDate!)
-          .inDays;
+          : DateTime.now().difference(garment.purchaseDate!).inDays;
 
       if (daysSincePurchase >= 7) {
         alerts.add(<String, dynamic>{
@@ -73,7 +69,7 @@ class AlertRuleService {
           'garment_id': garment.id,
           'title': 'Unworn garment',
           'body':
-          '${garment.name} has not been worn yet. Try styling it into an outfit!',
+              '${garment.name} has not been worn yet. Try styling it into an outfit!',
           'is_read': false,
           'is_dismissed': false,
         });
@@ -95,7 +91,7 @@ class AlertRuleService {
           'garment_id': garment.id,
           'title': 'Not worn recently',
           'body':
-          '${garment.name} hasn\'t been worn in $daysSinceLastWorn days. Time to rotate it back in!',
+              '${garment.name} hasn\'t been worn in $daysSinceLastWorn days. Time to rotate it back in!',
           'is_read': false,
           'is_dismissed': false,
         });
@@ -116,27 +112,32 @@ class AlertRuleService {
       return;
     }
 
-    if (shouldHaveLaundryAlert(garment)){
+    if (shouldHaveLaundryAlert(garment)) {
       alerts.add(<String, dynamic>{
         'user_id': userId,
         'member_id': memberId,
         'type': 'laundry',
         'garment_id': garment.id,
         'title': 'Laundry needed',
-        'body':
-        '${garment.name} is marked as dirty. Time for a wash!',
+        'body': '${garment.name} is marked as dirty. Time for a wash!',
         'is_read': false,
         'is_dismissed': false,
       });
     }
   }
+
   Map<String, dynamic>? buildOotdAlert({
     required String userId,
     required String memberId,
     required bool enabled,
     required bool hasOotdAlertToday,
+    required bool isOotdEligible,
   }) {
     if (!enabled) {
+      return null;
+    }
+
+    if (!isOotdEligible) {
       return null;
     }
 
@@ -150,11 +151,17 @@ class AlertRuleService {
       'type': 'ootd',
       'garment_id': null,
       'title': 'Your outfit suggestion is ready',
-      'body':
-      'Check your Outfit of the Day for a fresh wardrobe suggestion.',
+      'body': 'Check your Outfit of the Day for a fresh wardrobe suggestion.',
       'is_read': false,
       'is_dismissed': false,
     };
+  }
+
+  bool shouldHaveOotdAlert({
+    required bool enabled,
+    required bool isOotdEligible,
+  }) {
+    return enabled && isOotdEligible;
   }
 
   Map<String, dynamic>? buildGrowthAlert({
@@ -163,6 +170,7 @@ class AlertRuleService {
     required String userId,
     required Set<String> existingKeys,
     required bool enabled,
+    bool hasReminderForLatestCycle = false,
   }) {
     if (!enabled) {
       return null;
@@ -178,13 +186,14 @@ class AlertRuleService {
       return null;
     }
 
-    final bool needsReminder =
-    growthIntelligenceService.needsMeasurementReminder(
-      member: member,
-      measurements: measurements,
-    );
+    final bool needsReminder = growthIntelligenceService
+        .needsMeasurementReminder(member: member, measurements: measurements);
 
     if (needsReminder) {
+      if (hasReminderForLatestCycle) {
+        return null;
+      }
+
       return <String, dynamic>{
         'user_id': userId,
         'member_id': member.id,
@@ -192,14 +201,13 @@ class AlertRuleService {
         'garment_id': null,
         'title': 'Time for a growth check',
         'body':
-        'Update ${member.name}\'s measurements to keep their wardrobe sizes current.',
+            'Update ${member.name}\'s measurements to keep their wardrobe sizes current.',
         'is_read': false,
         'is_dismissed': false,
       };
     }
 
-    final GrowthComparison? comparison =
-    growthIntelligenceService.compare(
+    final GrowthComparison? comparison = growthIntelligenceService.compare(
       measurements: measurements,
     );
 
@@ -212,9 +220,7 @@ class AlertRuleService {
     final double? heightChange = comparison.heightChangeCm;
 
     if (heightChange != null && heightChange > 0) {
-      changes.add(
-        'grown ${heightChange.toStringAsFixed(1)} cm',
-      );
+      changes.add('grown ${heightChange.toStringAsFixed(1)} cm');
     }
 
     if (comparison.clothingSizeChanged) {
@@ -236,12 +242,13 @@ class AlertRuleService {
       'garment_id': null,
       'title': 'Growth detected',
       'body':
-      '${member.name} has ${_joinChanges(changes)}. '
+          '${member.name} has ${_joinChanges(changes)}. '
           'Review their wardrobe to see what still fits.',
       'is_read': false,
       'is_dismissed': false,
     };
   }
+
   bool shouldHaveGrowthAlert({
     required FamilyMember member,
     required List<GrowthMeasurement> measurements,
@@ -257,13 +264,13 @@ class AlertRuleService {
       return true;
     }
 
-    final GrowthComparison? comparison =
-    growthIntelligenceService.compare(
+    final GrowthComparison? comparison = growthIntelligenceService.compare(
       measurements: measurements,
     );
 
     return comparison?.hasGrowthChange ?? false;
   }
+
   String _joinChanges(List<String> changes) {
     if (changes.length == 1) {
       return changes.first;
@@ -276,6 +283,7 @@ class AlertRuleService {
     return '${changes.sublist(0, changes.length - 1).join(', ')}, '
         'and ${changes.last}';
   }
+
   bool shouldHaveUnusedAlert(Garment garment) {
     final DateTime now = DateTime.now();
 
@@ -284,15 +292,17 @@ class AlertRuleService {
         return false;
       }
 
-      final int daysSincePurchase =
-          now.difference(garment.purchaseDate!).inDays;
+      final int daysSincePurchase = now
+          .difference(garment.purchaseDate!)
+          .inDays;
 
       return daysSincePurchase >= 7;
     }
 
     if (garment.lastWornDate != null && garment.wearCount > 0) {
-      final int daysSinceLastWorn =
-          now.difference(garment.lastWornDate!).inDays;
+      final int daysSinceLastWorn = now
+          .difference(garment.lastWornDate!)
+          .inDays;
 
       return daysSinceLastWorn >= 30;
     }

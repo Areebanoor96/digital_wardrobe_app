@@ -1,5 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart'
+    as alerts;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,16 +15,40 @@ class AddGrowthMeasurementDialog extends ConsumerStatefulWidget {
       _AddGrowthMeasurementDialogState();
 }
 
+const List<String> kChildClothingSizes = <String>[
+  '0–1 Years',
+  '1–2 Years',
+  '2–3 Years',
+  '3–4 Years',
+  '4–5 Years',
+  '5–6 Years',
+  '6–7 Years',
+  '7–8 Years',
+  '8–9 Years',
+  '9–10 Years',
+  '10–11 Years',
+  '11–12 Years',
+  '12–13 Years',
+  '13–14 Years',
+  '14–15 Years',
+  '15–16 Years',
+  '16–17 Years',
+];
+
+const List<String> kShoeSizeSystems = <String>['UK/PK', 'US', 'EU'];
+
 class _AddGrowthMeasurementDialogState
     extends ConsumerState<AddGrowthMeasurementDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _heightController;
   late final TextEditingController _weightController;
-  late final TextEditingController _clothingSizeController;
-  late final TextEditingController _shoeSizeController;
+  late final TextEditingController _footLengthController;
+  late final TextEditingController _shoeValueController;
 
   DateTime _recordedAt = DateTime.now();
+  String? _selectedClothingSize;
+  String? _selectedShoeSystem;
   bool _isSaving = false;
 
   @override
@@ -31,20 +57,41 @@ class _AddGrowthMeasurementDialogState
 
     _heightController = TextEditingController();
     _weightController = TextEditingController();
-    _clothingSizeController = TextEditingController(
-      text: widget.member.currentSize ?? '',
-    );
-    _shoeSizeController = TextEditingController(
-      text: widget.member.shoeSize ?? '',
-    );
+    _footLengthController = TextEditingController();
+
+    final String? memberCurrentSize = widget.member.currentSize;
+    _selectedClothingSize = kChildClothingSizes.contains(memberCurrentSize)
+        ? memberCurrentSize
+        : null;
+
+    final String? memberShoeSize = widget.member.shoeSize;
+    String? shoeSystem;
+    String? shoeValue;
+
+    if (memberShoeSize != null && memberShoeSize.trim().isNotEmpty) {
+      for (final String system in kShoeSizeSystems) {
+        if (memberShoeSize.startsWith('$system ')) {
+          shoeSystem = system;
+          shoeValue = memberShoeSize.substring(system.length + 1).trim();
+          break;
+        }
+      }
+
+      if (shoeSystem == null) {
+        shoeValue = memberShoeSize;
+      }
+    }
+
+    _selectedShoeSystem = shoeSystem ?? kShoeSizeSystems.first;
+    _shoeValueController = TextEditingController(text: shoeValue ?? '');
   }
 
   @override
   void dispose() {
     _heightController.dispose();
     _weightController.dispose();
-    _clothingSizeController.dispose();
-    _shoeSizeController.dispose();
+    _footLengthController.dispose();
+    _shoeValueController.dispose();
     super.dispose();
   }
 
@@ -97,20 +144,96 @@ class _AddGrowthMeasurementDialogState
                       _validateNumber(value, 'weight'),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _clothingSizeController,
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedClothingSize,
                   decoration: const InputDecoration(
                     labelText: 'Clothing size',
                     prefixIcon: Icon(Icons.checkroom_outlined),
                   ),
+                  items: kChildClothingSizes.map((String size) {
+                    return DropdownMenuItem<String>(
+                      value: size,
+                      child: Text(size),
+                    );
+                  }).toList(),
+                  onChanged: _isSaving
+                      ? null
+                      : (String? value) {
+                          setState(() {
+                            _selectedClothingSize = value;
+                          });
+                        },
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
-                  controller: _shoeSizeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Shoe size',
-                    prefixIcon: Icon(Icons.directions_walk_outlined),
+                  controller: _footLengthController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
                   ),
+                  decoration: const InputDecoration(
+                    labelText: 'Foot length',
+                    suffixText: 'cm',
+                    prefixIcon: Icon(Icons.straighten_outlined),
+                  ),
+                  validator: (String? value) =>
+                      _validateNumber(value, 'foot length'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _selectedShoeSystem,
+                        decoration: const InputDecoration(
+                          labelText: 'Shoe size system',
+                          prefixIcon: Icon(Icons.directions_walk_outlined),
+                        ),
+                        items: kShoeSizeSystems.map((String system) {
+                          return DropdownMenuItem<String>(
+                            value: system,
+                            child: Text(system),
+                          );
+                        }).toList(),
+                        onChanged: _isSaving
+                            ? null
+                            : (String? value) {
+                                if (value == null) {
+                                  return;
+                                }
+
+                                setState(() {
+                                  _selectedShoeSystem = value;
+                                });
+                              },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _shoeValueController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Shoe size',
+                          prefixIcon: Icon(Icons.straighten_outlined),
+                        ),
+                        validator: (String? value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return null;
+                          }
+
+                          final double? number = double.tryParse(value.trim());
+
+                          if (number == null || number <= 0) {
+                            return 'Enter a valid shoe size';
+                          }
+
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -174,13 +297,18 @@ class _AddGrowthMeasurementDialogState
 
     final String heightText = _heightController.text.trim();
     final String weightText = _weightController.text.trim();
-    final String clothingSize = _clothingSizeController.text.trim();
-    final String shoeSize = _shoeSizeController.text.trim();
+    final String footLengthText = _footLengthController.text.trim();
+    final String shoeValue = _shoeValueController.text.trim();
+    final String? clothingSize = _selectedClothingSize;
+    final String? shoeSize = shoeValue.isEmpty
+        ? null
+        : '${_selectedShoeSystem ?? kShoeSizeSystems.first} $shoeValue';
 
     if (heightText.isEmpty &&
         weightText.isEmpty &&
-        clothingSize.isEmpty &&
-        shoeSize.isEmpty) {
+        footLengthText.isEmpty &&
+        clothingSize == null &&
+        shoeSize == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Enter at least one measurement.')),
       );
@@ -199,14 +327,18 @@ class _AddGrowthMeasurementDialogState
             recordedAt: _recordedAt,
             heightCm: heightText.isEmpty ? null : double.parse(heightText),
             weightKg: weightText.isEmpty ? null : double.parse(weightText),
-            clothingSize: clothingSize.isEmpty ? null : clothingSize,
-            shoeSize: shoeSize.isEmpty ? null : shoeSize,
+            clothingSize: clothingSize,
+            shoeSize: shoeSize,
+            footLengthCm: footLengthText.isEmpty
+                ? null
+                : double.parse(footLengthText),
           );
 
       ref.invalidate(growthMeasurementsProvider(widget.member.id));
 
       ref.invalidate(familyMembersProvider);
       ref.invalidate(familyMemberProvider(widget.member.id));
+      ref.invalidate(alerts.alertsProvider);
       if (mounted) {
         Navigator.pop(context, true);
       }

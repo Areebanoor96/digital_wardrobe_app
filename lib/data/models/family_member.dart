@@ -34,6 +34,7 @@ class FamilyMember {
     this.heightCm,
     this.weightKg,
     this.shoeSize,
+    this.footLengthCm,
     this.avatarPath,
     this.avatarUrl,
   });
@@ -46,8 +47,11 @@ class FamilyMember {
   final double? heightCm;
   final double? weightKg;
   final String? shoeSize;
+  final double? footLengthCm;
   final String? avatarPath;
   final String? avatarUrl;
+
+  bool get isChild => relationship == RelationshipType.child;
 
   factory FamilyMember.fromJson(Map<String, dynamic> json) => FamilyMember(
     id: json['id'] as String,
@@ -60,6 +64,7 @@ class FamilyMember {
     heightCm: (json['height_cm'] as num?)?.toDouble(),
     weightKg: (json['weight_kg'] as num?)?.toDouble(),
     shoeSize: json['shoe_size'] as String?,
+    footLengthCm: (json['foot_length_cm'] as num?)?.toDouble(),
     avatarPath: json['avatar_path'] as String?,
   );
 
@@ -71,6 +76,7 @@ class FamilyMember {
     'height_cm': heightCm,
     'weight_kg': weightKg,
     'shoe_size': shoeSize,
+    'foot_length_cm': footLengthCm,
     'avatar_path': avatarPath,
   };
 
@@ -82,6 +88,7 @@ class FamilyMember {
     double? heightCm,
     double? weightKg,
     String? shoeSize,
+    double? footLengthCm,
     String? avatarPath,
     String? avatarUrl,
   }) => FamilyMember(
@@ -93,6 +100,7 @@ class FamilyMember {
     heightCm: heightCm ?? this.heightCm,
     weightKg: weightKg ?? this.weightKg,
     shoeSize: shoeSize ?? this.shoeSize,
+    footLengthCm: footLengthCm ?? this.footLengthCm,
     avatarPath: avatarPath ?? this.avatarPath,
     avatarUrl: avatarUrl ?? this.avatarUrl,
   );

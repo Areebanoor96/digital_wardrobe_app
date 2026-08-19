@@ -7,6 +7,7 @@ class GrowthMeasurement {
     this.weightKg,
     this.clothingSize,
     this.shoeSize,
+    this.footLengthCm,
   });
 
   final String id;
@@ -17,6 +18,7 @@ class GrowthMeasurement {
   final double? weightKg;
   final String? clothingSize;
   final String? shoeSize;
+  final double? footLengthCm;
 
   factory GrowthMeasurement.fromJson(Map<String, dynamic> json) =>
       GrowthMeasurement(
@@ -27,5 +29,6 @@ class GrowthMeasurement {
         weightKg: (json['weight_kg'] as num?)?.toDouble(),
         clothingSize: json['clothing_size'] as String?,
         shoeSize: json['shoe_size'] as String?,
+        footLengthCm: (json['foot_length_cm'] as num?)?.toDouble(),
       );
 }

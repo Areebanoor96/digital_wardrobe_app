@@ -14,6 +14,7 @@ void main() {
     List<String> seasons = const <String>[],
     List<String> moods = const <String>[],
     String? colorHex,
+    String? memberId = 'member-1',
     LaundryStatus laundryStatus = LaundryStatus.clean,
     bool isArchived = false,
     DateTime? lastWornDate,
@@ -21,7 +22,7 @@ void main() {
     return Garment(
       id: id,
       name: name,
-      memberId: 'member-1',
+      memberId: memberId,
       category: category,
       photoPaths: const <String>['test/photo.jpg'],
       photoUrls: const <String>['https://example.com/photo.jpg'],
@@ -36,6 +37,148 @@ void main() {
   }
 
   group('OOTD eligibility', () {
+    test('wardrobe with fewer than 5 active garments is not eligible', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(id: 't3', name: 'Top 3', category: GarmentCategory.top),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+      ];
+
+      garments.removeLast();
+
+      expect(service.isEligibleForRecommendation(garments), isFalse);
+    });
+
+    test('wardrobe missing shoes is not eligible', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(id: 't3', name: 'Top 3', category: GarmentCategory.top),
+        garment(id: 't4', name: 'Top 4', category: GarmentCategory.top),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+      ];
+
+      expect(service.isEligibleForRecommendation(garments), isFalse);
+    });
+
+    test('wardrobe missing top or bottom is not eligible', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+        garment(id: 's2', name: 'Shoes 2', category: GarmentCategory.shoe),
+        garment(id: 's3', name: 'Shoes 3', category: GarmentCategory.shoe),
+        garment(id: 'a1', name: 'Bag', category: GarmentCategory.bag),
+      ];
+
+      expect(service.isEligibleForRecommendation(garments), isFalse);
+    });
+
+    test('archived garments do not count towards eligibility', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(
+          id: 'archived',
+          name: 'Archived Top',
+          category: GarmentCategory.top,
+          isArchived: true,
+        ),
+      ];
+
+      expect(service.isEligibleForRecommendation(garments), isFalse);
+    });
+
+    test('dirty garments do not count towards eligibility', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(
+          id: 'dirty',
+          name: 'Dirty Top',
+          category: GarmentCategory.top,
+          laundryStatus: LaundryStatus.dirty,
+        ),
+      ];
+
+      expect(service.isEligibleForRecommendation(garments), isFalse);
+    });
+
+    test('washing and ironing garments do not count towards eligibility', () {
+      final List<Garment> garments = <Garment>[
+        garment(
+          id: 'washing',
+          name: 'Washing Top',
+          category: GarmentCategory.top,
+          laundryStatus: LaundryStatus.washing,
+        ),
+        garment(
+          id: 'ironing',
+          name: 'Ironing Top',
+          category: GarmentCategory.top,
+          laundryStatus: LaundryStatus.ironing,
+        ),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(id: 't3', name: 'Top 3', category: GarmentCategory.top),
+      ];
+
+      expect(service.isEligibleForRecommendation(garments), isFalse);
+    });
+
+    test('garments from other members do not count towards eligibility', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(
+          id: 'other-member',
+          name: 'Other Member Top',
+          category: GarmentCategory.top,
+          memberId: 'member-2',
+        ),
+      ];
+
+      expect(
+        service.isEligibleForRecommendation(garments, memberId: 'member-1'),
+        isFalse,
+      );
+    });
+
+    test('memberId filter accepts matching member garments', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(id: 'a1', name: 'Bag', category: GarmentCategory.bag),
+      ];
+
+      expect(
+        service.isEligibleForRecommendation(garments, memberId: 'member-1'),
+        isTrue,
+      );
+    });
+
+    test('wardrobe meeting the minimum is eligible', () {
+      final List<Garment> garments = <Garment>[
+        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
+        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
+        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
+        garment(id: 'a1', name: 'Bag', category: GarmentCategory.bag),
+      ];
+
+      expect(service.isEligibleForRecommendation(garments), isTrue);
+    });
+
     test('archived garments are never recommended', () {
       final Garment archived = garment(
         id: 'archived',

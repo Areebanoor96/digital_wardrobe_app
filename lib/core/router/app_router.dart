@@ -1,6 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/verify_email_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/auth_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/onboarding_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/setup_wizard_screen.dart';
@@ -13,6 +14,9 @@ import 'package:digital_wardrobe_app/features/shell/screens/app_shell_screen.dar
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/archived_garments_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/forgot_password_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/reset_password_otp_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/new_password_screen.dart';
 import 'package:go_router/go_router.dart';
 
 final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
@@ -29,7 +33,11 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       final bool isPublicRoute =
           location == '/splash' ||
           location == '/onboarding' ||
-          location == '/auth';
+          location == '/auth'||
+          location == '/verify-email'||
+              location == '/forgot-password' ||
+              location == '/reset-password-otp' ||
+              location == '/new-password';
 
       final bool isProfileRoute =
           location == '/profiles' || location == '/setup';
@@ -52,6 +60,39 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: '/auth', builder: (_, _) => const AuthScreen()),
+      GoRoute(
+        path: '/verify-email',
+        builder: (_, GoRouterState state) {
+          final String email = state.extra! as String;
+
+          return VerifyEmailScreen(
+            email: email,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, _) =>
+        const ForgotPasswordScreen(),
+      ),
+
+      GoRoute(
+        path: '/reset-password-otp',
+        builder: (_, GoRouterState state) {
+          final String email =
+          state.extra! as String;
+
+          return ResetPasswordOtpScreen(
+            email: email,
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/new-password',
+        builder: (_, _) =>
+        const NewPasswordScreen(),
+      ),
       GoRoute(path: '/setup', builder: (_, _) => const SetupWizardScreen()),
       GoRoute(
         path: '/profiles',

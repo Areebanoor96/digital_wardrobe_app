@@ -1,7 +1,9 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/screens/family_screen.dart';
+import 'package:digital_wardrobe_app/features/profile/Family/widgets/add_growth_measurement_dialog.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/profile_avatar_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,6 +76,11 @@ class ProfileSelectionScreen extends ConsumerWidget {
 
                   await ProfileSessionService.saveSelectedProfile(member.id);
 
+                  if (context.mounted &&
+                      member.relationship == RelationshipType.child) {
+                    await _maybePromptFirstMeasurements(context, ref, member);
+                  }
+
                   if (context.mounted) {
                     context.go('/app');
                   }
@@ -83,6 +90,31 @@ class ProfileSelectionScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _maybePromptFirstMeasurements(
+    BuildContext context,
+    WidgetRef ref,
+    FamilyMember member,
+  ) async {
+    final GrowthMeasurement? latest = await ref
+        .read(growthRepositoryProvider)
+        .fetchLatestMeasurement(memberId: member.id);
+
+    if (latest != null) {
+      return;
+    }
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AddGrowthMeasurementDialog(member: member);
+      },
     );
   }
 }

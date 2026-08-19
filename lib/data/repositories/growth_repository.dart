@@ -54,6 +54,7 @@ class GrowthRepository {
     double? weightKg,
     String? clothingSize,
     String? shoeSize,
+    double? footLengthCm,
   }) async {
     final String userId = _client.auth.currentUser!.id;
 
@@ -65,6 +66,7 @@ class GrowthRepository {
       'weight_kg': weightKg,
       'clothing_size': clothingSize,
       'shoe_size': shoeSize,
+      'foot_length_cm': footLengthCm,
     };
 
     final Map<String, dynamic> row = Map<String, dynamic>.from(
@@ -111,6 +113,7 @@ class GrowthRepository {
     double? weightKg;
     String? clothingSize;
     String? shoeSize;
+    double? footLengthCm;
 
     for (final dynamic rawRow in rows) {
       final Map<String, dynamic> row = Map<String, dynamic>.from(rawRow as Map);
@@ -119,11 +122,13 @@ class GrowthRepository {
       weightKg ??= (row['weight_kg'] as num?)?.toDouble();
       clothingSize ??= row['clothing_size'] as String?;
       shoeSize ??= row['shoe_size'] as String?;
+      footLengthCm ??= (row['foot_length_cm'] as num?)?.toDouble();
 
       if (heightCm != null &&
           weightKg != null &&
           clothingSize != null &&
-          shoeSize != null) {
+          shoeSize != null &&
+          footLengthCm != null) {
         break;
       }
     }
@@ -135,6 +140,7 @@ class GrowthRepository {
           'weight_kg': weightKg,
           'current_size': clothingSize,
           'shoe_size': shoeSize,
+          'foot_length_cm': footLengthCm,
         })
         .eq('id', memberId)
         .eq('user_id', userId);

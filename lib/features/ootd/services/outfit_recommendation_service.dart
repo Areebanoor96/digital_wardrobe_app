@@ -26,6 +26,28 @@ class OutfitRecommendationService {
 
   final OutfitIntelligenceEngine engine;
 
+  bool isEligibleForRecommendation(List<Garment> garments, {String? memberId}) {
+    final List<Garment> active = garments
+        .where(
+          (Garment garment) =>
+              !garment.isArchived &&
+              garment.laundryStatus == LaundryStatus.clean &&
+              (memberId == null || garment.memberId == memberId),
+        )
+        .toList();
+
+    if (active.length < 5) {
+      return false;
+    }
+
+    bool hasCategory(GarmentCategory category) =>
+        active.any((Garment garment) => garment.category == category);
+
+    return hasCategory(GarmentCategory.top) &&
+        hasCategory(GarmentCategory.bottom) &&
+        hasCategory(GarmentCategory.shoe);
+  }
+
   OutfitRecommendation recommend({
     required List<Garment> allGarments,
     required Set<String> recentlyWornGarmentIds,
@@ -34,16 +56,16 @@ class OutfitRecommendationService {
     final List<Garment> eligible = allGarments
         .where(
           (Garment garment) =>
-      !garment.isArchived &&
-          garment.laundryStatus == LaundryStatus.clean,
-    )
+              !garment.isArchived &&
+              garment.laundryStatus == LaundryStatus.clean,
+        )
         .toList();
 
     if (eligible.isEmpty) {
       return const OutfitRecommendation(
         garments: <Garment>[],
         reason:
-        'Add some clean garments to your wardrobe to get a recommendation.',
+            'Add some clean garments to your wardrobe to get a recommendation.',
       );
     }
 
@@ -53,9 +75,7 @@ class OutfitRecommendationService {
       context: context,
     );
 
-    final OutfitContext ootdContext = context.copyWith(
-      heroGarment: hero,
-    );
+    final OutfitContext ootdContext = context.copyWith(heroGarment: hero);
 
     final recommendation = engine.recommend(
       garments: eligible,
@@ -109,10 +129,10 @@ class OutfitRecommendationService {
   }
 
   int _heroScore(
-      Garment garment, {
-        required Set<String> recentlyWornGarmentIds,
-        required OutfitContext context,
-      }) {
+    Garment garment, {
+    required Set<String> recentlyWornGarmentIds,
+    required OutfitContext context,
+  }) {
     int score = 0;
 
     if (!recentlyWornGarmentIds.contains(garment.id)) {
@@ -135,34 +155,22 @@ class OutfitRecommendationService {
       }
     }
 
-    if (_containsIgnoreCase(
-      garment.occasions,
-      context.occasion,
-    )) {
+    if (_containsIgnoreCase(garment.occasions, context.occasion)) {
       score += 25;
     }
 
-    if (_containsIgnoreCase(
-      garment.seasons,
-      context.season,
-    )) {
+    if (_containsIgnoreCase(garment.seasons, context.season)) {
       score += 20;
     }
 
-    if (_containsIgnoreCase(
-      garment.moods,
-      context.mood,
-    )) {
+    if (_containsIgnoreCase(garment.moods, context.mood)) {
       score += 15;
     }
 
     return score;
   }
 
-  bool _containsIgnoreCase(
-      List<String> values,
-      String? target,
-      ) {
+  bool _containsIgnoreCase(List<String> values, String? target) {
     if (target == null) {
       return false;
     }
@@ -170,8 +178,7 @@ class OutfitRecommendationService {
     final String normalizedTarget = target.toLowerCase();
 
     return values.any(
-          (String value) =>
-      value.toLowerCase() == normalizedTarget,
+      (String value) => value.toLowerCase() == normalizedTarget,
     );
   }
 

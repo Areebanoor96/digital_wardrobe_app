@@ -15,10 +15,8 @@ void main() {
         birthDate: DateTime(2000, 1, 1),
       );
 
-      expect(
-        service.isEligibleForGrowthTracking(member),
-        isFalse,
-      );
+      expect(service.isEligibleForGrowthTracking(member), isFalse);
+      expect(member.isChild, isFalse);
     });
 
     test('child under 18 is eligible for growth tracking', () {
@@ -26,15 +24,11 @@ void main() {
         id: 'member-1',
         name: 'Child',
         relationship: RelationshipType.child,
-        birthDate: DateTime.now().subtract(
-          const Duration(days: 365 * 10),
-        ),
+        birthDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
       );
 
-      expect(
-        service.isEligibleForGrowthTracking(member),
-        isTrue,
-      );
+      expect(service.isEligibleForGrowthTracking(member), isTrue);
+      expect(member.isChild, isTrue);
     });
 
     test('child without birth date is not eligible', () {
@@ -44,10 +38,7 @@ void main() {
         relationship: RelationshipType.child,
       );
 
-      expect(
-        service.isEligibleForGrowthTracking(member),
-        isFalse,
-      );
+      expect(service.isEligibleForGrowthTracking(member), isFalse);
     });
 
     test('returns null comparison with fewer than two measurements', () {
@@ -73,8 +64,9 @@ void main() {
         ),
       ];
 
-      final GrowthComparison? result =
-      service.compare(measurements: measurements);
+      final GrowthComparison? result = service.compare(
+        measurements: measurements,
+      );
 
       expect(result, isNotNull);
       expect(result!.heightChangeCm, 5);
@@ -97,8 +89,9 @@ void main() {
         ),
       ];
 
-      final GrowthComparison? result =
-      service.compare(measurements: measurements);
+      final GrowthComparison? result = service.compare(
+        measurements: measurements,
+      );
 
       expect(result, isNotNull);
       expect(result!.clothingSizeChanged, isTrue);
@@ -121,8 +114,9 @@ void main() {
         ),
       ];
 
-      final GrowthComparison? result =
-      service.compare(measurements: measurements);
+      final GrowthComparison? result = service.compare(
+        measurements: measurements,
+      );
 
       expect(result, isNotNull);
       expect(result!.shoeSizeChanged, isTrue);
@@ -154,6 +148,64 @@ void main() {
           now: now,
         ),
         isTrue,
+      );
+    });
+
+    test('measurement reminder is needed after 91 days', () {
+      final FamilyMember child = FamilyMember(
+        id: 'member-1',
+        name: 'Child',
+        relationship: RelationshipType.child,
+        birthDate: DateTime(2015, 1, 1),
+      );
+
+      final DateTime now = DateTime(2026, 8, 13);
+
+      final List<GrowthMeasurement> measurements = <GrowthMeasurement>[
+        GrowthMeasurement(
+          id: 'measurement-1',
+          memberId: child.id,
+          heightCm: 140,
+          recordedAt: now.subtract(const Duration(days: 91)),
+        ),
+      ];
+
+      expect(
+        service.needsMeasurementReminder(
+          member: child,
+          measurements: measurements,
+          now: now,
+        ),
+        isTrue,
+      );
+    });
+
+    test('measurement reminder is not needed before 90 days', () {
+      final FamilyMember child = FamilyMember(
+        id: 'member-1',
+        name: 'Child',
+        relationship: RelationshipType.child,
+        birthDate: DateTime(2015, 1, 1),
+      );
+
+      final DateTime now = DateTime(2026, 8, 13);
+
+      final List<GrowthMeasurement> measurements = <GrowthMeasurement>[
+        GrowthMeasurement(
+          id: 'measurement-1',
+          memberId: child.id,
+          heightCm: 140,
+          recordedAt: now.subtract(const Duration(days: 89)),
+        ),
+      ];
+
+      expect(
+        service.needsMeasurementReminder(
+          member: child,
+          measurements: measurements,
+          now: now,
+        ),
+        isFalse,
       );
     });
 
