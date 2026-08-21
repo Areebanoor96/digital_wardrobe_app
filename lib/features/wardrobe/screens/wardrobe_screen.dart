@@ -5,9 +5,10 @@ import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.d
 import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_feedback.dart';
-
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_sheet.dart';
-
+import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/features/profile/utils/select_family_member.dart';
+import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_search_bar.dart';
@@ -33,6 +34,89 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
     _searchController = TextEditingController(text: existingQuery);
   }
 
+  Future<void> _showProfileSwitcher(
+    BuildContext context,
+    FamilyMember selectedMember,
+  ) async {
+    final List<FamilyMember> members = await ref.read(
+      familyMembersProvider.future,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  'Switch wardrobe',
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+
+                for (final FamilyMember member in members)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: FamilyMemberAvatar(
+                      name: member.name,
+                      avatarUrl: member.avatarUrl,
+                      radius: 22,
+                    ),
+                    title: Text(member.name),
+                    subtitle: Text(member.relationship.label),
+                    trailing: member.id == selectedMember.id
+                        ? const Icon(Icons.check_circle)
+                        : null,
+                    onTap: member.id == selectedMember.id
+                        ? null
+                        : () async {
+                            Navigator.of(sheetContext).pop();
+
+                            final bool selected = await selectFamilyMember(
+                              context: context,
+                              ref: ref,
+                              member: member,
+                            );
+
+                            if (!mounted || !selected) {
+                              return;
+                            }
+
+                            ref.invalidate(familyMembersProvider);
+                          },
+                  ),
+
+                const Divider(),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.people_outline),
+                  title: const Text('View all profiles'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    context.push('/profiles');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -41,6 +125,9 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final FamilyMember? selectedMember = ref.watch(
+      selectedFamilyMemberProvider,
+    );
     final AsyncValue<List<Garment>> garments = ref.watch(garmentsProvider);
 
     final WardrobeFilters filters = ref.watch(wardrobeFilterProvider);
@@ -51,6 +138,16 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
       appBar: AppBar(
         title: const Text('My Wardrobe'),
         actions: <Widget>[
+          if (selectedMember != null)
+            IconButton(
+              onPressed: () => _showProfileSwitcher(context, selectedMember),
+              tooltip: 'Switch profile',
+              icon: FamilyMemberAvatar(
+                name: selectedMember.name,
+                avatarUrl: selectedMember.avatarUrl,
+                radius: 17,
+              ),
+            ),
           IconButton(
             onPressed: () => context.push('/garments/archived'),
             icon: const Icon(Icons.archive_outlined),
@@ -58,10 +155,19 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/garments/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Add item'),
+      floatingActionButton: garments.maybeWhen(
+        data: (List<Garment> allGarments) {
+          if (allGarments.isEmpty) {
+            return null;
+          }
+
+          return FloatingActionButton.extended(
+            onPressed: () => context.push('/garments/new'),
+            icon: const Icon(Icons.add),
+            label: const Text('Add item'),
+          );
+        },
+        orElse: () => null,
       ),
       body: garments.when(
         loading: () => const GarmentGridShimmer(),

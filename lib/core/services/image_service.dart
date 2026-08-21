@@ -1,8 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
-
-
 class ImageService {
   ImageService(this._picker);
 
@@ -17,6 +16,30 @@ class ImageService {
 
   Future<List<XFile>> pickMultipleFromGallery({required int limit}) {
     return _picker.pickMultiImage(limit: limit);
+  }
+  Future<XFile?> pickImageFile() async {
+    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: <String>[
+        'jpg',
+        'jpeg',
+        'png',
+        'webp',
+      ],
+      allowMultiple: false,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return null;
+    }
+
+    final String? path = result.files.single.path;
+
+    if (path == null) {
+      return null;
+    }
+
+    return XFile(path);
   }
   Future<Uint8List> readAndCompressBytes(
       XFile image, {

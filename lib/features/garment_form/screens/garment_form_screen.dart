@@ -9,6 +9,12 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+enum _GarmentImageSource {
+  camera,
+  gallery,
+  file,
+}
+
 class GarmentFormScreen extends ConsumerStatefulWidget {
   const GarmentFormScreen({super.key, this.garment});
 
@@ -167,8 +173,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       );
       return;
     }
-
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+    final _GarmentImageSource? source =
+    await showModalBottomSheet<_GarmentImageSource>(
       context: context,
       builder: (BuildContext sheetContext) {
         return SafeArea(
@@ -178,14 +184,28 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 leading: const Icon(Icons.camera_alt_outlined),
                 title: const Text('Take photo'),
                 onTap: () {
-                  Navigator.pop(sheetContext, ImageSource.camera);
+                  Navigator.pop(sheetContext, _GarmentImageSource.camera);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
                 title: const Text('Choose from gallery'),
                 onTap: () {
-                  Navigator.pop(sheetContext, ImageSource.gallery);
+                  Navigator.pop(
+                    sheetContext,
+                    _GarmentImageSource.gallery,
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.attach_file),
+                title: const Text('Attach image file'),
+                subtitle: const Text('JPG, JPEG, PNG or WEBP'),
+                onTap: () {
+                  Navigator.pop(
+                    sheetContext,
+                    _GarmentImageSource.file,
+                  );
                 },
               ),
             ],
@@ -197,9 +217,9 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     if (source == null) {
       return;
     }
-
-    if (source == ImageSource.camera) {
-      final XFile? image = await ref.read(imageServiceProvider).takePhoto();
+    if (source == _GarmentImageSource.file) {
+      final XFile? image =
+      await ref.read(imageServiceProvider).pickImageFile();
 
       if (image == null || !mounted) {
         return;

@@ -99,144 +99,142 @@ class _AddGrowthMeasurementDialogState
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text('Add measurement for ${widget.member.name}'),
-      content: SizedBox(
-        width: 420,
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today_outlined),
-                  title: const Text('Measurement date'),
-                  subtitle: Text(_formatDate(_recordedAt)),
-                  trailing: const Icon(Icons.edit_calendar_outlined),
-                  onTap: _selectDate,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_today_outlined),
+                title: const Text('Measurement date'),
+                subtitle: Text(_formatDate(_recordedAt)),
+                trailing: const Icon(Icons.edit_calendar_outlined),
+                onTap: _selectDate,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _heightController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _heightController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Height',
-                    suffixText: 'cm',
-                    prefixIcon: Icon(Icons.height),
-                  ),
-                  validator: (String? value) =>
-                      _validateNumber(value, 'height'),
+                decoration: const InputDecoration(
+                  labelText: 'Height',
+                  suffixText: 'cm',
+                  prefixIcon: Icon(Icons.height),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _weightController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Weight',
-                    suffixText: 'kg',
-                    prefixIcon: Icon(Icons.monitor_weight_outlined),
-                  ),
-                  validator: (String? value) =>
-                      _validateNumber(value, 'weight'),
+                validator: (String? value) => _validateNumber(value, 'height'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _weightController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedClothingSize,
-                  decoration: const InputDecoration(
-                    labelText: 'Clothing size',
-                    prefixIcon: Icon(Icons.checkroom_outlined),
-                  ),
-                  items: kChildClothingSizes.map((String size) {
-                    return DropdownMenuItem<String>(
-                      value: size,
-                      child: Text(size),
-                    );
-                  }).toList(),
-                  onChanged: _isSaving
-                      ? null
-                      : (String? value) {
-                          setState(() {
-                            _selectedClothingSize = value;
-                          });
-                        },
+                decoration: const InputDecoration(
+                  labelText: 'Weight',
+                  suffixText: 'kg',
+                  prefixIcon: Icon(Icons.monitor_weight_outlined),
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _footLengthController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Foot length',
-                    suffixText: 'cm',
-                    prefixIcon: Icon(Icons.straighten_outlined),
-                  ),
-                  validator: (String? value) =>
-                      _validateNumber(value, 'foot length'),
+                validator: (String? value) => _validateNumber(value, 'weight'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedClothingSize,
+                decoration: const InputDecoration(
+                  labelText: 'Clothing size',
+                  prefixIcon: Icon(Icons.checkroom_outlined),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedShoeSystem,
-                        decoration: const InputDecoration(
-                          labelText: 'Shoe size system',
-                          prefixIcon: Icon(Icons.directions_walk_outlined),
-                        ),
-                        items: kShoeSizeSystems.map((String system) {
-                          return DropdownMenuItem<String>(
-                            value: system,
-                            child: Text(system),
-                          );
-                        }).toList(),
-                        onChanged: _isSaving
-                            ? null
-                            : (String? value) {
-                                if (value == null) {
-                                  return;
-                                }
-
-                                setState(() {
-                                  _selectedShoeSystem = value;
-                                });
-                              },
+                items: kChildClothingSizes.map((String size) {
+                  return DropdownMenuItem<String>(
+                    value: size,
+                    child: Text(size),
+                  );
+                }).toList(),
+                onChanged: _isSaving
+                    ? null
+                    : (String? value) {
+                        setState(() {
+                          _selectedClothingSize = value;
+                        });
+                      },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _footLengthController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Foot length',
+                  suffixText: 'cm',
+                  prefixIcon: Icon(Icons.straighten_outlined),
+                ),
+                validator: (String? value) =>
+                    _validateNumber(value, 'foot length'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedShoeSystem,
+                      decoration: const InputDecoration(
+                        labelText: 'Shoe size system',
+                        prefixIcon: Icon(Icons.directions_walk_outlined),
                       ),
+                      items: kShoeSizeSystems.map((String system) {
+                        return DropdownMenuItem<String>(
+                          value: system,
+                          child: Text(system),
+                        );
+                      }).toList(),
+                      onChanged: _isSaving
+                          ? null
+                          : (String? value) {
+                              if (value == null) {
+                                return;
+                              }
+
+                              setState(() {
+                                _selectedShoeSystem = value;
+                              });
+                            },
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _shoeValueController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Shoe size',
-                          prefixIcon: Icon(Icons.straighten_outlined),
-                        ),
-                        validator: (String? value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return null;
-                          }
-
-                          final double? number = double.tryParse(value.trim());
-
-                          if (number == null || number <= 0) {
-                            return 'Enter a valid shoe size';
-                          }
-
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _shoeValueController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Shoe size',
+                        prefixIcon: Icon(Icons.straighten_outlined),
+                      ),
+                      validator: (String? value) {
+                        if (value == null || value.trim().isEmpty) {
                           return null;
-                        },
-                      ),
+                        }
+
+                        final double? number = double.tryParse(value.trim());
+
+                        if (number == null || number <= 0) {
+                          return 'Enter a valid shoe size';
+                        }
+
+                        return null;
+                      },
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
