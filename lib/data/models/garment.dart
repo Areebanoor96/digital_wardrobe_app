@@ -45,6 +45,8 @@ class Garment {
     this.subcategory,
     this.colorName,
     this.colorHex,
+    this.secondaryColorName,
+    this.secondaryColorHex,
     this.size,
     this.brand,
     this.purchaseStore,
@@ -54,6 +56,7 @@ class Garment {
     this.seasons = const <String>[],
     this.moods = const <String>[],
     this.fabric,
+    this.details,
     this.washInstructions,
     this.wearCount = 0,
     this.lastWornDate,
@@ -71,6 +74,10 @@ class Garment {
   final String? subcategory;
   final String? colorName;
   final String? colorHex;
+
+  /// Optional secondary color selected from the same garment palette.
+  final String? secondaryColorName;
+  final String? secondaryColorHex;
   final String? size;
   final String? brand;
 
@@ -83,6 +90,9 @@ class Garment {
   final List<String> seasons;
   final List<String> moods;
   final String? fabric;
+
+  /// Optional free-form details, limited to 100 characters by the form.
+  final String? details;
   final String? washInstructions;
   final int wearCount;
   final DateTime? lastWornDate;
@@ -108,6 +118,8 @@ class Garment {
       subcategory: json['subcategory'] as String?,
       colorName: json['color_name'] as String?,
       colorHex: json['color_hex'] as String?,
+      secondaryColorName: json['secondary_color_name'] as String?,
+      secondaryColorHex: json['secondary_color_hex'] as String?,
       size: json['size'] as String?,
       brand: json['brand'] as String?,
       purchaseStore: json['purchase_store'] as String?,
@@ -123,6 +135,7 @@ class Garment {
         json['mood_tags'] as List<dynamic>? ?? const <String>[],
       ),
       fabric: json['fabric'] as String?,
+      details: json['details'] as String?,
       washInstructions: json['wash_instructions'] as String?,
       wearCount: json['wear_count'] as int? ?? 0,
       lastWornDate: DateTime.tryParse(json['last_worn_date'] as String? ?? ''),
@@ -143,6 +156,8 @@ class Garment {
     'subcategory': subcategory,
     'color_name': colorName,
     'color_hex': colorHex,
+    'secondary_color_name': secondaryColorName,
+    'secondary_color_hex': secondaryColorHex,
     'size': size,
     'brand': brand,
     'purchase_store': purchaseStore,
@@ -152,6 +167,7 @@ class Garment {
     'seasons': seasons,
     'mood_tags': moods,
     'fabric': fabric,
+    'details': details,
     'wash_instructions': washInstructions,
     'photo_urls': photoPaths,
     'purchase_date': purchaseDate?.toIso8601String().split('T').first,
@@ -177,6 +193,8 @@ class Garment {
       subcategory: subcategory,
       colorName: colorName,
       colorHex: colorHex,
+      secondaryColorName: secondaryColorName,
+      secondaryColorHex: secondaryColorHex,
       size: size,
       brand: brand,
       purchaseStore: purchaseStore ?? this.purchaseStore,
@@ -186,6 +204,7 @@ class Garment {
       seasons: seasons,
       moods: moods,
       fabric: fabric,
+      details: details,
       washInstructions: washInstructions,
       wearCount: wearCount,
       lastWornDate: lastWornDate,

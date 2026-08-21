@@ -6,8 +6,10 @@ import 'package:digital_wardrobe_app/features/profile/screens/profile_screen.dar
 import 'package:digital_wardrobe_app/features/wardrobe/screens/wardrobe_screen.dart';
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AppShellScreen extends ConsumerStatefulWidget {
   const AppShellScreen({super.key});
@@ -17,7 +19,14 @@ class AppShellScreen extends ConsumerStatefulWidget {
 }
 
 class _AppShellScreenState extends ConsumerState<AppShellScreen> {
+  static const int _wardrobeIndex = 0;
+  static const Duration _exitConfirmationWindow = Duration(seconds: 2);
+
   int _index = 0;
+  DateTime? _lastBackPressAt;
+
+  bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
+
   static const List<Widget> _screens = <Widget>[
     WardrobeScreen(),
     OutfitsScreen(),
@@ -27,6 +36,40 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     ProfileScreen(),
   ];
 
+  void _handleBackPress(bool didPop, Object? result) {
+    if (didPop) {
+      return;
+    }
+
+    if (_index != _wardrobeIndex) {
+      setState(() {
+        _index = _wardrobeIndex;
+        _lastBackPressAt = null;
+      });
+      return;
+    }
+
+    if (!_isAndroid) {
+      return;
+    }
+
+    final DateTime now = DateTime.now();
+    final DateTime? lastPress = _lastBackPressAt;
+
+    if (lastPress == null ||
+        now.difference(lastPress) > _exitConfirmationWindow) {
+      _lastBackPressAt = now;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Press back again to exit.')),
+        );
+      return;
+    }
+
+    SystemNavigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
@@ -35,11 +78,18 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         ?.where((Alert alert) => !alert.isRead)
         .length ??
         0;
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (int value) => setState(() => _index = value),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: _handleBackPress,
+      child: Scaffold(
+        body: IndexedStack(index: _index, children: _screens),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (int value) =>
+              setState(() {
+                _index = value;
+                _lastBackPressAt = null;
+              }),
         destinations: <NavigationDestination>[
           const NavigationDestination(
             icon: Icon(Icons.checkroom_outlined),
@@ -84,6 +134,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
             label: 'Profile',
           ),
         ],
+        ),
       ),
     );
   }

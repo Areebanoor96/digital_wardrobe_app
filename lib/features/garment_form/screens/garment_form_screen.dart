@@ -1,9 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
+import 'package:digital_wardrobe_app/data/models/garment_color.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -39,11 +39,36 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     text: widget.garment?.purchaseStore,
   );
 
-  late final TextEditingController _color = TextEditingController(
-    text: widget.garment?.colorName,
+  late String? _primaryColorName = _cleanOptional(widget.garment?.colorName);
+  late String? _primaryColorHex = _cleanOptional(widget.garment?.colorHex);
+  late String? _secondaryColorName = _cleanOptional(
+    widget.garment?.secondaryColorName,
   );
+  late String? _secondaryColorHex = _cleanOptional(
+    widget.garment?.secondaryColorHex,
+  );
+  bool _showPrimaryColorError = false;
+
+  static const List<String> _childSizeOptions = <String>[
+    '0-1M',
+    '0-3M',
+    '3-6M',
+    '6-9M',
+    '9-12M',
+    '1-2Y',
+    '2-3Y',
+    '3-4Y',
+    '4-5Y',
+    '5-6Y',
+    '6-7Y',
+    '7-8Y',
+    '9-10Y',
+    '11-12Y',
+    '12-14Y',
+  ];
 
   static const List<String> _sizeOptions = <String>[
+    ..._childSizeOptions,
     'XS',
     'S',
     'M',
@@ -72,6 +97,60 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         ? _sizeOptions
         : <String>[..._sizeOptions, savedSize];
   }
+
+  static const List<String> _fabricOptions = <String>[
+    'Cotton',
+    'Lawn',
+    'Linen',
+    'Jersey',
+    'Silk',
+    'Satin',
+    'Chiffon',
+    'Georgette',
+    'Velvet',
+    'Denim',
+    'Wool',
+    'Flannel',
+    'Fleece',
+    'Cashmere',
+    'Polyester',
+    'Nylon',
+    'Rayon/Viscose',
+    'Modal',
+    'Lycra/Spandex',
+    'Leather',
+    'Suede',
+    'Corduroy',
+    'Khaddar',
+    'Organza',
+    'Net/Tulle',
+    'Canvas',
+    'Tweed',
+    'Chambray',
+    'Bamboo',
+  ];
+
+  late String? _selectedFabric = _cleanOptional(widget.garment?.fabric);
+
+  late final List<String> _fabricDropdownItems = _buildFabricDropdownItems();
+
+  List<String> _buildFabricDropdownItems() {
+    final String? savedFabric = widget.garment?.fabric?.trim();
+
+    if (savedFabric == null || savedFabric.isEmpty) {
+      return _fabricOptions;
+    }
+
+    return _fabricOptions.contains(savedFabric)
+        ? _fabricOptions
+        : <String>[..._fabricOptions, savedFabric];
+  }
+
+  late final TextEditingController _details = TextEditingController(
+    text: widget.garment?.details,
+  );
+
+  static const int _maximumDetailsLength = 100;
 
   late final TextEditingController _price = TextEditingController(
     text: widget.garment?.price?.toString(),
@@ -157,10 +236,53 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     _name.dispose();
     _brand.dispose();
     _purchaseStore.dispose();
-    _color.dispose();
+    _details.dispose();
     _price.dispose();
     _purchaseDateController.dispose();
     super.dispose();
+  }
+
+  String? _cleanOptional(String? value) {
+    final String trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _pickColor({required bool isPrimary}) async {
+    final GarmentColorOption? picked =
+        await showModalBottomSheet<GarmentColorOption>(
+          context: context,
+          isScrollControlled: true,
+          builder: (BuildContext sheetContext) {
+            return _GarmentColorPickerSheet(
+              title: isPrimary ? 'Select primary color' : 'Select secondary color',
+              selectedName: isPrimary
+                  ? _primaryColorName
+                  : _secondaryColorName,
+            );
+          },
+        );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      if (isPrimary) {
+        _primaryColorName = picked.name;
+        _primaryColorHex = picked.hex;
+        _showPrimaryColorError = false;
+      } else {
+        _secondaryColorName = picked.name;
+        _secondaryColorHex = picked.hex;
+      }
+    });
+  }
+
+  void _clearSecondaryColor() {
+    setState(() {
+      _secondaryColorName = null;
+      _secondaryColorHex = null;
+    });
   }
 
   Future<void> _chooseImages() async {
@@ -361,6 +483,16 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       return;
     }
 
+    if (_primaryColorName == null) {
+      setState(() {
+        _showPrimaryColorError = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a primary color.')),
+      );
+      return;
+    }
+
     final selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
@@ -431,15 +563,18 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         subcategory: widget.garment?.subcategory,
         brand: _optional(_brand.text),
         purchaseStore: _optional(_purchaseStore.text),
-        colorName: _optional(_color.text),
-        colorHex: widget.garment?.colorHex,
+        colorName: _primaryColorName,
+        colorHex: _primaryColorHex,
+        secondaryColorName: _secondaryColorName,
+        secondaryColorHex: _secondaryColorHex,
         size: _selectedSize,
         price: double.tryParse(_price.text.trim()),
         currency: widget.garment?.currency ?? 'PKR',
         occasions: _selectedOccasions.toList(),
         seasons: _selectedSeasons.toList(),
         moods: _selectedMoods.toList(),
-        fabric: widget.garment?.fabric,
+        fabric: _selectedFabric,
+        details: _optional(_details.text),
         washInstructions: widget.garment?.washInstructions,
         wearCount: widget.garment?.wearCount ?? 0,
         lastWornDate: widget.garment?.lastWornDate,
@@ -604,9 +739,24 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _color,
-              decoration: const InputDecoration(labelText: 'Color'),
+            _GarmentColorField(
+              label: 'Primary color *',
+              colorName: _primaryColorName,
+              colorHex: _primaryColorHex,
+              errorText: _showPrimaryColorError && _primaryColorName == null
+                  ? 'Select a primary color'
+                  : null,
+              onTap: _saving ? null : () => _pickColor(isPrimary: true),
+            ),
+            const SizedBox(height: 12),
+            _GarmentColorField(
+              label: 'Secondary color (optional)',
+              colorName: _secondaryColorName,
+              colorHex: _secondaryColorHex,
+              onTap: _saving ? null : () => _pickColor(isPrimary: false),
+              onClear: _saving || _secondaryColorName == null
+                  ? null
+                  : _clearSecondaryColor,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
@@ -630,6 +780,52 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                     _selectedSize = value;
                   });
                 }
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _selectedFabric,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Fabric',
+                hintText: 'Select a fabric (optional)',
+              ),
+              items: <DropdownMenuItem<String?>>[
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Not specified'),
+                ),
+                ..._fabricDropdownItems.map(
+                  (String fabric) => DropdownMenuItem<String?>(
+                    value: fabric,
+                    child: Text(fabric),
+                  ),
+                ),
+              ],
+              onChanged: (String? value) {
+                setState(() {
+                  _selectedFabric = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _details,
+              maxLength: _maximumDetailsLength,
+              maxLengthEnforcement: MaxLengthEnforcement.enforced,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Details',
+                hintText: 'Optional extra information about this garment',
+                alignLabelWithHint: true,
+              ),
+              validator: (String? value) {
+                if ((value ?? '').characters.length > _maximumDetailsLength) {
+                  return 'Details must be $_maximumDetailsLength characters '
+                      'or fewer';
+                }
+
+                return null;
               },
             ),
             const SizedBox(height: 12),
@@ -885,6 +1081,235 @@ class _AddPhotoTile extends StatelessWidget {
               Text('Add photo'),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+Color? _colorFromHex(String? hex) {
+  final String cleaned = (hex ?? '').replaceFirst('#', '').trim();
+
+  if (cleaned.length != 6) {
+    return null;
+  }
+
+  final int? value = int.tryParse(cleaned, radix: 16);
+
+  if (value == null) {
+    return null;
+  }
+
+  return Color(0xFF000000 | value);
+}
+
+class _GarmentColorField extends StatelessWidget {
+  const _GarmentColorField({
+    required this.label,
+    required this.colorName,
+    required this.colorHex,
+    required this.onTap,
+    this.errorText,
+    this.onClear,
+  });
+
+  final String label;
+  final String? colorName;
+  final String? colorHex;
+  final String? errorText;
+  final VoidCallback? onTap;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color? swatch =
+        _colorFromHex(colorHex) ??
+        _colorFromHex(GarmentColorPalette.tryFindByName(colorName)?.hex);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          errorText: errorText,
+          suffixIcon: onClear == null
+              ? null
+              : IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Clear secondary color',
+                ),
+        ),
+        child: Row(
+          children: <Widget>[
+            if (swatch != null)
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: swatch,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+              )
+            else
+              const Icon(Icons.palette_outlined, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                colorName ?? 'Select a shade',
+                style: colorName == null
+                    ? TextStyle(color: Theme.of(context).hintColor)
+                    : null,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GarmentColorPickerSheet extends StatelessWidget {
+  const _GarmentColorPickerSheet({
+    required this.title,
+    required this.selectedName,
+  });
+
+  final String title;
+  final String? selectedName;
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (BuildContext context, ScrollController scrollController) {
+        return Column(
+          children: <Widget>[
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                children: <Widget>[
+                  for (final GarmentColorFamily family
+                      in GarmentColorPalette.families)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            family.name,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 16,
+                            children: family.colors
+                                .map(
+                                  (GarmentColorOption option) =>
+                                      _GarmentColorSwatch(
+                                        option: option,
+                                        isSelected:
+                                            option.name.toLowerCase() ==
+                                            selectedName?.trim().toLowerCase(),
+                                      ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _GarmentColorSwatch extends StatelessWidget {
+  const _GarmentColorSwatch({required this.option, required this.isSelected});
+
+  final GarmentColorOption option;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color swatch = _colorFromHex(option.hex)!;
+    final bool lightSwatch = swatch.computeLuminance() > 0.5;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => Navigator.pop(context, option),
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          children: <Widget>[
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: swatch,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.outlineVariant,
+                  width: isSelected ? 3 : 1,
+                ),
+              ),
+              child: isSelected
+                  ? Icon(
+                      Icons.check,
+                      size: 20,
+                      color: lightSwatch ? Colors.black87 : Colors.white,
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              option.name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ],
         ),
       ),
     );

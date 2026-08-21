@@ -18,7 +18,7 @@ class ImageService {
     return _picker.pickMultiImage(limit: limit);
   }
   Future<XFile?> pickImageFile() async {
-    final FilePickerResult? result = await FilePicker.platform.pickFiles(
+    final PlatformFile? file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: <String>[
         'jpg',
@@ -26,16 +26,15 @@ class ImageService {
         'png',
         'webp',
       ],
-      allowMultiple: false,
     );
 
-    if (result == null || result.files.isEmpty) {
+    if (file == null) {
       return null;
     }
 
-    final String? path = result.files.single.path;
+    final String? path = file.path;
 
-    if (path == null) {
+    if (path == null || path.isEmpty) {
       return null;
     }
 
