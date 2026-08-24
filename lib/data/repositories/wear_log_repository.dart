@@ -47,9 +47,12 @@ class WearLogRepository {
     String? eventName,
     String? notes,
     LaundryStatus? laundryStatusAfter,
+    double? weatherTemp,
+    String? weatherCondition,
   }) {
     final String? cleanEventName = eventName?.trim();
     final String? cleanNotes = notes?.trim();
+    final String? cleanWeatherCondition = weatherCondition?.trim();
 
     return <String, dynamic>{
       'user_id': userId,
@@ -62,6 +65,11 @@ class WearLogRepository {
           : cleanEventName,
       'notes': cleanNotes == null || cleanNotes.isEmpty ? null : cleanNotes,
       'laundry_status_after': laundryStatusAfter?.name,
+      'weather_temp': weatherTemp,
+      'weather_cond':
+          cleanWeatherCondition == null || cleanWeatherCondition.isEmpty
+          ? null
+          : cleanWeatherCondition,
     };
   }
 
@@ -73,6 +81,8 @@ class WearLogRepository {
     String? notes,
     String? outfitId,
     LaundryStatus? laundryStatusAfter,
+    double? weatherTemp,
+    String? weatherCondition,
   }) async {
     final User? currentUser = _client.auth.currentUser;
 
@@ -82,18 +92,22 @@ class WearLogRepository {
 
     final DateTime resolvedWornDate = resolveWornDate(wornDate);
 
-    await _client.from('wear_log').insert(
-      buildWearLogRow(
-        userId: currentUser.id,
-        memberId: memberId,
-        garmentId: garmentId,
-        wornDate: resolvedWornDate,
-        outfitId: outfitId,
-        eventName: eventName,
-        notes: notes,
-        laundryStatusAfter: laundryStatusAfter,
-      ),
-    );
+    await _client
+        .from('wear_log')
+        .insert(
+          buildWearLogRow(
+            userId: currentUser.id,
+            memberId: memberId,
+            garmentId: garmentId,
+            wornDate: resolvedWornDate,
+            outfitId: outfitId,
+            eventName: eventName,
+            notes: notes,
+            laundryStatusAfter: laundryStatusAfter,
+            weatherTemp: weatherTemp,
+            weatherCondition: weatherCondition,
+          ),
+        );
   }
 
   Future<void> createWearLogsForOutfit({
@@ -104,6 +118,8 @@ class WearLogRepository {
     String? eventName,
     String? notes,
     LaundryStatus? laundryStatusAfter,
+    double? weatherTemp,
+    String? weatherCondition,
   }) async {
     final User? currentUser = _client.auth.currentUser;
 
@@ -128,6 +144,8 @@ class WearLogRepository {
             eventName: eventName,
             notes: notes,
             laundryStatusAfter: laundryStatusAfter,
+            weatherTemp: weatherTemp,
+            weatherCondition: weatherCondition,
           ),
         )
         .toList();
@@ -197,6 +215,23 @@ class WearLogRepository {
     return _mapWearLogs(rows);
   }
 
+  Future<List<WearLog>> fetchRecommendationWearHistory({
+    required String memberId,
+    int days = 90,
+  }) async {
+    final DateTime start = DateTime.now().subtract(Duration(days: days));
+
+    final List<dynamic> rows = await _client
+        .from('wear_log')
+        .select()
+        .eq('user_id', _requireUserId())
+        .eq('member_id', memberId)
+        .gte('worn_date', _dateOnly(start))
+        .order('worn_date', ascending: false);
+
+    return _mapWearLogs(rows);
+  }
+
   Future<List<WearLog>> fetchMonthActivity({
     required String memberId,
     required DateTime month,
@@ -258,6 +293,7 @@ class WearLogRepository {
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
   }
+
   Future<void> wearOutfitAtomically({
     required String memberId,
     required String outfitId,

@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Future<Finder> pumpForm(
-  WidgetTester tester, {
-  Garment? garment,
-}) async {
+Future<Finder> pumpForm(WidgetTester tester, {Garment? garment}) async {
   // Enlarge the test surface so every form field is built inside the
   // lazy ListView.
   tester.view.physicalSize = const Size(1080, 3200);
@@ -55,49 +52,49 @@ void main() {
     'One Size',
   ];
 
-  testWidgets('add form shows palette fields, sizes, fabric and details', (
-    WidgetTester tester,
-  ) async {
-    await pumpForm(tester);
+  testWidgets(
+    'add form shows palette fields, sizes, fabric, metadata and details',
+    (WidgetTester tester) async {
+      await pumpForm(tester);
 
-    expect(find.text('Primary color *'), findsOneWidget);
-    expect(find.text('Secondary color (optional)'), findsOneWidget);
-    expect(find.text('Select a shade'), findsNWidgets(2));
+      expect(find.text('Primary color *'), findsOneWidget);
+      expect(find.text('Secondary color (optional)'), findsOneWidget);
+      expect(find.text('Select a shade'), findsNWidgets(2));
 
-    final DropdownButton<String> sizeButton =
-        tester.widget<DropdownButton<String>>(
-          find.byType(DropdownButton<String>),
-        );
+      final DropdownButton<String> sizeButton = tester
+          .widget<DropdownButton<String>>(find.byType(DropdownButton<String>));
 
-    final List<String?> sizeValues = sizeButton.items!
-        .map((DropdownMenuItem<String> item) => item.value)
-        .toList();
+      final List<String?> sizeValues = sizeButton.items!
+          .map((DropdownMenuItem<String> item) => item.value)
+          .toList();
 
-    expect(sizeValues.length, childSizes.length + adultSizes.length);
-    for (int index = 0; index < childSizes.length; index++) {
-      expect(sizeValues[index], childSizes[index]);
-    }
-    for (int index = 0; index < adultSizes.length; index++) {
-      expect(
-        sizeValues[childSizes.length + index],
-        adultSizes[index],
-      );
-    }
+      expect(sizeValues.length, childSizes.length + adultSizes.length);
+      for (int index = 0; index < childSizes.length; index++) {
+        expect(sizeValues[index], childSizes[index]);
+      }
+      for (int index = 0; index < adultSizes.length; index++) {
+        expect(sizeValues[childSizes.length + index], adultSizes[index]);
+      }
 
-    final DropdownButton<String?> fabricButton =
-        tester.widget<DropdownButton<String?>>(
-          find.byType(DropdownButton<String?>),
-        );
+      final List<String?> fabricValues = tester
+          .widgetList<DropdownButton<String?>>(
+            find.byType(DropdownButton<String?>),
+          )
+          .expand(
+            (DropdownButton<String?> button) => button.items!.map(
+              (DropdownMenuItem<String?> item) => item.value,
+            ),
+          )
+          .toList();
 
-    final List<String?> fabricValues = fabricButton.items!
-        .map((DropdownMenuItem<String?> item) => item.value)
-        .toList();
+      expect(fabricValues.first, isNull);
+      expect(fabricValues, containsAll(<String>['Cotton', 'Khaddar', 'Denim']));
+      expect(fabricValues, containsAll(<String>['Tailored', 'Solid', 'Heavy']));
+      expect(find.text('Sleeve length'), findsOneWidget);
 
-    expect(fabricValues.first, isNull);
-    expect(fabricValues, containsAll(<String>['Cotton', 'Khaddar', 'Denim']));
-
-    expect(find.text('0/100'), findsOneWidget);
-  });
+      expect(find.text('0/100'), findsOneWidget);
+    },
+  );
 
   testWidgets('details field enforces the 100 character limit', (
     WidgetTester tester,
@@ -128,6 +125,10 @@ void main() {
       secondaryColorHex: '#FFFDD0',
       size: '3-4Y',
       fabric: 'Lawn',
+      fit: 'Tailored',
+      pattern: 'Embroidered',
+      fabricWeight: 'Light',
+      sleeveLength: 'Long Sleeve',
       details: 'Embroidered collar',
     );
 
@@ -136,6 +137,10 @@ void main() {
     expect(find.text('Navy'), findsOneWidget);
     expect(find.text('Cream'), findsOneWidget);
     expect(find.text('Lawn'), findsOneWidget);
+    expect(find.text('Tailored'), findsOneWidget);
+    expect(find.text('Embroidered'), findsOneWidget);
+    expect(find.text('Light'), findsOneWidget);
+    expect(find.text('Long Sleeve'), findsOneWidget);
     expect(find.text('Embroidered collar'), findsOneWidget);
     expect(find.text('3-4Y'), findsOneWidget);
   });

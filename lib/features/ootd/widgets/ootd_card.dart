@@ -1,7 +1,7 @@
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
 import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
 import 'package:flutter/material.dart';
 
 class OotdCard extends StatelessWidget {
@@ -197,6 +197,23 @@ class OotdCard extends StatelessWidget {
                       ),
                     ),
               ],
+              if (recommendation.alternatives.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: recommendation.alternatives
+                      .map(
+                        (OutfitRecommendation alternative) => Chip(
+                          avatar: const Icon(Icons.auto_awesome, size: 16),
+                          label: Text(
+                            '${alternative.label} ${alternative.score}%',
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: <Widget>[
@@ -241,8 +258,14 @@ class OotdCard extends StatelessWidget {
 
   Future<void> _showPersonalizeSheet(BuildContext context) async {
     String? selectedOccasion = outfitContext.occasion;
-    String? selectedSeason = outfitContext.season;
     String? selectedMood = outfitContext.mood;
+    String? selectedDressCode = outfitContext.dressCode;
+    int? selectedActivity = outfitContext.expectedActivityLevel;
+    String selectedPlace = outfitContext.indoor == true
+        ? 'indoor'
+        : outfitContext.outdoor == true
+        ? 'outdoor'
+        : 'both';
 
     final OutfitContext?
     updatedContext = await showModalBottomSheet<OutfitContext>(
@@ -270,7 +293,7 @@ class OotdCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Choose an occasion, season and mood.',
+                      'Season is automatic. Add optional context or just pick.',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 20),
@@ -311,16 +334,16 @@ class OotdCard extends StatelessWidget {
                     const SizedBox(height: 12),
 
                     DropdownButtonFormField<String>(
-                      initialValue: selectedSeason,
-                      decoration: const InputDecoration(labelText: 'Season'),
+                      initialValue: selectedDressCode,
+                      decoration: const InputDecoration(
+                        labelText: 'Dress code',
+                      ),
                       items:
                           const <String>[
-                                'summer',
-                                'winter',
-                                'spring',
-                                'autumn',
-                                'rainy',
-                                'all',
+                                'casual',
+                                'smart casual',
+                                'business casual',
+                                'formal',
                               ]
                               .map(
                                 (String value) => DropdownMenuItem<String>(
@@ -341,7 +364,7 @@ class OotdCard extends StatelessWidget {
                               .toList(),
                       onChanged: (String? value) {
                         setModalState(() {
-                          selectedSeason = value;
+                          selectedDressCode = value;
                         });
                       },
                     ),
@@ -378,6 +401,54 @@ class OotdCard extends StatelessWidget {
                       },
                     ),
 
+                    const SizedBox(height: 12),
+
+                    DropdownButtonFormField<int>(
+                      initialValue: selectedActivity,
+                      decoration: const InputDecoration(labelText: 'Activity'),
+                      items: const <DropdownMenuItem<int>>[
+                        DropdownMenuItem<int>(value: 2, child: Text('Low')),
+                        DropdownMenuItem<int>(
+                          value: 5,
+                          child: Text('Moderate'),
+                        ),
+                        DropdownMenuItem<int>(value: 8, child: Text('High')),
+                      ],
+                      onChanged: (int? value) {
+                        setModalState(() {
+                          selectedActivity = value;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    SegmentedButton<String>(
+                      segments: const <ButtonSegment<String>>[
+                        ButtonSegment<String>(
+                          value: 'indoor',
+                          label: Text('Indoor'),
+                          icon: Icon(Icons.home_outlined),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'both',
+                          label: Text('Both'),
+                          icon: Icon(Icons.compare_arrows),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'outdoor',
+                          label: Text('Outdoor'),
+                          icon: Icon(Icons.wb_sunny_outlined),
+                        ),
+                      ],
+                      selected: <String>{selectedPlace},
+                      onSelectionChanged: (Set<String> values) {
+                        setModalState(() {
+                          selectedPlace = values.single;
+                        });
+                      },
+                    ),
+
                     const SizedBox(height: 20),
 
                     Row(
@@ -386,7 +457,7 @@ class OotdCard extends StatelessWidget {
                           onPressed: () {
                             Navigator.pop(sheetContext, const OutfitContext());
                           },
-                          child: const Text('Clear'),
+                          child: const Text('Just pick for me'),
                         ),
                         const Spacer(),
                         FilledButton(
@@ -395,8 +466,19 @@ class OotdCard extends StatelessWidget {
                               sheetContext,
                               OutfitContext(
                                 occasion: selectedOccasion,
-                                season: selectedSeason,
                                 mood: selectedMood,
+                                dressCode: selectedDressCode,
+                                expectedActivityLevel: selectedActivity,
+                                indoor: selectedPlace == 'indoor'
+                                    ? true
+                                    : selectedPlace == 'outdoor'
+                                    ? false
+                                    : null,
+                                outdoor: selectedPlace == 'outdoor'
+                                    ? true
+                                    : selectedPlace == 'indoor'
+                                    ? false
+                                    : null,
                               ),
                             );
                           },

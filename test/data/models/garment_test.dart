@@ -13,6 +13,10 @@ void main() {
         'color_hex': '#000080',
         'secondary_color_name': 'Cream',
         'secondary_color_hex': '#FFFDD0',
+        'fit': 'Tailored',
+        'pattern': 'Embroidered',
+        'fabric_weight': 'Light',
+        'sleeve_length': 'Long Sleeve',
         'details': 'Embroidered collar',
       });
 
@@ -20,6 +24,10 @@ void main() {
       expect(garment.colorHex, '#000080');
       expect(garment.secondaryColorName, 'Cream');
       expect(garment.secondaryColorHex, '#FFFDD0');
+      expect(garment.fit, 'Tailored');
+      expect(garment.pattern, 'Embroidered');
+      expect(garment.fabricWeight, 'Light');
+      expect(garment.sleeveLength, 'Long Sleeve');
       expect(garment.details, 'Embroidered collar');
     });
 
@@ -47,6 +55,10 @@ void main() {
         colorHex: '#000080',
         secondaryColorName: 'Cream',
         secondaryColorHex: '#FFFDD0',
+        fit: 'Tailored',
+        pattern: 'Embroidered',
+        fabricWeight: 'Light',
+        sleeveLength: 'Long Sleeve',
         details: 'Embroidered collar',
       );
 
@@ -56,6 +68,10 @@ void main() {
       expect(json['color_hex'], '#000080');
       expect(json['secondary_color_name'], 'Cream');
       expect(json['secondary_color_hex'], '#FFFDD0');
+      expect(json['fit'], 'Tailored');
+      expect(json['pattern'], 'Embroidered');
+      expect(json['fabric_weight'], 'Light');
+      expect(json['sleeve_length'], 'Long Sleeve');
       expect(json['details'], 'Embroidered collar');
     });
 
@@ -74,6 +90,10 @@ void main() {
       expect(json['color_hex'], isNull);
       expect(json['secondary_color_name'], isNull);
       expect(json['secondary_color_hex'], isNull);
+      expect(json['fit'], isNull);
+      expect(json['pattern'], isNull);
+      expect(json['fabric_weight'], isNull);
+      expect(json['sleeve_length'], isNull);
       expect(json['details'], isNull);
     });
 
@@ -88,6 +108,10 @@ void main() {
         colorHex: '#000080',
         secondaryColorName: 'Cream',
         secondaryColorHex: '#FFFDD0',
+        fit: 'Tailored',
+        pattern: 'Embroidered',
+        fabricWeight: 'Light',
+        sleeveLength: 'Long Sleeve',
         details: 'Embroidered collar',
       );
 
@@ -97,6 +121,10 @@ void main() {
 
       expect(copy.secondaryColorName, 'Cream');
       expect(copy.secondaryColorHex, '#FFFDD0');
+      expect(copy.fit, 'Tailored');
+      expect(copy.pattern, 'Embroidered');
+      expect(copy.fabricWeight, 'Light');
+      expect(copy.sleeveLength, 'Long Sleeve');
       expect(copy.details, 'Embroidered collar');
     });
   });

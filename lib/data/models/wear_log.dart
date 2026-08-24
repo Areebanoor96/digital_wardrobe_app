@@ -10,6 +10,8 @@ class WearLog {
     this.eventName,
     this.notes,
     this.laundryStatusAfter,
+    this.weatherTemp,
+    this.weatherCondition,
   });
 
   final String id;
@@ -23,6 +25,8 @@ class WearLog {
 
   final String? notes;
   final LaundryStatus? laundryStatusAfter;
+  final double? weatherTemp;
+  final String? weatherCondition;
 
   factory WearLog.fromJson(Map<String, dynamic> json) {
     final String? laundryStatusValue = json['laundry_status_after'] as String?;
@@ -38,6 +42,8 @@ class WearLog {
       laundryStatusAfter: laundryStatusValue == null
           ? null
           : LaundryStatus.values.byName(laundryStatusValue),
+      weatherTemp: (json['weather_temp'] as num?)?.toDouble(),
+      weatherCondition: json['weather_cond'] as String?,
     );
   }
 }

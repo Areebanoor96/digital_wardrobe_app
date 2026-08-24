@@ -56,6 +56,10 @@ class Garment {
     this.seasons = const <String>[],
     this.moods = const <String>[],
     this.fabric,
+    this.fit,
+    this.pattern,
+    this.fabricWeight,
+    this.sleeveLength,
     this.details,
     this.washInstructions,
     this.wearCount = 0,
@@ -90,6 +94,10 @@ class Garment {
   final List<String> seasons;
   final List<String> moods;
   final String? fabric;
+  final String? fit;
+  final String? pattern;
+  final String? fabricWeight;
+  final String? sleeveLength;
 
   /// Optional free-form details, limited to 100 characters by the form.
   final String? details;
@@ -135,6 +143,10 @@ class Garment {
         json['mood_tags'] as List<dynamic>? ?? const <String>[],
       ),
       fabric: json['fabric'] as String?,
+      fit: json['fit'] as String?,
+      pattern: json['pattern'] as String?,
+      fabricWeight: json['fabric_weight'] as String?,
+      sleeveLength: json['sleeve_length'] as String?,
       details: json['details'] as String?,
       washInstructions: json['wash_instructions'] as String?,
       wearCount: json['wear_count'] as int? ?? 0,
@@ -167,6 +179,10 @@ class Garment {
     'seasons': seasons,
     'mood_tags': moods,
     'fabric': fabric,
+    'fit': fit,
+    'pattern': pattern,
+    'fabric_weight': fabricWeight,
+    'sleeve_length': sleeveLength,
     'details': details,
     'wash_instructions': washInstructions,
     'photo_urls': photoPaths,
@@ -204,6 +220,10 @@ class Garment {
       seasons: seasons,
       moods: moods,
       fabric: fabric,
+      fit: fit,
+      pattern: pattern,
+      fabricWeight: fabricWeight,
+      sleeveLength: sleeveLength,
       details: details,
       washInstructions: washInstructions,
       wearCount: wearCount,

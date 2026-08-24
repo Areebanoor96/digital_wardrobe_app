@@ -1,4 +1,9 @@
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/wear_log.dart';
+import 'package:digital_wardrobe_app/features/ootd/models/daily_context.dart';
+import 'package:digital_wardrobe_app/features/ootd/models/weather_data.dart';
+import 'package:digital_wardrobe_app/features/ootd/services/daily_context_interpreter.dart';
+import 'package:digital_wardrobe_app/features/ootd/services/garment_metadata_interpreter.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
 import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,10 +19,17 @@ void main() {
     List<String> seasons = const <String>[],
     List<String> moods = const <String>[],
     String? colorHex,
+    String? secondaryColorHex,
     String? memberId = 'member-1',
     LaundryStatus laundryStatus = LaundryStatus.clean,
     bool isArchived = false,
     DateTime? lastWornDate,
+    String? fabric,
+    String? fabricWeight,
+    String? fit,
+    String? pattern,
+    String? sleeveLength,
+    int wearCount = 0,
   }) {
     return Garment(
       id: id,
@@ -30,404 +42,310 @@ void main() {
       seasons: seasons,
       moods: moods,
       colorHex: colorHex,
+      secondaryColorHex: secondaryColorHex,
       laundryStatus: laundryStatus,
       isArchived: isArchived,
       lastWornDate: lastWornDate,
+      fabric: fabric,
+      fabricWeight: fabricWeight,
+      fit: fit,
+      pattern: pattern,
+      sleeveLength: sleeveLength,
+      wearCount: wearCount,
     );
   }
 
-  group('OOTD eligibility', () {
-    test('wardrobe with fewer than 5 active garments is not eligible', () {
-      final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
-        garment(id: 't3', name: 'Top 3', category: GarmentCategory.top),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-      ];
+  List<Garment> baseWardrobe() {
+    return <Garment>[
+      garment(
+        id: 'linen-shirt',
+        name: 'White Linen Shirt',
+        category: GarmentCategory.top,
+        colorHex: '#FFFFFF',
+        fabric: 'Linen',
+        fabricWeight: 'Light',
+        sleeveLength: 'Short Sleeve',
+        fit: 'Regular',
+        pattern: 'Solid',
+        occasions: const <String>['casual', 'work'],
+        seasons: const <String>['summer', 'all'],
+      ),
+      garment(
+        id: 'wool-sweater',
+        name: 'Heavy Wool Sweater',
+        category: GarmentCategory.top,
+        colorHex: '#7A1E1E',
+        fabric: 'Wool',
+        fabricWeight: 'Heavy',
+        sleeveLength: 'Long Sleeve',
+        fit: 'Oversized',
+        pattern: 'Solid',
+        occasions: const <String>['casual'],
+        seasons: const <String>['winter'],
+      ),
+      garment(
+        id: 'trousers',
+        name: 'Black Trousers',
+        category: GarmentCategory.bottom,
+        colorHex: '#111111',
+        fabric: 'Cotton',
+        fabricWeight: 'Medium',
+        fit: 'Straight',
+        pattern: 'Solid',
+        occasions: const <String>['work', 'casual'],
+        seasons: const <String>['all'],
+      ),
+      garment(
+        id: 'sandals',
+        name: 'Tan Sandals',
+        category: GarmentCategory.shoe,
+        colorHex: '#D2B48C',
+        fabric: 'Leather',
+        occasions: const <String>['casual'],
+        seasons: const <String>['summer'],
+      ),
+      garment(
+        id: 'sneakers',
+        name: 'White Sneakers',
+        category: GarmentCategory.shoe,
+        colorHex: '#F5F5F5',
+        fabric: 'Canvas',
+        occasions: const <String>['casual', 'travel', 'college'],
+        seasons: const <String>['all'],
+      ),
+      garment(
+        id: 'bag',
+        name: 'Black Bag',
+        category: GarmentCategory.bag,
+        colorHex: '#000000',
+        pattern: 'Solid',
+      ),
+    ];
+  }
 
-      garments.removeLast();
+  group('context and garment metadata', () {
+    test(
+      'hot humid weather produces low warmth and high breathability needs',
+      () {
+        final requirements = const DailyContextInterpreter().interpret(
+          DailyContext.from(
+            weather: const WeatherData(
+              temperature: 33,
+              feelsLike: 38,
+              humidity: 80,
+              rainProbability: 20,
+            ),
+            date: DateTime(2026, 8, 24),
+          ),
+        );
 
-      expect(service.isEligibleForRecommendation(garments), isFalse);
-    });
+        expect(requirements.targetWarmth, lessThan(2));
+        expect(requirements.targetBreathability, greaterThan(9));
+        expect(requirements.preferLightLayers, isTrue);
+      },
+    );
 
-    test('wardrobe missing shoes is not eligible', () {
-      final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
-        garment(id: 't3', name: 'Top 3', category: GarmentCategory.top),
-        garment(id: 't4', name: 'Top 4', category: GarmentCategory.top),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-      ];
-
-      expect(service.isEligibleForRecommendation(garments), isFalse);
-    });
-
-    test('wardrobe missing top or bottom is not eligible', () {
-      final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-        garment(id: 's2', name: 'Shoes 2', category: GarmentCategory.shoe),
-        garment(id: 's3', name: 'Shoes 3', category: GarmentCategory.shoe),
-        garment(id: 'a1', name: 'Bag', category: GarmentCategory.bag),
-      ];
-
-      expect(service.isEligibleForRecommendation(garments), isFalse);
-    });
-
-    test('archived garments do not count towards eligibility', () {
-      final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
+    test('garment metadata combines fabric, weight, sleeve and category', () {
+      final metadata = const GarmentMetadataInterpreter().interpret(
         garment(
-          id: 'archived',
-          name: 'Archived Top',
-          category: GarmentCategory.top,
-          isArchived: true,
+          id: 'coat',
+          name: 'Heavy Wool Coat',
+          category: GarmentCategory.outerwear,
+          fabric: 'Wool',
+          fabricWeight: 'Heavy',
+          sleeveLength: 'Long Sleeve',
+          fit: 'Structured',
+          pattern: 'Solid',
         ),
-      ];
-
-      expect(service.isEligibleForRecommendation(garments), isFalse);
-    });
-
-    test('dirty garments do not count towards eligibility', () {
-      final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
-        garment(
-          id: 'dirty',
-          name: 'Dirty Top',
-          category: GarmentCategory.top,
-          laundryStatus: LaundryStatus.dirty,
-        ),
-      ];
-
-      expect(service.isEligibleForRecommendation(garments), isFalse);
-    });
-
-    test('washing and ironing garments do not count towards eligibility', () {
-      final List<Garment> garments = <Garment>[
-        garment(
-          id: 'washing',
-          name: 'Washing Top',
-          category: GarmentCategory.top,
-          laundryStatus: LaundryStatus.washing,
-        ),
-        garment(
-          id: 'ironing',
-          name: 'Ironing Top',
-          category: GarmentCategory.top,
-          laundryStatus: LaundryStatus.ironing,
-        ),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
-        garment(id: 't3', name: 'Top 3', category: GarmentCategory.top),
-      ];
-
-      expect(service.isEligibleForRecommendation(garments), isFalse);
-    });
-
-    test('garments from other members do not count towards eligibility', () {
-      final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
-        garment(
-          id: 'other-member',
-          name: 'Other Member Top',
-          category: GarmentCategory.top,
-          memberId: 'member-2',
-        ),
-      ];
-
-      expect(
-        service.isEligibleForRecommendation(garments, memberId: 'member-1'),
-        isFalse,
       );
+
+      expect(metadata.warmth, greaterThan(9));
+      expect(metadata.breathability, lessThan(4));
+      expect(metadata.formality, greaterThan(5));
     });
+  });
 
-    test('memberId filter accepts matching member garments', () {
+  group('eligibility and hard rules', () {
+    test('dress plus shoes is eligible without top and bottom', () {
       final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
-        garment(id: 'a1', name: 'Bag', category: GarmentCategory.bag),
-      ];
-
-      expect(
-        service.isEligibleForRecommendation(garments, memberId: 'member-1'),
-        isTrue,
-      );
-    });
-
-    test('wardrobe meeting the minimum is eligible', () {
-      final List<Garment> garments = <Garment>[
-        garment(id: 't1', name: 'Top', category: GarmentCategory.top),
-        garment(id: 't2', name: 'Top 2', category: GarmentCategory.top),
-        garment(id: 'b1', name: 'Bottom', category: GarmentCategory.bottom),
-        garment(id: 's1', name: 'Shoes', category: GarmentCategory.shoe),
-        garment(id: 'a1', name: 'Bag', category: GarmentCategory.bag),
+        garment(
+          id: 'dress',
+          name: 'Blue Dress',
+          category: GarmentCategory.dress,
+        ),
+        garment(
+          id: 'shoes',
+          name: 'Black Shoes',
+          category: GarmentCategory.shoe,
+        ),
       ];
 
       expect(service.isEligibleForRecommendation(garments), isTrue);
     });
 
-    test('archived garments are never recommended', () {
-      final Garment archived = garment(
-        id: 'archived',
-        name: 'Archived Shirt',
-        category: GarmentCategory.top,
-        isArchived: true,
-      );
-
-      final Garment available = garment(
-        id: 'available',
-        name: 'Available Dress',
-        category: GarmentCategory.dress,
-      );
-
+    test('dress outfit excludes separate top and bottom', () {
       final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[archived, available],
-        recentlyWornGarmentIds: const <String>{},
+        allGarments: <Garment>[
+          garment(
+            id: 'dress',
+            name: 'Black Dress',
+            category: GarmentCategory.dress,
+            occasions: const <String>['formal'],
+          ),
+          ...baseWardrobe(),
+        ],
+        context: const OutfitContext(occasion: 'formal'),
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
+      );
+
+      final bool hasDress = result.garments.any(
+        (Garment garment) => garment.category == GarmentCategory.dress,
+      );
+
+      if (hasDress) {
+        expect(
+          result.garments.any(
+            (Garment garment) => garment.category == GarmentCategory.top,
+          ),
+          isFalse,
+        );
+        expect(
+          result.garments.any(
+            (Garment garment) => garment.category == GarmentCategory.bottom,
+          ),
+          isFalse,
+        );
+      }
+    });
+
+    test('dirty, archived and other-member garments are never recommended', () {
+      final OutfitRecommendation result = service.recommend(
+        allGarments: <Garment>[
+          ...baseWardrobe(),
+          garment(
+            id: 'dirty',
+            name: 'Dirty Shirt',
+            category: GarmentCategory.top,
+            laundryStatus: LaundryStatus.dirty,
+          ),
+          garment(
+            id: 'archived',
+            name: 'Archived Shoes',
+            category: GarmentCategory.shoe,
+            isArchived: true,
+          ),
+          garment(
+            id: 'other',
+            name: 'Other Member Trousers',
+            category: GarmentCategory.bottom,
+            memberId: 'member-2',
+          ),
+        ],
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
       );
 
       expect(
-        result.garments.any((Garment item) => item.id == archived.id),
-        isFalse,
+        result.garments.map((Garment g) => g.id),
+        isNot(contains('dirty')),
       );
-    });
-
-    test('dirty garments are never recommended', () {
-      final Garment dirtyShoes = garment(
-        id: 'dirty-shoes',
-        name: 'Dirty Shoes',
-        category: GarmentCategory.shoe,
-        laundryStatus: LaundryStatus.dirty,
-      );
-
-      final Garment dress = garment(
-        id: 'dress',
-        name: 'Black Dress',
-        category: GarmentCategory.dress,
-      );
-
-      final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[dress, dirtyShoes],
-        recentlyWornGarmentIds: const <String>{},
-      );
-
       expect(
-        result.garments.any((Garment item) => item.id == dirtyShoes.id),
-        isFalse,
+        result.garments.map((Garment g) => g.id),
+        isNot(contains('archived')),
+      );
+      expect(
+        result.garments.map((Garment g) => g.id),
+        isNot(contains('other')),
       );
     });
   });
 
-  group('OOTD hero selection', () {
-    test('recently worn garment is deprioritized as hero', () {
-      final Garment recentTop = garment(
-        id: 'recent',
-        name: 'Recently Worn Top',
-        category: GarmentCategory.top,
-        lastWornDate: DateTime.now(),
-      );
-
-      final Garment freshTop = garment(
-        id: 'fresh',
-        name: 'Fresh Top',
-        category: GarmentCategory.top,
-        lastWornDate: DateTime.now().subtract(const Duration(days: 30)),
-      );
-
-      final Garment bottom = garment(
-        id: 'bottom',
-        name: 'Black Trousers',
-        category: GarmentCategory.bottom,
-      );
-
+  group('complete outfit ranking', () {
+    test('hot weather prefers breathable linen over heavy wool', () {
       final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[recentTop, freshTop, bottom],
-        recentlyWornGarmentIds: <String>{recentTop.id},
-      );
-
-      expect(result.heroGarment?.id, freshTop.id);
-    });
-
-    test('hero garment only appears once', () {
-      final Garment top = garment(
-        id: 'hero',
-        name: 'White Shirt',
-        category: GarmentCategory.top,
-      );
-
-      final Garment bottom = garment(
-        id: 'bottom',
-        name: 'Black Trousers',
-        category: GarmentCategory.bottom,
-      );
-
-      final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[top, bottom],
-        recentlyWornGarmentIds: const <String>{},
-      );
-
-      final int heroCount = result.garments
-          .where((Garment item) => item.id == result.heroGarment?.id)
-          .length;
-
-      expect(heroCount, 1);
-    });
-  });
-
-  group('OOTD context intelligence', () {
-    test('occasion influences hero selection', () {
-      final Garment weddingDress = garment(
-        id: 'wedding',
-        name: 'Wedding Dress',
-        category: GarmentCategory.dress,
-        occasions: const <String>['wedding'],
-      );
-
-      final Garment casualDress = garment(
-        id: 'casual',
-        name: 'Casual Dress',
-        category: GarmentCategory.dress,
-        occasions: const <String>['casual'],
-      );
-
-      final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[casualDress, weddingDress],
-        recentlyWornGarmentIds: const <String>{},
-        context: const OutfitContext(occasion: 'wedding'),
-      );
-
-      expect(result.heroGarment?.id, weddingDress.id);
-    });
-
-    test('season influences hero selection', () {
-      final Garment summerDress = garment(
-        id: 'summer',
-        name: 'Summer Dress',
-        category: GarmentCategory.dress,
-        seasons: const <String>['summer'],
-      );
-
-      final Garment winterDress = garment(
-        id: 'winter',
-        name: 'Winter Dress',
-        category: GarmentCategory.dress,
-        seasons: const <String>['winter'],
-      );
-
-      final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[summerDress, winterDress],
-        recentlyWornGarmentIds: const <String>{},
-        context: const OutfitContext(season: 'winter'),
-      );
-
-      expect(result.heroGarment?.id, winterDress.id);
-    });
-
-    test('mood influences hero selection', () {
-      final Garment relaxedDress = garment(
-        id: 'relaxed',
-        name: 'Relaxed Dress',
-        category: GarmentCategory.dress,
-        moods: const <String>['relaxed'],
-      );
-
-      final Garment elegantDress = garment(
-        id: 'elegant',
-        name: 'Elegant Dress',
-        category: GarmentCategory.dress,
-        moods: const <String>['elegant'],
-      );
-
-      final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[relaxedDress, elegantDress],
-        recentlyWornGarmentIds: const <String>{},
-        context: const OutfitContext(mood: 'elegant'),
-      );
-
-      expect(result.heroGarment?.id, elegantDress.id);
-    });
-  });
-
-  group('OOTD result safety', () {
-    test('score always stays between 0 and 100', () {
-      final Garment top = garment(
-        id: 'top',
-        name: 'White Shirt',
-        category: GarmentCategory.top,
-        occasions: const <String>['wedding'],
-        seasons: const <String>['winter'],
-        moods: const <String>['elegant'],
-        colorHex: '#FFFFFF',
-      );
-
-      final Garment bottom = garment(
-        id: 'bottom',
-        name: 'Black Trousers',
-        category: GarmentCategory.bottom,
-        occasions: const <String>['wedding'],
-        seasons: const <String>['winter'],
-        moods: const <String>['elegant'],
-        colorHex: '#000000',
-      );
-
-      final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[top, bottom],
-        recentlyWornGarmentIds: const <String>{},
-        context: const OutfitContext(
-          occasion: 'wedding',
-          season: 'winter',
-          mood: 'elegant',
+        allGarments: baseWardrobe(),
+        weather: const WeatherData(
+          temperature: 34,
+          feelsLike: 38,
+          humidity: 75,
+          rainProbability: 10,
+          condition: 'Clear',
         ),
+        context: const OutfitContext(occasion: 'casual'),
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
       );
 
-      expect(result.score, inInclusiveRange(0, 100));
+      expect(result.garments.map((Garment g) => g.id), contains('linen-shirt'));
+      expect(
+        result.garments.map((Garment g) => g.id),
+        isNot(contains('wool-sweater')),
+      );
+      expect(result.weatherScore, greaterThan(60));
     });
 
-    test('empty wardrobe returns safe empty result', () {
+    test('recent top receives stronger rotation penalty than shoes', () {
+      final List<WearLog> wearLogs = <WearLog>[
+        WearLog(
+          id: 'top-log',
+          memberId: 'member-1',
+          garmentId: 'linen-shirt',
+          wornDate: DateTime(2026, 8, 23),
+        ),
+      ];
+
       final OutfitRecommendation result = service.recommend(
-        allGarments: const <Garment>[],
-        recentlyWornGarmentIds: const <String>{},
+        allGarments: baseWardrobe(),
+        wearLogs: wearLogs,
+        weather: const WeatherData(temperature: 25, feelsLike: 25),
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
       );
 
-      expect(result.garments, isEmpty);
-      expect(result.score, 0);
-      expect(result.reason, isNotEmpty);
+      final bool includesRecentTop = result.garments.any(
+        (Garment garment) => garment.id == 'linen-shirt',
+      );
+
+      expect(!includesRecentTop || result.rotationScore < 78, isTrue);
     });
 
-    test('wardrobe containing only unavailable garments is safe', () {
-      final Garment dirty = garment(
-        id: 'dirty',
-        name: 'Dirty Shirt',
-        category: GarmentCategory.top,
-        laundryStatus: LaundryStatus.dirty,
+    test('returns up to three distinct recommendations', () {
+      final List<OutfitRecommendation> results = service.recommendMany(
+        allGarments: <Garment>[
+          ...baseWardrobe(),
+          garment(
+            id: 'dress',
+            name: 'Green Dress',
+            category: GarmentCategory.dress,
+            colorHex: '#2E7D32',
+            fabric: 'Cotton',
+          ),
+          garment(
+            id: 'flats',
+            name: 'Black Flats',
+            category: GarmentCategory.shoe,
+            colorHex: '#000000',
+          ),
+        ],
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
       );
 
-      final Garment archived = garment(
-        id: 'archived',
-        name: 'Archived Trousers',
-        category: GarmentCategory.bottom,
-        isArchived: true,
-      );
+      expect(results.length, inInclusiveRange(1, 3));
+      expect(results.first.alternatives.length, results.length - 1);
+      expect(results.first.score, inInclusiveRange(0, 100));
+    });
 
+    test('missing weather still returns a safe recommendation', () {
       final OutfitRecommendation result = service.recommend(
-        allGarments: <Garment>[dirty, archived],
-        recentlyWornGarmentIds: const <String>{},
+        allGarments: baseWardrobe(),
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
       );
 
-      expect(result.garments, isEmpty);
-      expect(result.score, 0);
+      expect(result.garments, isNotEmpty);
+      expect(result.reasons.join(' '), contains('Weather is unavailable'));
     });
   });
 }

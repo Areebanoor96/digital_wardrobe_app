@@ -15,6 +15,8 @@ void main() {
         'event_name': 'University',
         'notes': 'Wore to campus',
         'laundry_status_after': 'dirty',
+        'weather_temp': 31.5,
+        'weather_cond': 'Clouds',
       });
 
       expect(log.id, 'log-1');
@@ -25,6 +27,8 @@ void main() {
       expect(log.eventName, 'University');
       expect(log.notes, 'Wore to campus');
       expect(log.laundryStatusAfter, LaundryStatus.dirty);
+      expect(log.weatherTemp, 31.5);
+      expect(log.weatherCondition, 'Clouds');
     });
 
     test('event, notes and laundry status are optional', () {
@@ -87,10 +91,8 @@ void main() {
 
     test('throws for a wear date in the future', () {
       expect(
-        () => WearLogRepository.resolveWornDate(
-          DateTime(2026, 8, 14),
-          now: now,
-        ),
+        () =>
+            WearLogRepository.resolveWornDate(DateTime(2026, 8, 14), now: now),
         throwsArgumentError,
       );
     });
@@ -104,6 +106,8 @@ void main() {
       String? notes,
       String? outfitId,
       LaundryStatus? laundryStatusAfter,
+      double? weatherTemp,
+      String? weatherCondition,
     }) {
       return WearLogRepository.buildWearLogRow(
         userId: 'user-1',
@@ -114,6 +118,8 @@ void main() {
         eventName: eventName,
         notes: notes,
         laundryStatusAfter: laundryStatusAfter,
+        weatherTemp: weatherTemp,
+        weatherCondition: weatherCondition,
       );
     }
 
@@ -138,15 +144,30 @@ void main() {
     });
 
     test('stores the chosen laundry status and outfit id', () {
-      expect(build(laundryStatusAfter: LaundryStatus.clean)[
-        'laundry_status_after'],
-      'clean');
-      expect(build(laundryStatusAfter: LaundryStatus.dirty)[
-        'laundry_status_after'],
-      'dirty');
+      expect(
+        build(laundryStatusAfter: LaundryStatus.clean)['laundry_status_after'],
+        'clean',
+      );
+      expect(
+        build(laundryStatusAfter: LaundryStatus.dirty)['laundry_status_after'],
+        'dirty',
+      );
       expect(build(laundryStatusAfter: null)['laundry_status_after'], isNull);
       expect(build(outfitId: 'outfit-1')['outfit_id'], 'outfit-1');
       expect(build(outfitId: null)['outfit_id'], isNull);
+    });
+
+    test('weather fields are optional and trimmed', () {
+      expect(build(weatherTemp: null)['weather_temp'], isNull);
+      expect(build(weatherCondition: '   ')['weather_cond'], isNull);
+
+      final Map<String, dynamic> row = build(
+        weatherTemp: 32.2,
+        weatherCondition: '  Rain  ',
+      );
+
+      expect(row['weather_temp'], 32.2);
+      expect(row['weather_cond'], 'Rain');
     });
   });
 }

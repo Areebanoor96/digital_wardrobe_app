@@ -9,11 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
-enum _GarmentImageSource {
-  camera,
-  gallery,
-  file,
-}
+enum _GarmentImageSource { camera, gallery, file }
 
 class GarmentFormScreen extends ConsumerStatefulWidget {
   const GarmentFormScreen({super.key, this.garment});
@@ -146,6 +142,61 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         : <String>[..._fabricOptions, savedFabric];
   }
 
+  static const List<String> _fitOptions = <String>[
+    'Regular',
+    'Slim',
+    'Relaxed',
+    'Oversized',
+    'Tailored',
+    'Straight',
+    'Tapered',
+    'Wide-leg',
+    'Skinny',
+    'Flared',
+    'Boxy',
+    'Cropped',
+    'Flowy',
+    'Structured',
+  ];
+
+  static const List<String> _patternOptions = <String>[
+    'Solid',
+    'Striped',
+    'Checked',
+    'Floral',
+    'Graphic',
+    'Polka Dot',
+    'Animal Print',
+    'Abstract',
+    'Embroidered',
+    'Sequined',
+    'Textured',
+    'Other',
+  ];
+
+  static const List<String> _fabricWeightOptions = <String>[
+    'Light',
+    'Medium',
+    'Heavy',
+  ];
+
+  static const List<String> _sleeveLengthOptions = <String>[
+    'Sleeveless',
+    'Short Sleeve',
+    'Three-Quarter Sleeve',
+    'Long Sleeve',
+    'Not Applicable',
+  ];
+
+  late String? _selectedFit = _cleanOptional(widget.garment?.fit);
+  late String? _selectedPattern = _cleanOptional(widget.garment?.pattern);
+  late String? _selectedFabricWeight = _cleanOptional(
+    widget.garment?.fabricWeight,
+  );
+  late String? _selectedSleeveLength = _cleanOptional(
+    widget.garment?.sleeveLength,
+  );
+
   late final TextEditingController _details = TextEditingController(
     text: widget.garment?.details,
   );
@@ -254,10 +305,10 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
           isScrollControlled: true,
           builder: (BuildContext sheetContext) {
             return _GarmentColorPickerSheet(
-              title: isPrimary ? 'Select primary color' : 'Select secondary color',
-              selectedName: isPrimary
-                  ? _primaryColorName
-                  : _secondaryColorName,
+              title: isPrimary
+                  ? 'Select primary color'
+                  : 'Select secondary color',
+              selectedName: isPrimary ? _primaryColorName : _secondaryColorName,
             );
           },
         );
@@ -296,52 +347,45 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       return;
     }
     final _GarmentImageSource? source =
-    await showModalBottomSheet<_GarmentImageSource>(
-      context: context,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.camera_alt_outlined),
-                title: const Text('Take photo'),
-                onTap: () {
-                  Navigator.pop(sheetContext, _GarmentImageSource.camera);
-                },
+        await showModalBottomSheet<_GarmentImageSource>(
+          context: context,
+          builder: (BuildContext sheetContext) {
+            return SafeArea(
+              child: Wrap(
+                children: <Widget>[
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt_outlined),
+                    title: const Text('Take photo'),
+                    onTap: () {
+                      Navigator.pop(sheetContext, _GarmentImageSource.camera);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library_outlined),
+                    title: const Text('Choose from gallery'),
+                    onTap: () {
+                      Navigator.pop(sheetContext, _GarmentImageSource.gallery);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.attach_file),
+                    title: const Text('Attach image file'),
+                    subtitle: const Text('JPG, JPEG, PNG or WEBP'),
+                    onTap: () {
+                      Navigator.pop(sheetContext, _GarmentImageSource.file);
+                    },
+                  ),
+                ],
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Choose from gallery'),
-                onTap: () {
-                  Navigator.pop(
-                    sheetContext,
-                    _GarmentImageSource.gallery,
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.attach_file),
-                title: const Text('Attach image file'),
-                subtitle: const Text('JPG, JPEG, PNG or WEBP'),
-                onTap: () {
-                  Navigator.pop(
-                    sheetContext,
-                    _GarmentImageSource.file,
-                  );
-                },
-              ),
-            ],
-          ),
+            );
+          },
         );
-      },
-    );
 
     if (source == null) {
       return;
     }
     if (source == _GarmentImageSource.file) {
-      final XFile? image =
-      await ref.read(imageServiceProvider).pickImageFile();
+      final XFile? image = await ref.read(imageServiceProvider).pickImageFile();
 
       if (image == null || !mounted) {
         return;
@@ -574,6 +618,10 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         seasons: _selectedSeasons.toList(),
         moods: _selectedMoods.toList(),
         fabric: _selectedFabric,
+        fit: _selectedFit,
+        pattern: _selectedPattern,
+        fabricWeight: _selectedFabricWeight,
+        sleeveLength: _showSleeveLength ? _selectedSleeveLength : null,
         details: _optional(_details.text),
         washInstructions: widget.garment?.washInstructions,
         wearCount: widget.garment?.wearCount ?? 0,
@@ -626,6 +674,19 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   String? _optional(String value) {
     final String trimmedValue = value.trim();
     return trimmedValue.isEmpty ? null : trimmedValue;
+  }
+
+  bool get _showSleeveLength =>
+      _category == GarmentCategory.top ||
+      _category == GarmentCategory.dress ||
+      _category == GarmentCategory.outerwear;
+
+  List<String> _optionsWithSavedValue(List<String> options, String? saved) {
+    if (saved == null || saved.isEmpty || options.contains(saved)) {
+      return options;
+    }
+
+    return <String>[...options, saved];
   }
 
   @override
@@ -721,6 +782,9 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 if (value != null) {
                   setState(() {
                     _category = value;
+                    if (!_showSleeveLength) {
+                      _selectedSleeveLength = null;
+                    }
                   });
                 }
               },
@@ -808,6 +872,119 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 });
               },
             ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _selectedFit,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Fit',
+                hintText: 'Select a fit (optional)',
+              ),
+              items: <DropdownMenuItem<String?>>[
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Not specified'),
+                ),
+                ..._optionsWithSavedValue(_fitOptions, _selectedFit).map(
+                  (String fit) =>
+                      DropdownMenuItem<String?>(value: fit, child: Text(fit)),
+                ),
+              ],
+              onChanged: (String? value) {
+                setState(() {
+                  _selectedFit = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _selectedPattern,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Pattern',
+                hintText: 'Select a pattern (optional)',
+              ),
+              items: <DropdownMenuItem<String?>>[
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Not specified'),
+                ),
+                ..._optionsWithSavedValue(
+                  _patternOptions,
+                  _selectedPattern,
+                ).map(
+                  (String pattern) => DropdownMenuItem<String?>(
+                    value: pattern,
+                    child: Text(pattern),
+                  ),
+                ),
+              ],
+              onChanged: (String? value) {
+                setState(() {
+                  _selectedPattern = value;
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _selectedFabricWeight,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Fabric weight',
+                hintText: 'Select a fabric weight (optional)',
+              ),
+              items: <DropdownMenuItem<String?>>[
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Not specified'),
+                ),
+                ..._optionsWithSavedValue(
+                  _fabricWeightOptions,
+                  _selectedFabricWeight,
+                ).map(
+                  (String weight) => DropdownMenuItem<String?>(
+                    value: weight,
+                    child: Text(weight),
+                  ),
+                ),
+              ],
+              onChanged: (String? value) {
+                setState(() {
+                  _selectedFabricWeight = value;
+                });
+              },
+            ),
+            if (_showSleeveLength) ...<Widget>[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _selectedSleeveLength,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Sleeve length',
+                  hintText: 'Select a sleeve length (optional)',
+                ),
+                items: <DropdownMenuItem<String?>>[
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not specified'),
+                  ),
+                  ..._optionsWithSavedValue(
+                    _sleeveLengthOptions,
+                    _selectedSleeveLength,
+                  ).map(
+                    (String sleeveLength) => DropdownMenuItem<String?>(
+                      value: sleeveLength,
+                      child: Text(sleeveLength),
+                    ),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  setState(() {
+                    _selectedSleeveLength = value;
+                  });
+                },
+              ),
+            ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _details,

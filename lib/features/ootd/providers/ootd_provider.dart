@@ -5,6 +5,8 @@ import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart'
     as alerts;
+import 'package:digital_wardrobe_app/features/ootd/models/weather_data.dart';
+import 'package:digital_wardrobe_app/features/ootd/providers/weather_provider.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
 import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,18 +14,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final StateProvider<OutfitContext> ootdContextProvider =
     StateProvider<OutfitContext>((Ref ref) => const OutfitContext());
 
+final FutureProvider<List<WearLog>> ootdWearHistoryProvider =
+    FutureProvider<List<WearLog>>((Ref ref) async {
+      final selectedMember = ref.watch(selectedFamilyMemberProvider);
+
+      if (selectedMember == null) {
+        return const <WearLog>[];
+      }
+
+      return ref
+          .watch(wearLogRepositoryProvider)
+          .fetchRecommendationWearHistory(memberId: selectedMember.id);
+    });
+
 final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
   final List<Garment> garments =
       ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
 
-  final List<WearLog> recentLogs =
-      ref.watch(recentWearActivityProvider).valueOrNull ?? const <WearLog>[];
+  final List<WearLog> wearLogs =
+      ref.watch(ootdWearHistoryProvider).valueOrNull ?? const <WearLog>[];
+
+  final WeatherData? weather = ref.watch(ootdWeatherProvider).valueOrNull;
 
   final OutfitContext context = ref.watch(ootdContextProvider);
-
-  final Set<String> recentlyWornIds = recentLogs
-      .map((WearLog log) => log.garmentId)
-      .toSet();
 
   const OutfitRecommendationService service = OutfitRecommendationService();
 
@@ -33,15 +46,17 @@ final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
     return const OutfitRecommendation(
       garments: <Garment>[],
       reason:
-          'Add at least 5 garments including a top, bottom and shoes '
-          'to get an outfit suggestion.',
+          'Add clean garments that can make either top + bottom + shoes '
+          'or dress + shoes to get an outfit suggestion.',
     );
   }
 
   return service.recommend(
     allGarments: garments,
-    recentlyWornGarmentIds: recentlyWornIds,
+    wearLogs: wearLogs,
     context: context,
+    weather: weather,
+    memberId: memberId,
   );
 });
 
@@ -99,6 +114,8 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncLoading<void>();
 
     state = await AsyncValue.guard(() async {
+      final WeatherData? weather = ref.read(ootdWeatherProvider).valueOrNull;
+
       for (final Garment garment in garments) {
         await ref
             .read(wearLogRepositoryProvider)
@@ -108,6 +125,8 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
               eventName: eventName,
               laundryStatusAfter: laundryStatusAfter,
               notes: notes,
+              weatherTemp: weather?.temperature,
+              weatherCondition: weather?.condition,
             );
       }
     });
@@ -115,6 +134,7 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
     if (!state.hasError) {
       ref.invalidate(garmentsProvider);
       ref.invalidate(recentWearActivityProvider);
+      ref.invalidate(ootdWearHistoryProvider);
       ref.invalidate(calendarMonthProvider);
       ref.invalidate(selectedDayWearHistoryProvider);
       ref.invalidate(analyticsSummaryProvider);
