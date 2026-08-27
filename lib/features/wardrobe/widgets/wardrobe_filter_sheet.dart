@@ -21,8 +21,22 @@ class WardrobeFilterSheet extends ConsumerWidget {
       garments.map((Garment garment) => garment.brand),
     );
 
-    final List<String> sizes = _uniqueValues(
-      garments.map((Garment garment) => garment.size),
+    final List<String> sizes = _uniqueListValues(
+      garments.expand((Garment garment) => garment.effectiveSizes),
+    );
+
+    final Map<String, String> locations = <String, String>{
+      for (final Garment garment in garments)
+        if (garment.locationId != null && garment.locationName != null)
+          garment.locationId!: garment.locationName!,
+    };
+
+    final List<String> outerwearSubcategories = _uniqueValues(
+      garments
+          .where(
+            (Garment garment) => garment.category == GarmentCategory.outerwear,
+          )
+          .map((Garment garment) => garment.subcategory),
     );
 
     final List<String> occasions = _uniqueListValues(
@@ -74,7 +88,7 @@ class WardrobeFilterSheet extends ConsumerWidget {
                             .read(wardrobeFilterProvider.notifier)
                             .clearFilters();
                       },
-                      child: const Text('Clear filters'),
+                      child: const Text('Clear Filters'),
                     ),
                   ],
                 ),
@@ -87,13 +101,13 @@ class WardrobeFilterSheet extends ConsumerWidget {
                     _SectionTitle(
                       title: 'Sort by',
                       onClear:
-                          filters.sortOption == WardrobeSortOption.newestAdded
+                          filters.sortOption == WardrobeSortOption.leastWorn
                           ? null
                           : () {
                               ref
                                   .read(wardrobeFilterProvider.notifier)
                                   .setSortOption(
-                                    WardrobeSortOption.newestAdded,
+                                    WardrobeSortOption.leastWorn,
                                   );
                             },
                     ),
@@ -193,12 +207,12 @@ class WardrobeFilterSheet extends ConsumerWidget {
                       initialValue: filters.laundryStatus,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.local_laundry_service_outlined),
-                        labelText: 'Laundry status',
+                        labelText: 'Laundry Status',
                       ),
                       items: <DropdownMenuItem<LaundryStatus?>>[
                         const DropdownMenuItem<LaundryStatus?>(
                           value: null,
-                          child: Text('All laundry statuses'),
+                          child: Text('All Laundry Statuses'),
                         ),
                         ...LaundryStatus.values.map(
                           (LaundryStatus status) =>
@@ -212,6 +226,120 @@ class WardrobeFilterSheet extends ConsumerWidget {
                           .read(wardrobeFilterProvider.notifier)
                           .setLaundryStatus,
                     ),
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<GarmentAvailabilityStatus?>(
+                      initialValue: filters.availabilityStatus,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.inventory_2_outlined),
+                        labelText: 'Garment Status',
+                      ),
+                      items: <DropdownMenuItem<GarmentAvailabilityStatus?>>[
+                        const DropdownMenuItem<GarmentAvailabilityStatus?>(
+                          value: null,
+                          child: Text('All Garment Statuses'),
+                        ),
+                        ...GarmentAvailabilityStatus.values.map(
+                          (GarmentAvailabilityStatus status) =>
+                              DropdownMenuItem<GarmentAvailabilityStatus?>(
+                                value: status,
+                                child: Text(status.label),
+                              ),
+                        ),
+                      ],
+                      onChanged: ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setAvailabilityStatus,
+                    ),
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<String?>(
+                      initialValue: filters.locationId,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.place_outlined),
+                        labelText: 'Location',
+                      ),
+                      items: <DropdownMenuItem<String?>>[
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('All locations'),
+                        ),
+                        ...locations.entries.map(
+                          (MapEntry<String, String> entry) =>
+                              DropdownMenuItem<String?>(
+                                value: entry.key,
+                                child: Text(entry.value),
+                              ),
+                        ),
+                      ],
+                      onChanged: (String? value) {
+                        ref.read(wardrobeFilterProvider.notifier).setLocation(
+                              id: value,
+                              name: value == null ? null : locations[value],
+                            );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<StitchingStatus?>(
+                      initialValue: filters.stitchingStatus,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.content_cut_outlined),
+                        labelText: 'Stitching Status',
+                      ),
+                      items: <DropdownMenuItem<StitchingStatus?>>[
+                        const DropdownMenuItem<StitchingStatus?>(
+                          value: null,
+                          child: Text('All Stitching Statuses'),
+                        ),
+                        ...StitchingStatus.values.map(
+                          (StitchingStatus status) =>
+                              DropdownMenuItem<StitchingStatus?>(
+                                value: status,
+                                child: Text(status.label),
+                              ),
+                        ),
+                      ],
+                      onChanged: ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setStitchingStatus,
+                    ),
+                    const SizedBox(height: 16),
+
+                    DropdownButtonFormField<IroningStatus?>(
+                      initialValue: filters.ironingStatus,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.local_laundry_service_outlined),
+                        labelText: 'Ironing Status',
+                      ),
+                      items: <DropdownMenuItem<IroningStatus?>>[
+                        const DropdownMenuItem<IroningStatus?>(
+                          value: null,
+                          child: Text('All Ironing Statuses'),
+                        ),
+                        ...IroningStatus.values.map(
+                          (IroningStatus status) =>
+                              DropdownMenuItem<IroningStatus?>(
+                                value: status,
+                                child: Text(status.label),
+                              ),
+                        ),
+                      ],
+                      onChanged: ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setIroningStatus,
+                    ),
+                    const SizedBox(height: 16),
+
+                    _FilterDropdown(
+                      label: 'Outerwear Subcategory',
+                      icon: Icons.layers_outlined,
+                      value: filters.outerwearSubcategory,
+                      values: outerwearSubcategories,
+                      onChanged: ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setOuterwearSubcategory,
+                    ),
                   ],
                 ),
               ),
@@ -223,8 +351,8 @@ class WardrobeFilterSheet extends ConsumerWidget {
                     onPressed: () => Navigator.pop(context),
                     child: Text(
                       filters.activeFilterCount == 0
-                          ? 'Show garments'
-                          : 'Show garments · ${filters.activeFilterCount} filters',
+                          ? 'Show Garments'
+                          : 'Show Garments - ${filters.activeFilterCount} Filters',
                     ),
                   ),
                 ),

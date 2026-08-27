@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/ootd/models/weather_data.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/location_service.dart';
@@ -52,6 +54,32 @@ void main() {
       expect(weather.condition, 'Clear');
       expect(weather.latitude, location.latitude);
       expect(weather.longitude, location.longitude);
+    });
+
+    test('free-weather normalized payload accepts missing UV', () async {
+      final Map<String, dynamic> payload = validPayload();
+      payload['uv_index'] = null;
+      payload['rain_probability'] = 80;
+      payload['has_rain_or_snow'] = true;
+      payload['condition'] = 'Rain';
+      final WeatherRepository repository = repositoryFor(<dynamic>[payload]);
+
+      final WeatherData? weather = await repository.fetchForLocation(
+        location: location,
+      );
+
+      expect(weather, isNotNull);
+      expect(weather!.uvIndex, isNull);
+      expect(weather.rainProbability, 80);
+      expect(weather.hasRainOrSnow, isTrue);
+      expect(weather.condition, 'Rain');
+    });
+
+    test('legacy 0-1 precipitation probability is normalized to percent', () {
+      final WeatherData weather = WeatherData.fromJson(validPayload()
+        ..['rain_probability'] = 0.8);
+
+      expect(weather.rainProbability, 80);
     });
 
     test('{error: ...} response becomes unavailable weather', () async {
@@ -157,5 +185,16 @@ void main() {
         );
       },
     );
+
+    test('weather function source does not use paid endpoint path', () {
+      final String source = Directory('supabase/functions/ootd-weather')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .map((File file) => file.readAsStringSync())
+          .join('\n');
+
+      expect(source, isNot(contains('/data/' '3.0/')));
+      expect(source, isNot(contains('one' 'call')));
+    });
   });
 }

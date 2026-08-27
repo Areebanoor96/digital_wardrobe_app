@@ -1,17 +1,30 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
 import 'package:digital_wardrobe_app/features/analytics/widgets/analytics_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
-  const AnalyticsScreen({super.key});
+  const AnalyticsScreen({
+    super.key,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
+  });
+
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(analyticsSummaryProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Analytics')),
+      appBar: AppBar(
+        leading: canNavigateBack
+            ? BackArrowButton(onPressed: onNavigateBack)
+            : null,
+        title: const Text('Analytics'),
+      ),
       body: summary.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => _AnalyticsFeedback(

@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/features/outfits/widgets/outfit_garment_tile.dart';
@@ -21,7 +22,7 @@ class OutfitDetailScreen extends ConsumerWidget {
           loading: () =>
               const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (_, _) => Scaffold(
-            appBar: AppBar(),
+            appBar: AppBar(leading: const BackArrowButton()),
             body: const Center(child: Text('This outfit could not be loaded.')),
           ),
           data: (Outfit outfit) {
@@ -35,6 +36,7 @@ class OutfitDetailScreen extends ConsumerWidget {
                 .toList();
             return Scaffold(
               appBar: AppBar(
+                leading: const BackArrowButton(),
                 actions: <Widget>[
                   IconButton(
                     onPressed: () =>

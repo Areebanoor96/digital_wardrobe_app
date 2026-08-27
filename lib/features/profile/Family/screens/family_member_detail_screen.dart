@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
@@ -22,7 +23,10 @@ class FamilyMemberDetailScreen extends ConsumerWidget {
     final bool isChild = currentMember.relationship == RelationshipType.child;
 
     return Scaffold(
-      appBar: AppBar(title: Text(member.name)),
+      appBar: AppBar(
+        leading: const BackArrowButton(),
+        title: Text(member.name),
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(familyMemberProvider(member.id));

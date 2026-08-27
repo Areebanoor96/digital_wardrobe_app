@@ -17,6 +17,9 @@ void main() {
     LaundryStatus laundryStatus = LaundryStatus.clean,
     bool isArchived = false,
     DateTime? lastWornDate,
+    GarmentAvailabilityStatus availabilityStatus =
+        GarmentAvailabilityStatus.available,
+    IroningStatus? ironingStatus,
   }) {
     return Garment(
       id: id,
@@ -32,6 +35,8 @@ void main() {
       laundryStatus: laundryStatus,
       isArchived: isArchived,
       lastWornDate: lastWornDate,
+      availabilityStatus: availabilityStatus,
+      ironingStatus: ironingStatus,
     );
   }
 
@@ -98,6 +103,55 @@ void main() {
         ),
         isFalse,
       );
+    });
+
+    test('does not recommend unavailable or needs-ironing garments', () {
+      final Garment hero = garment(
+        id: 'hero',
+        name: 'White Shirt',
+        category: GarmentCategory.top,
+      );
+
+      final Garment borrowedBottom = garment(
+        id: 'borrowed',
+        name: 'Borrowed Trousers',
+        category: GarmentCategory.bottom,
+        availabilityStatus: GarmentAvailabilityStatus.borrowed,
+      );
+
+      final Garment lentBottom = garment(
+        id: 'lent',
+        name: 'Lent Trousers',
+        category: GarmentCategory.bottom,
+        availabilityStatus: GarmentAvailabilityStatus.lent,
+      );
+
+      final Garment needsIroning = garment(
+        id: 'needs-ironing',
+        name: 'Wrinkled Trousers',
+        category: GarmentCategory.bottom,
+        ironingStatus: IroningStatus.needsIroning,
+      );
+
+      final result = engine.recommend(
+        garments: <Garment>[
+          hero,
+          borrowedBottom,
+          lentBottom,
+          needsIroning,
+        ],
+        context: OutfitContext(
+          heroGarment: hero,
+        ),
+      );
+
+      final Iterable<String> ids = result.garments.map(
+        (Garment item) => item.id,
+      );
+
+      expect(ids, contains('borrowed'));
+      expect(ids, isNot(contains('lent')));
+      expect(ids, isNot(contains('needs-ironing')));
     });
 
     test('hero garment is not duplicated', () {
@@ -276,16 +330,18 @@ void main() {
 
       final matchingResult = engine.recommend(
         garments: <Garment>[
+          hero,
           strongMatch,
         ],
-        context: context,
+        context: context.copyWith(heroGarment: hero),
       );
 
       final weakResult = engine.recommend(
         garments: <Garment>[
+          hero,
           weakMatch,
         ],
-        context: context,
+        context: context.copyWith(heroGarment: hero),
       );
 
       expect(

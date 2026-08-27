@@ -60,6 +60,8 @@ class OotdEngine {
           (Garment garment) =>
               !garment.isArchived &&
               garment.laundryStatus == LaundryStatus.clean &&
+              garment.availabilityStatus.isPhysicallyAvailable &&
+              garment.ironingStatus != IroningStatus.needsIroning &&
               (memberId == null || garment.memberId == memberId),
         )
         .toList();

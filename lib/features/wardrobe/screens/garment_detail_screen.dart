@@ -1,8 +1,10 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/lending_record.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/utils/garment_metadata_formatter.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_photo_carousel.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_status_widgets.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wear_history_list.dart';
@@ -18,8 +20,12 @@ class GarmentDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<void> wearState = ref.watch(wearLogControllerProvider);
-
-    final history = ref.watch(garmentWearHistoryProvider(garmentId));
+    final AsyncValue<List<WearLog>> history = ref.watch(
+      garmentWearHistoryProvider(garmentId),
+    );
+    final AsyncValue<LendingRecord?> activeLending = ref.watch(
+      activeLendingRecordProvider(garmentId),
+    );
 
     return ref
         .watch(garmentProvider(garmentId))
@@ -27,31 +33,32 @@ class GarmentDetailScreen extends ConsumerWidget {
           loading: () =>
               const Scaffold(body: Center(child: CircularProgressIndicator())),
           error: (_, _) => Scaffold(
-            appBar: AppBar(),
+            appBar: AppBar(leading: const BackArrowButton()),
             body: const Center(
               child: Text('This garment could not be loaded.'),
             ),
           ),
           data: (Garment garment) => Scaffold(
             appBar: AppBar(
+              leading: const BackArrowButton(),
               actions: <Widget>[
                 IconButton(
                   onPressed: () =>
                       context.push('/garments/$garmentId/edit', extra: garment),
                   icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Edit garment',
+                  tooltip: 'Edit Garment',
                 ),
                 if (!garment.isArchived)
                   IconButton(
                     onPressed: () => _archive(context, ref, garment),
                     icon: const Icon(Icons.archive_outlined),
-                    tooltip: 'Move to Closet Vault',
+                    tooltip: 'Move To Closet Vault',
                   )
                 else
                   IconButton(
                     onPressed: () => _restore(context, ref, garment),
                     icon: const Icon(Icons.unarchive_outlined),
-                    tooltip: 'Return to Wardrobe',
+                    tooltip: 'Return To Wardrobe',
                   ),
               ],
             ),
@@ -69,26 +76,26 @@ class GarmentDetailScreen extends ConsumerWidget {
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children:
-                            <String?>[
-                                  garment.category.label,
-                                  garment.colorName,
-                                  garment.size,
-                                ]
-                                .whereType<String>()
-                                .map((String text) => Chip(label: Text(text)))
-                                .toList(),
+                      const SizedBox(height: 8),
+                      Text(
+                        _summaryLine(garment),
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
+                      if (_colorsForGarment(garment).isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 24),
+                        _Section(
+                          title: 'Colors',
+                          child: _ColorSwatchList(
+                            shades: _colorsForGarment(garment),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       if (garment.isArchived)
                         FilledButton.icon(
                           onPressed: () => _restore(context, ref, garment),
                           icon: const Icon(Icons.unarchive_outlined),
-                          label: const Text('Restore to wardrobe'),
+                          label: const Text('Restore To Wardrobe'),
                         )
                       else
                         FilledButton.icon(
@@ -107,22 +114,122 @@ class GarmentDetailScreen extends ConsumerWidget {
                           label: Text(
                             wearState.isLoading
                                 ? 'Recording...'
-                                : 'Mark as Worn',
+                                : 'Mark As Worn',
                           ),
                         ),
                       const SizedBox(height: 28),
                       _Section(
-                        title: 'Wear statistics',
+                        title: 'Wear Statistics',
                         child: WearStatsRow(garment: garment),
                       ),
                       const SizedBox(height: 24),
                       _Section(
-                        title: 'Laundry status',
-                        child: LaundryStatusPill(status: garment.laundryStatus),
+                        title: 'Garment Status',
+                        child: _DetailsList(
+                          values: <String, String?>{
+                            'Availability': garment.availabilityStatus.label,
+                          },
+                        ),
                       ),
+                      if (garment.availabilityStatus ==
+                              GarmentAvailabilityStatus.lent ||
+                          garment.availabilityStatus ==
+                              GarmentAvailabilityStatus.borrowed) ...<Widget>[
+                        const SizedBox(height: 24),
+                        _LendingSection(
+                          garment: garment,
+                          activeLending: activeLending,
+                          onMarkReturned: () =>
+                              _markReturned(context, ref, garment),
+                          isReturning: ref.watch(lendingControllerProvider)
+                              .isLoading,
+                          formatDate: _formatDate,
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       _Section(
-                        title: 'Wear history',
+                        title: 'Care & Readiness',
+                        child: _DetailsList(
+                          values: <String, String?>{
+                            'Laundry Status': garment.laundryStatus.label,
+                            'Ironing': garment.ironingStatus?.label,
+                            'Wash Instructions': garment.washInstructions,
+                          },
+                        ),
+                      ),
+                      if (_hasWardrobeInformation(garment)) ...<Widget>[
+                        const SizedBox(height: 24),
+                        _Section(
+                          title: 'Wardrobe Information',
+                          child: _DetailsList(
+                            values: <String, String?>{
+                              'Location': garment.locationName,
+                              'Sizes': GarmentMetadataFormatter
+                                  .detailListSummary(garment.effectiveSizes),
+                              'Season': GarmentMetadataFormatter.seasonSummary(
+                                garment.seasons,
+                              ),
+                              'Occasions': GarmentMetadataFormatter
+                                  .detailListSummary(
+                                    garment.occasions.map(_titleCase).toList(),
+                                  ),
+                            },
+                          ),
+                        ),
+                      ],
+                      if (_hasGarmentDetails(garment)) ...<Widget>[
+                        const SizedBox(height: 24),
+                        _Section(
+                          title: 'Garment Details',
+                          child: _DetailsList(
+                            values: <String, String?>{
+                              'Category': garment.category.label,
+                              'Subcategory':
+                                  garment.category == GarmentCategory.outerwear
+                                  ? garment.subcategory
+                                  : null,
+                              'Fabric': garment.fabric,
+                              'Fit': _supportsFit(garment.category)
+                                  ? garment.fit
+                                  : null,
+                              'Pattern': garment.pattern,
+                              'Fabric Weight': garment.fabricWeight,
+                              'Sleeve Length':
+                                  _supportsSleeveLength(garment.category)
+                                  ? garment.sleeveLength
+                                  : null,
+                              'Stitching': _supportsStitching(
+                                garment.category,
+                              )
+                                  ? garment.stitchingStatus?.label
+                                  : null,
+                              'Details': garment.details,
+                            },
+                          ),
+                        ),
+                      ],
+                      if (_hasPurchaseInformation(garment)) ...<Widget>[
+                        const SizedBox(height: 24),
+                        _Section(
+                          title: 'Purchase Information',
+                          child: _DetailsList(
+                            values: <String, String?>{
+                              'Brand': garment.brand,
+                              'Store': garment.purchaseStore,
+                              'Price': garment.price == null
+                                  ? null
+                                  : '${garment.currency} '
+                                        '${garment.price!.toStringAsFixed(0)}',
+                              'Purchase Date': garment.purchaseDate == null
+                                  ? null
+                                  : _formatDate(garment.purchaseDate!),
+                            },
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      _Section(
+                        title: 'Wear History',
                         child: history.when(
                           loading: () => const Padding(
                             padding: EdgeInsets.all(12),
@@ -133,50 +240,15 @@ class GarmentDetailScreen extends ConsumerWidget {
                               garmentWearHistoryProvider(garmentId),
                             ),
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Retry loading wear history'),
+                            label: const Text('Retry Loading Wear History'),
                           ),
-                          data: (history) => WearHistoryList(
+                          data: (List<WearLog> history) => WearHistoryList(
                             history: history,
                             onDelete: (WearLog entry) =>
                                 _deleteWear(context, ref, garment, entry),
                           ),
                         ),
                       ),
-                      if (garment.price != null ||
-                          garment.purchaseDate != null ||
-                          garment.brand != null ||
-                          garment.purchaseStore != null) ...<Widget>[
-                        const SizedBox(height: 24),
-                        _Section(
-                          title: 'Purchase information',
-                          child: _DetailsList(
-                            values: <String, String?>{
-                              'Brand': garment.brand,
-                              'Store and location': garment.purchaseStore,
-                              'Price': garment.price == null
-                                  ? null
-                                  : '${garment.currency} '
-                                        '${garment.price!.toStringAsFixed(0)}',
-                              'Purchased': garment.purchaseDate == null
-                                  ? null
-                                  : _formatDate(garment.purchaseDate!),
-                            },
-                          ),
-                        ),
-                      ],
-                      if (garment.fabric != null ||
-                          garment.washInstructions != null) ...<Widget>[
-                        const SizedBox(height: 24),
-                        _Section(
-                          title: 'Care information',
-                          child: _DetailsList(
-                            values: <String, String?>{
-                              'Fabric': garment.fabric,
-                              'Instructions': garment.washInstructions,
-                            },
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -187,49 +259,33 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _markAsWorn(BuildContext context, WidgetRef ref) async {
-    final _WearEntryData? wearEntry = await showDialog<_WearEntryData>(
+    final bool? recorded = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
-        return const _WearEntryDialog();
+        return _WearEntryDialog(
+          onSubmit: (_WearEntryData wearEntry) async {
+            await ref
+                .read(wearLogControllerProvider.notifier)
+                .markAsWorn(
+                  garmentId,
+                  wornDate: wearEntry.wornDate,
+                  eventName: wearEntry.eventName,
+                  notes: wearEntry.notes,
+                  laundryStatusAfter: wearEntry.laundryStatusAfter,
+                );
+
+            return !ref.read(wearLogControllerProvider).hasError;
+          },
+        );
       },
     );
 
-    if (wearEntry == null || !context.mounted) {
+    if (recorded != true || !context.mounted) {
       return;
     }
-
-    await ref
-        .read(wearLogControllerProvider.notifier)
-        .markAsWorn(
-          garmentId,
-          wornDate: wearEntry.wornDate,
-          eventName: wearEntry.eventName,
-          notes: wearEntry.notes,
-          laundryStatusAfter: wearEntry.laundryStatusAfter,
-        );
-
-    if (!context.mounted) {
-      return;
-    }
-
-    final AsyncValue<void> state = ref.read(wearLogControllerProvider);
-
-    if (state.hasError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not record this wear.')),
-      );
-      return;
-    }
-
-    ref.invalidate(garmentProvider(garmentId));
-    ref.invalidate(garmentsProvider);
-    ref.invalidate(garmentWearHistoryProvider(garmentId));
-    ref.invalidate(recentWearActivityProvider);
-    ref.invalidate(selectedDayWearHistoryProvider);
-    ref.invalidate(analyticsSummaryProvider);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Wear recorded successfully.')),
+      const SnackBar(content: Text('Wear Recorded Successfully.')),
     );
   }
 
@@ -251,13 +307,13 @@ class GarmentDetailScreen extends ConsumerWidget {
 
     if (state.hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not delete this wear record.')),
+        const SnackBar(content: Text('Could Not Delete This Wear Record.')),
       );
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Wear record deleted.')),
+      const SnackBar(content: Text('Wear Record Deleted.')),
     );
   }
 
@@ -269,7 +325,7 @@ class GarmentDetailScreen extends ConsumerWidget {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Move to Closet Vault?'),
+        title: const Text('Move To Closet Vault?'),
         content: const Text(
           'It will be removed from your wardrobe but kept safely '
           'in your Closet Vault.',
@@ -281,64 +337,72 @@ class GarmentDetailScreen extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Move to Closet Vault'),
+            child: const Text('Move To Closet Vault'),
           ),
         ],
       ),
     );
 
-    if (confirmed != true) {
+    if (confirmed != true || !context.mounted) {
       return;
     }
 
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a profile first.')),
-        );
-      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Please Select A Profile First.')),
+      );
       return;
     }
 
     if (garment.memberId != selectedMember.id) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'This garment does not belong to the selected profile.',
-            ),
-          ),
-        );
-      }
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('This garment does not belong to the selected profile.'),
+        ),
+      );
+      return;
+    }
+
+    await ref
+        .read(garmentArchiveControllerProvider.notifier)
+        .archive(garmentId: garment.id);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final AsyncValue<void> state = ref.read(garmentArchiveControllerProvider);
+
+    if (state.hasError) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could Not Move To Closet Vault.')),
+      );
       return;
     }
 
     try {
-      await ref
-          .read(garmentArchiveControllerProvider.notifier)
-          .archive(garmentId: garment.id);
-
       ref.invalidate(garmentsProvider);
+      ref.invalidate(archivedGarmentsProvider);
       ref.invalidate(garmentProvider(garmentId));
-
-      if (context.mounted) {
-        context.pop();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Garment moved to Closet Vault.')),
-        );
-      }
     } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not move this garment to Closet Vault.'),
-          ),
-        );
-      }
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Moved To Closet Vault. Refresh May Take A Moment.'),
+        ),
+      );
+      return;
     }
+
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Moved To Closet Vault.')),
+    );
   }
 
   Future<void> _restore(
@@ -346,6 +410,8 @@ class GarmentDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Garment garment,
   ) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
     await ref
         .read(garmentArchiveControllerProvider.notifier)
         .restore(garmentId: garment.id);
@@ -357,17 +423,150 @@ class GarmentDetailScreen extends ConsumerWidget {
     final AsyncValue<void> state = ref.read(garmentArchiveControllerProvider);
 
     if (state.hasError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not restore this garment.')),
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could Not Restore This Garment.')),
       );
       return;
     }
 
-    context.pop();
+    ref.invalidate(garmentsProvider);
+    ref.invalidate(archivedGarmentsProvider);
+    ref.invalidate(garmentProvider(garmentId));
+
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Garment Restored To Wardrobe.')),
+    );
+  }
+
+  Future<void> _markReturned(
+    BuildContext context,
+    WidgetRef ref,
+    Garment garment,
+  ) async {
+    await ref
+        .read(lendingControllerProvider.notifier)
+        .markReturned(garmentId: garment.id);
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final AsyncValue<void> state = ref.read(lendingControllerProvider);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Garment restored to wardrobe.')),
+      SnackBar(
+        content: Text(
+          state.hasError
+              ? 'Could Not Mark This Garment Returned.'
+              : 'Garment Marked Returned.',
+        ),
+      ),
     );
+  }
+
+  String _summaryLine(Garment garment) {
+    final List<String> values = <String>[
+      garment.category.label,
+      garment.availabilityStatus.label,
+    ];
+    final String sizeSummary = GarmentMetadataFormatter.sizeSummary(
+      garment.effectiveSizes,
+    );
+    if (sizeSummary.isNotEmpty) {
+      values.add(sizeSummary);
+    }
+
+    return values.join(' - ');
+  }
+
+  bool _hasWardrobeInformation(Garment garment) {
+    return (garment.locationName?.trim().isNotEmpty ?? false) ||
+        garment.effectiveSizes.isNotEmpty ||
+        garment.seasons.any((String season) => season.trim().isNotEmpty) ||
+        garment.occasions.any((String occasion) => occasion.trim().isNotEmpty);
+  }
+
+  bool _hasGarmentDetails(Garment garment) {
+    return garment.category.label.trim().isNotEmpty ||
+        (garment.category == GarmentCategory.outerwear &&
+            (garment.subcategory?.trim().isNotEmpty ?? false)) ||
+        (garment.fabric?.trim().isNotEmpty ?? false) ||
+        (_supportsFit(garment.category) &&
+            (garment.fit?.trim().isNotEmpty ?? false)) ||
+        (garment.pattern?.trim().isNotEmpty ?? false) ||
+        (garment.fabricWeight?.trim().isNotEmpty ?? false) ||
+        (_supportsSleeveLength(garment.category) &&
+            (garment.sleeveLength?.trim().isNotEmpty ?? false)) ||
+        (_supportsStitching(garment.category) &&
+            garment.stitchingStatus != null) ||
+        (garment.details?.trim().isNotEmpty ?? false);
+  }
+
+  bool _hasPurchaseInformation(Garment garment) {
+    return (garment.brand?.trim().isNotEmpty ?? false) ||
+        (garment.purchaseStore?.trim().isNotEmpty ?? false) ||
+        garment.price != null ||
+        garment.purchaseDate != null;
+  }
+
+  List<GarmentColorShade> _colorsForGarment(Garment garment) {
+    if (garment.colorShades.isNotEmpty) {
+      return normalizeColorShades(garment.colorShades);
+    }
+
+    final String? name = garment.colorName?.trim();
+    if (name == null || name.isEmpty) {
+      return const <GarmentColorShade>[];
+    }
+
+    return <GarmentColorShade>[
+      GarmentColorShade(
+        name: name,
+        hex: garment.colorHex ?? '#CCCCCC',
+        isPrimary: true,
+      ),
+    ];
+  }
+
+  bool _supportsSleeveLength(GarmentCategory category) {
+    return category == GarmentCategory.top ||
+        category == GarmentCategory.dress ||
+        category == GarmentCategory.outerwear;
+  }
+
+  bool _supportsFit(GarmentCategory category) {
+    return category == GarmentCategory.top ||
+        category == GarmentCategory.bottom ||
+        category == GarmentCategory.dress ||
+        category == GarmentCategory.outerwear ||
+        category == GarmentCategory.shoe;
+  }
+
+  bool _supportsStitching(GarmentCategory category) {
+    return category == GarmentCategory.top ||
+        category == GarmentCategory.bottom ||
+        category == GarmentCategory.dress ||
+        category == GarmentCategory.outerwear;
+  }
+
+  String _titleCase(String value) {
+    final String clean = value.trim();
+    if (clean.isEmpty) {
+      return '';
+    }
+
+    return clean
+        .split(RegExp(r'\s+'))
+        .map(
+          (String word) => word.isEmpty
+              ? word
+              : word[0].toUpperCase() + word.substring(1).toLowerCase(),
+        )
+        .join(' ');
   }
 
   String _formatDate(DateTime date) {
@@ -377,41 +576,179 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 }
 
+class _LendingSection extends StatelessWidget {
+  const _LendingSection({
+    required this.garment,
+    required this.activeLending,
+    required this.onMarkReturned,
+    required this.isReturning,
+    required this.formatDate,
+  });
+
+  final Garment garment;
+  final AsyncValue<LendingRecord?> activeLending;
+  final VoidCallback onMarkReturned;
+  final bool isReturning;
+  final String Function(DateTime date) formatDate;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      title: garment.availabilityStatus == GarmentAvailabilityStatus.borrowed
+          ? 'Borrowing Information'
+          : 'Lending Information',
+      child: activeLending.when(
+        loading: () => const LinearProgressIndicator(),
+        error: (_, _) => const Text('Could Not Load Lending Information.'),
+        data: (LendingRecord? record) {
+          if (record == null) {
+            return const Text('No active lending record was found.');
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _DetailsList(
+                values: <String, String?>{
+                  (record.direction == LendingDirection.borrowed
+                          ? 'Borrowed From'
+                          : 'Lent To'):
+                      record.personName,
+                  (record.direction == LendingDirection.borrowed
+                          ? 'Borrowed Date'
+                          : 'Lent Date'):
+                      formatDate(record.dateOut),
+                  'Expected Return Date': record.expectedReturnDate == null
+                      ? null
+                      : formatDate(record.expectedReturnDate!),
+                  'Notes': record.notes,
+                },
+              ),
+              if (record.direction == LendingDirection.lent) ...<Widget>[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: isReturning ? null : onMarkReturned,
+                  icon: isReturning
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.assignment_return_outlined),
+                  label: const Text('Mark Returned'),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ColorSwatchList extends StatelessWidget {
+  const _ColorSwatchList({required this.shades});
+
+  final List<GarmentColorShade> shades;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 10,
+      children: shades.map((GarmentColorShade shade) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Theme.of(context).dividerColor),
+              ),
+              child: CircleAvatar(
+                radius: 7,
+                backgroundColor: _colorFromHex(shade.hex),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(shade.name),
+            if (shade.isPrimary) ...<Widget>[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.check_circle,
+                size: 14,
+                color: Theme.of(context).colorScheme.primary,
+                semanticLabel: 'Primary',
+              ),
+            ],
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Color _colorFromHex(String hex) {
+    final String clean = hex.replaceFirst('#', '').trim();
+    final int? value = int.tryParse(clean, radix: 16);
+    if (value == null) {
+      return const Color(0xFFCCCCCC);
+    }
+
+    return Color(0xFF000000 | value);
+  }
+}
+
 class _WearEntryData {
   const _WearEntryData({
     required this.wornDate,
-    required this.laundryStatusAfter,
     this.eventName,
     this.notes,
+    this.laundryStatusAfter,
   });
 
   final DateTime wornDate;
   final String? eventName;
   final String? notes;
-  final LaundryStatus laundryStatusAfter;
+  final LaundryStatus? laundryStatusAfter;
 }
 
 class _WearEntryDialog extends StatefulWidget {
-  const _WearEntryDialog();
+  const _WearEntryDialog({required this.onSubmit});
+
+  final Future<bool> Function(_WearEntryData data) onSubmit;
 
   @override
   State<_WearEntryDialog> createState() => _WearEntryDialogState();
 }
 
 class _WearEntryDialogState extends State<_WearEntryDialog> {
+  static const String _otherEventValue = 'Other';
+  static const List<String> _eventOptions = <String>[
+    'College / University',
+    'Work',
+    'Wedding',
+    'Party',
+    'Formal Event',
+    'Travel',
+    'Religious Event',
+    'Family Gathering',
+    'Dinner',
+    'Sports / Workout',
+    _otherEventValue,
+  ];
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  final TextEditingController _eventController = TextEditingController();
-
+  final TextEditingController _customEventController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
   DateTime _selectedWornDate = DateTime.now();
-
-  LaundryStatus _selectedLaundryStatus = LaundryStatus.dirty;
+  String? _selectedEvent;
+  LaundryStatus? _selectedLaundryStatus;
+  bool _submitting = false;
 
   @override
   void dispose() {
-    _eventController.dispose();
+    _customEventController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -427,7 +764,7 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
           : _selectedWornDate,
       firstDate: DateTime(today.year - 5),
       lastDate: nowDate,
-      helpText: 'When was this garment worn?',
+      helpText: 'When Was This Garment Worn?',
     );
 
     if (picked == null) {
@@ -439,106 +776,204 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final String eventName = _eventController.text.trim();
-    final String notes = _notesController.text.trim();
+    setState(() {
+      _submitting = true;
+    });
 
-    Navigator.pop(
-      context,
-      _WearEntryData(
-        wornDate: _selectedWornDate,
-        eventName: eventName.isEmpty ? null : eventName,
-        notes: notes.isEmpty ? null : notes,
-        laundryStatusAfter: _selectedLaundryStatus,
-      ),
-    );
+    final String customEvent = _customEventController.text.trim();
+    final String notes = _notesController.text.trim();
+    final String? eventName = _selectedEvent == null
+        ? null
+        : _selectedEvent == _otherEventValue
+        ? customEvent
+        : _selectedEvent;
+
+    final bool success;
+    try {
+      success = await widget.onSubmit(
+        _WearEntryData(
+          wornDate: _selectedWornDate,
+          eventName: eventName?.trim().isEmpty ?? true ? null : eventName,
+          notes: notes.isEmpty ? null : notes,
+          laundryStatusAfter: _selectedLaundryStatus,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _submitting = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could Not Record This Wear.')),
+      );
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    if (!success) {
+      setState(() {
+        _submitting = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could Not Record This Wear.')),
+      );
+      return;
+    }
+
+    Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Mark as worn'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              InkWell(
-                onTap: _pickDate,
-                borderRadius: BorderRadius.circular(4),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Worn on',
-                    prefixIcon: Icon(Icons.calendar_today_outlined),
-                  ),
-                  child: Text(_formatWornDate(_selectedWornDate)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _eventController,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Event',
-                  hintText: 'Optional. For example: University, Work or Wedding',
-                  prefixIcon: Icon(Icons.event_outlined),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _notesController,
-                textCapitalization: TextCapitalization.sentences,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Optional notes about this wear',
-                  prefixIcon: Icon(Icons.notes_outlined),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<LaundryStatus>(
-                initialValue: _selectedLaundryStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Laundry status after wearing',
-                  prefixIcon: Icon(Icons.local_laundry_service_outlined),
-                ),
-                items: LaundryStatus.values
-                    .map(
-                      (LaundryStatus status) => DropdownMenuItem<LaundryStatus>(
-                        value: status,
-                        child: Text(_laundryStatusLabel(status)),
+      title: const Text('Mark As Worn'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.72,
+          ),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  InkWell(
+                    onTap: _submitting ? null : _pickDate,
+                    borderRadius: BorderRadius.circular(4),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Worn On',
+                        prefixIcon: Icon(Icons.calendar_today_outlined),
                       ),
-                    )
-                    .toList(),
-                onChanged: (LaundryStatus? value) {
-                  if (value == null) {
-                    return;
-                  }
+                      child: Text(_formatWornDate(_selectedWornDate)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _selectedEvent,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Event'),
+                    items: <DropdownMenuItem<String?>>[
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('No Event'),
+                      ),
+                      ..._eventOptions.map(
+                        (String event) => DropdownMenuItem<String?>(
+                          value: event,
+                          child: Text(event),
+                        ),
+                      ),
+                    ],
+                    onChanged: _submitting
+                        ? null
+                        : (String? value) {
+                            setState(() {
+                              _selectedEvent = value;
+                              if (value != _otherEventValue) {
+                                _customEventController.clear();
+                              }
+                            });
+                          },
+                  ),
+                  if (_selectedEvent == _otherEventValue) ...<Widget>[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _customEventController,
+                      enabled: !_submitting,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Custom Event',
+                        hintText: 'For example: School Picnic',
+                      ),
+                      validator: (String? value) {
+                        if (_selectedEvent != _otherEventValue) {
+                          return null;
+                        }
 
-                  setState(() {
-                    _selectedLaundryStatus = value;
-                  });
-                },
+                        if ((value ?? '').trim().isEmpty) {
+                          return 'Enter a custom event.';
+                        }
+
+                        return null;
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _notesController,
+                    enabled: !_submitting,
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      hintText: 'Optional notes about this wear',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<LaundryStatus?>(
+                    initialValue: _selectedLaundryStatus,
+                    decoration: const InputDecoration(
+                      labelText: 'Laundry Action',
+                      prefixIcon: Icon(Icons.local_laundry_service_outlined),
+                    ),
+                    items: const <DropdownMenuItem<LaundryStatus?>>[
+                      DropdownMenuItem<LaundryStatus?>(
+                        value: null,
+                        child: Text('No Change'),
+                      ),
+                      DropdownMenuItem<LaundryStatus?>(
+                        value: LaundryStatus.dirty,
+                        child: Text('Needs Washing'),
+                      ),
+                    ],
+                    onChanged: _submitting
+                        ? null
+                        : (LaundryStatus? value) {
+                            setState(() {
+                              _selectedLaundryStatus = value;
+                            });
+                          },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
       actions: <Widget>[
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _submitting ? null : () => Navigator.pop(context, false),
           child: const Text('Cancel'),
         ),
         FilledButton.icon(
-          onPressed: _submit,
-          icon: const Icon(Icons.check),
-          label: const Text('Record wear'),
+          onPressed: _submitting ? null : _submit,
+          icon: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.check),
+          label: const Text('Record Wear'),
         ),
       ],
     );
@@ -547,19 +982,6 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
   String _formatWornDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/'
       '${date.month.toString().padLeft(2, '0')}/${date.year}';
-
-  String _laundryStatusLabel(LaundryStatus status) {
-    switch (status) {
-      case LaundryStatus.clean:
-        return 'Clean';
-      case LaundryStatus.dirty:
-        return 'Dirty';
-      case LaundryStatus.washing:
-        return 'Washing';
-      case LaundryStatus.ironing:
-        return 'Ironing';
-    }
-  }
 }
 
 class _Section extends StatelessWidget {
@@ -606,7 +1028,7 @@ class _DetailsList extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   SizedBox(
-                    width: 104,
+                    width: 132,
                     child: Text(
                       entry.key,
                       style: Theme.of(context).textTheme.bodySmall,

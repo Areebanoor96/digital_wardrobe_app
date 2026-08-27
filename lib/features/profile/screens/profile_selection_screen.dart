@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/screens/family_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/profile_avatar_card.dart';
@@ -13,9 +14,11 @@ class ProfileSelectionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final family = ref.watch(familyMembersProvider);
+    final pieceCounts = ref.watch(familyMemberPieceCountsProvider);
 
     return Scaffold(
       appBar: AppBar(
+        leading: Navigator.of(context).canPop() ? const BackArrowButton() : null,
         title: const Text("Choose your wardrobe"),
         centerTitle: true,
       ),
@@ -68,6 +71,7 @@ class ProfileSelectionScreen extends ConsumerWidget {
 
               return ProfileAvatarCard(
                 member: member,
+                pieceCount: pieceCounts.valueOrNull?[member.id] ?? 0,
                 onTap: () async {
                   final bool selected = await selectFamilyMember(
                     context: context,

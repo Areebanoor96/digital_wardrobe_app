@@ -79,7 +79,7 @@ void main() {
     );
   });
 
-  testWidgets('back press from another tab switches to Wardrobe', (
+  testWidgets('back press from another tab returns to previous visited tab', (
     WidgetTester tester,
   ) async {
     _setPlatform(TargetPlatform.android);
@@ -88,12 +88,15 @@ void main() {
     await tester.tap(_navLabel('Outfits'));
     await tester.pumpAndSettle();
     expect(_selectedTabIndex(tester), 1);
+    await tester.tap(_navLabel('Alerts'));
+    await tester.pumpAndSettle();
+    expect(_selectedTabIndex(tester), 3);
 
     final bool handled = await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(_selectedTabIndex(tester), 0);
+    expect(_selectedTabIndex(tester), 1);
     _resetPlatform();
   });
 
@@ -187,7 +190,7 @@ void main() {
     _resetPlatform();
   });
 
-  testWidgets('on iOS, back from another tab still returns to Wardrobe', (
+  testWidgets('on iOS, back from another tab still uses tab history', (
     WidgetTester tester,
   ) async {
     _setPlatform(TargetPlatform.iOS);
@@ -196,12 +199,15 @@ void main() {
     await tester.tap(_navLabel('Profile'));
     await tester.pumpAndSettle();
     expect(_selectedTabIndex(tester), 5);
+    await tester.tap(_navLabel('Calendar'));
+    await tester.pumpAndSettle();
+    expect(_selectedTabIndex(tester), 2);
 
     final bool handled = await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(_selectedTabIndex(tester), 0);
+    expect(_selectedTabIndex(tester), 5);
     expect(find.text('Press back again to exit.'), findsNothing);
     _resetPlatform();
   });

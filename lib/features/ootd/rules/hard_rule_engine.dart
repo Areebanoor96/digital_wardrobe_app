@@ -42,6 +42,14 @@ class HardRuleEngine {
         return const HardRuleResult.rejected('unavailable laundry state');
       }
 
+      if (!garment.availabilityStatus.isPhysicallyAvailable) {
+        return const HardRuleResult.rejected('unavailable garment status');
+      }
+
+      if (garment.ironingStatus == IroningStatus.needsIroning) {
+        return const HardRuleResult.rejected('needs ironing');
+      }
+
       if (memberId != null && garment.memberId != memberId) {
         return const HardRuleResult.rejected('wrong selected member');
       }

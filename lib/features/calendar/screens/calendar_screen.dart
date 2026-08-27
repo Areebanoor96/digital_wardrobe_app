@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
@@ -7,7 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
-  const CalendarScreen({super.key});
+  const CalendarScreen({
+    super.key,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
+  });
+
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
 
   @override
   ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
@@ -25,7 +33,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
     final outfits = ref.watch(outfitsProvider).valueOrNull ?? const <Outfit>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('Calendar')),
+      appBar: AppBar(
+        leading: widget.canNavigateBack
+            ? BackArrowButton(onPressed: widget.onNavigateBack)
+            : null,
+        title: const Text('Calendar'),
+      ),
       body: activity.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => _CalendarFeedback(

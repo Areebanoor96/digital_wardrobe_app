@@ -9,11 +9,13 @@ class GarmentRepository {
   final SupabaseClient _client;
 
   static const String _bucket = 'garments';
+  static const String _garmentSelect =
+      '*, garment_color_shades(*), garment_sizes(*), garment_locations(name)';
 
   Future<List<Garment>> fetchGarments({required String memberId}) async {
     final List<dynamic> rows = await _client
         .from('garments')
-        .select()
+        .select(_garmentSelect)
         .eq('is_archived', false)
         .eq('member_id', memberId)
         .order('created_at', ascending: false);
@@ -30,7 +32,7 @@ class GarmentRepository {
   }) async {
     final List<dynamic> rows = await _client
         .from('garments')
-        .select()
+        .select(_garmentSelect)
         .eq('is_archived', true)
         .eq('member_id', memberId)
         .order('created_at', ascending: false);
@@ -49,7 +51,7 @@ class GarmentRepository {
     final Map<String, dynamic> row = Map<String, dynamic>.from(
       await _client
               .from('garments')
-              .select()
+              .select(_garmentSelect)
               .eq('id', id)
               .eq('member_id', memberId)
               .single()
@@ -60,11 +62,16 @@ class GarmentRepository {
   }
 
   Future<Garment> saveGarment(Garment garment, {required bool isNew}) async {
-    final String userId = _client.auth.currentUser!.id;
+    final User? currentUser = _client.auth.currentUser;
+    if (currentUser == null) {
+      throw StateError('Cannot save garment without an authenticated user.');
+    }
+
+    final String userId = currentUser.id;
     final Map<String, dynamic> row;
 
     if (isNew) {
-      row = Map<String, dynamic>.from(
+      final Map<String, dynamic> inserted = Map<String, dynamic>.from(
         await _client
                 .from('garments')
                 .insert(garment.toInsertJson(userId))
@@ -72,31 +79,170 @@ class GarmentRepository {
                 .single()
             as Map,
       );
+      await _syncColorShades(garment, userId: userId);
+      await _syncSizes(garment, userId: userId);
+      row = await _fetchSavedRow(inserted['id'] as String, garment.memberId);
     } else {
-      final String? garmentId = garment.id;
+      final String garmentId = garment.id;
       final String? memberId = garment.memberId;
-
-      if (garmentId == null) {
-        throw StateError('Cannot update a garment without an ID.');
-      }
 
       if (memberId == null) {
         throw StateError('Cannot update a garment without a member ID.');
       }
 
-      row = Map<String, dynamic>.from(
+      await _client
+          .from('garments')
+          .update(garment.toInsertJson(userId))
+          .eq('id', garmentId)
+          .eq('member_id', memberId);
+
+      await _syncColorShades(garment, userId: userId);
+      await _syncSizes(garment, userId: userId);
+      row = await _fetchSavedRow(garmentId, memberId);
+    }
+
+    return _withSignedUrls(row);
+  }
+
+  Future<Map<String, dynamic>> _fetchSavedRow(
+    String garmentId,
+    String? memberId,
+  ) async {
+    if (memberId == null) {
+      return Map<String, dynamic>.from(
         await _client
                 .from('garments')
-                .update(garment.toInsertJson(userId))
+                .select(_garmentSelect)
                 .eq('id', garmentId)
-                .eq('member_id', memberId)
-                .select()
                 .single()
             as Map,
       );
     }
 
-    return _withSignedUrls(row);
+    return Map<String, dynamic>.from(
+      await _client
+              .from('garments')
+              .select(_garmentSelect)
+              .eq('id', garmentId)
+              .eq('member_id', memberId)
+              .single()
+          as Map,
+    );
+  }
+
+  Future<void> _syncColorShades(
+    Garment garment, {
+    required String userId,
+  }) async {
+    final List<GarmentColorShade> shades = normalizeColorShades(
+      garment.colorShades,
+    );
+
+    await _client
+        .from('garment_color_shades')
+        .delete()
+        .eq('garment_id', garment.id);
+
+    if (shades.isEmpty) {
+      return;
+    }
+
+    await _client.from('garment_color_shades').insert(
+      <Map<String, dynamic>>[
+        for (int index = 0; index < shades.length; index++)
+          shades[index].toJson(
+            userId: userId,
+            garmentId: garment.id,
+            sortOrder: index,
+          ),
+      ],
+    );
+  }
+
+  Future<void> _syncSizes(
+    Garment garment, {
+    required String userId,
+  }) async {
+    final List<String> sizes = _normalizeSizes(garment.effectiveSizes);
+
+    await _client
+        .from('garment_sizes')
+        .delete()
+        .eq('garment_id', garment.id)
+        .eq('user_id', userId);
+
+    if (sizes.isEmpty) {
+      return;
+    }
+
+    await _client.from('garment_sizes').insert(
+      <Map<String, dynamic>>[
+        for (int index = 0; index < sizes.length; index++)
+          <String, dynamic>{
+            'user_id': userId,
+            'garment_id': garment.id,
+            'size': sizes[index],
+            'sort_order': index,
+          },
+      ],
+    );
+  }
+
+  List<String> _normalizeSizes(List<String> values) {
+    final List<String> result = <String>[];
+    final Set<String> seen = <String>{};
+
+    for (final String value in values) {
+      final String trimmed = value.trim();
+      if (trimmed.isNotEmpty && seen.add(trimmed.toLowerCase())) {
+        result.add(trimmed);
+      }
+    }
+
+    return result;
+  }
+
+  Future<Map<String, int>> fetchActiveGarmentCountsByMember() async {
+    final String userId = _client.auth.currentUser!.id;
+
+    final List<dynamic> rows = await _client
+        .from('garments')
+        .select('member_id')
+        .eq('user_id', userId)
+        .eq('is_archived', false);
+
+    final Map<String, int> counts = <String, int>{};
+    for (final dynamic row in rows) {
+      final String? memberId =
+          Map<String, dynamic>.from(row as Map)['member_id'] as String?;
+      if (memberId == null) {
+        continue;
+      }
+
+      counts[memberId] = (counts[memberId] ?? 0) + 1;
+    }
+
+    return counts;
+  }
+
+  Future<void> _updateArchiveState({
+    required String garmentId,
+    required String memberId,
+    required bool isArchived,
+  }) async {
+    final Map<String, dynamic>? row = await _client
+        .from('garments')
+        .update(<String, bool>{'is_archived': isArchived})
+        .eq('id', garmentId)
+        .eq('member_id', memberId)
+        .select('id')
+        .maybeSingle();
+
+    if (row == null) {
+      throw StateError(
+        'No garment was updated. Check selected profile ownership.',
+      );
+    }
   }
 
   Future<String> uploadImage({
@@ -135,22 +281,22 @@ class GarmentRepository {
     required String garmentId,
     required String memberId,
   }) async {
-    await _client
-        .from('garments')
-        .update(<String, bool>{'is_archived': true})
-        .eq('id', garmentId)
-        .eq('member_id', memberId);
+    await _updateArchiveState(
+      garmentId: garmentId,
+      memberId: memberId,
+      isArchived: true,
+    );
   }
 
   Future<void> restoreGarment({
     required String garmentId,
     required String memberId,
   }) async {
-    await _client
-        .from('garments')
-        .update(<String, bool>{'is_archived': false})
-        .eq('id', garmentId)
-        .eq('member_id', memberId);
+    await _updateArchiveState(
+      garmentId: garmentId,
+      memberId: memberId,
+      isArchived: false,
+    );
   }
 
   Future<Garment> _withSignedUrls(Map<String, dynamic> row) async {

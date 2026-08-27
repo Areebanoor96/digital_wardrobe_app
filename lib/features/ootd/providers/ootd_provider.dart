@@ -98,7 +98,7 @@ class OotdActionController extends AutoDisposeAsyncNotifier<void> {
   Future<void> wearOutfit(
     List<Garment> garments, {
     String eventName = 'OOTD',
-    LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
+    LaundryStatus? laundryStatusAfter,
     String? notes,
   }) async {
     final selectedMember = ref.read(selectedFamilyMemberProvider);

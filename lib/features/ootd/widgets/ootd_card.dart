@@ -304,16 +304,16 @@ class OotdCard extends StatelessWidget {
                       items:
                           const <String>[
                                 'casual',
-                                'work',
-                                'formal',
-                                'party',
-                                'wedding',
                                 'college',
+                                'ethnic',
+                                'formal',
+                                'home',
+                                'party',
+                                'sleep',
                                 'sport',
                                 'travel',
-                                'home',
-                                'sleep',
-                                'ethnic',
+                                'wedding',
+                                'work',
                               ]
                               .map(
                                 (String value) => DropdownMenuItem<String>(
@@ -376,14 +376,14 @@ class OotdCard extends StatelessWidget {
                       decoration: const InputDecoration(labelText: 'Mood'),
                       items:
                           const <String>[
-                                'relaxed',
-                                'professional',
+                                'bold',
                                 'cozy',
                                 'elegant',
-                                'sporty',
                                 'minimal',
-                                'bold',
                                 'party',
+                                'professional',
+                                'relaxed',
+                                'sporty',
                               ]
                               .map(
                                 (String value) => DropdownMenuItem<String>(

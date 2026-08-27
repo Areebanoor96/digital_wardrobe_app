@@ -1,3 +1,4 @@
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:digital_wardrobe_app/features/alerts/widgets/alert_card.dart';
@@ -5,7 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class AlertsScreen extends ConsumerWidget {
-  const AlertsScreen({super.key});
+  const AlertsScreen({
+    super.key,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
+  });
+
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -18,6 +26,9 @@ class AlertsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: canNavigateBack
+            ? BackArrowButton(onPressed: onNavigateBack)
+            : null,
         title: const Text('Alerts'),
         actions: <Widget>[
           IconButton(

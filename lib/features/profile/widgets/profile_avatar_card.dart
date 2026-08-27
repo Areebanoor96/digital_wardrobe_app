@@ -7,10 +7,12 @@ class ProfileAvatarCard extends StatelessWidget {
     super.key,
     required this.member,
     required this.onTap,
+    this.pieceCount,
   });
 
   final FamilyMember member;
   final VoidCallback onTap;
+  final int? pieceCount;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +49,9 @@ class ProfileAvatarCard extends StatelessWidget {
               const SizedBox(height: 4),
 
               Text(
-                member.relationship.label,
+                pieceCount == null
+                    ? member.relationship.label
+                    : '${member.relationship.label} · $pieceCount Pieces',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),

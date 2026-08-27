@@ -30,6 +30,9 @@ void main() {
     String? pattern,
     String? sleeveLength,
     int wearCount = 0,
+    GarmentAvailabilityStatus availabilityStatus =
+        GarmentAvailabilityStatus.available,
+    IroningStatus? ironingStatus,
   }) {
     return Garment(
       id: id,
@@ -52,6 +55,8 @@ void main() {
       pattern: pattern,
       sleeveLength: sleeveLength,
       wearCount: wearCount,
+      availabilityStatus: availabilityStatus,
+      ironingStatus: ironingStatus,
     );
   }
 
@@ -258,6 +263,70 @@ void main() {
         result.garments.map((Garment g) => g.id),
         isNot(contains('other')),
       );
+    });
+
+    test('availability and ironing status are hard recommendation rules', () {
+      final OutfitRecommendation result = service.recommend(
+        allGarments: <Garment>[
+          garment(
+            id: 'available-top',
+            name: 'Available Shirt',
+            category: GarmentCategory.top,
+          ),
+          garment(
+            id: 'borrowed-bottom',
+            name: 'Borrowed Trousers',
+            category: GarmentCategory.bottom,
+            availabilityStatus: GarmentAvailabilityStatus.borrowed,
+          ),
+          garment(
+            id: 'available-shoes',
+            name: 'Available Shoes',
+            category: GarmentCategory.shoe,
+          ),
+          garment(
+            id: 'lent',
+            name: 'Lent Shirt',
+            category: GarmentCategory.top,
+            availabilityStatus: GarmentAvailabilityStatus.lent,
+          ),
+          garment(
+            id: 'storage',
+            name: 'Stored Trousers',
+            category: GarmentCategory.bottom,
+            availabilityStatus: GarmentAvailabilityStatus.inStorage,
+          ),
+          garment(
+            id: 'donated',
+            name: 'Donated Shoes',
+            category: GarmentCategory.shoe,
+            availabilityStatus: GarmentAvailabilityStatus.donated,
+          ),
+          garment(
+            id: 'lost',
+            name: 'Lost Bag',
+            category: GarmentCategory.bag,
+            availabilityStatus: GarmentAvailabilityStatus.lost,
+          ),
+          garment(
+            id: 'needs-ironing',
+            name: 'Wrinkled Shirt',
+            category: GarmentCategory.top,
+            ironingStatus: IroningStatus.needsIroning,
+          ),
+        ],
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
+      );
+
+      final Iterable<String> ids = result.garments.map((Garment g) => g.id);
+      expect(ids, contains('available-top'));
+      expect(ids, contains('borrowed-bottom'));
+      expect(ids, isNot(contains('lent')));
+      expect(ids, isNot(contains('storage')));
+      expect(ids, isNot(contains('donated')));
+      expect(ids, isNot(contains('lost')));
+      expect(ids, isNot(contains('needs-ironing')));
     });
   });
 

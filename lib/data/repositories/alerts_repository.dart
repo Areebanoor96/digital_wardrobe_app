@@ -79,12 +79,9 @@ class AlertsRepository {
         )
         .toList();
 
-    // A dismissed or read reminder must not regenerate for the same
-    // measurement cycle. The cycle is anchored to the latest measurement
-    // date: any reminder created after it belongs to the current cycle.
-    final GrowthMeasurement? latestMeasurement = growthMeasurements.isEmpty
-        ? null
-        : growthMeasurements.first;
+    final DateTime now = DateTime.now();
+    final DateTime startOfToday = DateTime(now.year, now.month, now.day);
+    final DateTime startOfCurrentMonth = DateTime(now.year, now.month);
 
     final List<dynamic> reminderRows = familyMember == null
         ? const <dynamic>[]
@@ -97,15 +94,11 @@ class AlertsRepository {
               .eq('title', 'Time for a growth check')
               .gte(
                 'created_at',
-                (latestMeasurement?.recordedAt ?? DateTime(2000))
-                    .toIso8601String(),
+                startOfCurrentMonth.toUtc().toIso8601String(),
               )
               .limit(1);
 
     final bool hasReminderForLatestCycle = reminderRows.isNotEmpty;
-
-    final DateTime now = DateTime.now();
-    final DateTime startOfToday = DateTime(now.year, now.month, now.day);
 
     // Fetch the user's alert preferences.
     final Map<String, dynamic> profileRow = Map<String, dynamic>.from(
@@ -158,6 +151,8 @@ class AlertsRepository {
       userId: userId,
       memberId: memberId,
       garments: garments,
+      unusedAlertsEnabled: profile.unusedAlertsEnabled,
+      laundryAlertsEnabled: profile.laundryAlertsEnabled,
     );
     final bool isOotdEligible = const OutfitRecommendationService()
         .isEligibleForRecommendation(garments, memberId: memberId);
@@ -244,10 +239,12 @@ class AlertsRepository {
     required String userId,
     required String memberId,
     required List<Garment> garments,
+    required bool unusedAlertsEnabled,
+    required bool laundryAlertsEnabled,
   }) async {
     for (final Garment garment in garments) {
       // Resolve laundry alerts when the garment no longer needs laundry.
-      if (!ruleService.shouldHaveLaundryAlert(garment)) {
+      if (!laundryAlertsEnabled || !ruleService.shouldHaveLaundryAlert(garment)) {
         await _client
             .from('alerts')
             .update(<String, bool>{'is_dismissed': true})
@@ -259,7 +256,7 @@ class AlertsRepository {
       }
 
       // Resolve unused alerts when the garment is no longer considered unused.
-      if (!ruleService.shouldHaveUnusedAlert(garment)) {
+      if (!unusedAlertsEnabled || !ruleService.shouldHaveUnusedAlert(garment)) {
         await _client
             .from('alerts')
             .update(<String, bool>{'is_dismissed': true})

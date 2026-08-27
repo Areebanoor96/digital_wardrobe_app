@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
 import 'package:go_router/go_router.dart';
@@ -17,7 +18,10 @@ class FamilyScreen extends ConsumerWidget {
     final family = ref.watch(familyMembersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Family Members")),
+      appBar: AppBar(
+        leading: const BackArrowButton(),
+        title: const Text("Family Members"),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showDialog<void>(

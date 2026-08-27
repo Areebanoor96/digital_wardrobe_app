@@ -4,6 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('isChildBirthDateValid', () {
+    test('relationship options are alphabetized by label', () {
+      final List<String> labels = RelationshipType.values
+          .map((RelationshipType type) => type.label)
+          .toList();
+      final List<String> sortedLabels = List<String>.from(labels)..sort();
+
+      expect(labels, sortedLabels);
+    });
+
     test('child requires a birth date', () {
       expect(
         isChildBirthDateValid(

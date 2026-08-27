@@ -25,8 +25,14 @@ final Provider<List<Garment>> filteredGarmentsProvider =
           garment.subcategory ?? '',
           garment.brand ?? '',
           garment.colorName ?? '',
+          ...garment.colorNames,
           garment.size ?? '',
+          ...garment.effectiveSizes,
           garment.purchaseStore ?? '',
+          garment.locationName ?? '',
+          garment.availabilityStatus.label,
+          garment.stitchingStatus?.label ?? '',
+          garment.ironingStatus?.label ?? '',
           garment.fabric ?? '',
           garment.washInstructions ?? '',
           ...garment.occasions,
@@ -42,7 +48,7 @@ final Provider<List<Garment>> filteredGarmentsProvider =
 
         final bool matchesColor =
             filters.color == null ||
-            garment.colorName?.toLowerCase() == filters.color!.toLowerCase();
+            garment.colorNames.contains(filters.color!.toLowerCase());
 
         final bool matchesBrand =
             filters.brand == null ||
@@ -50,7 +56,10 @@ final Provider<List<Garment>> filteredGarmentsProvider =
 
         final bool matchesSize =
             filters.size == null ||
-            garment.size?.toLowerCase() == filters.size!.toLowerCase();
+            garment.effectiveSizes.any(
+              (String value) =>
+                  value.toLowerCase() == filters.size!.toLowerCase(),
+            );
 
         final bool matchesOccasion =
             filters.occasion == null ||
@@ -76,6 +85,23 @@ final Provider<List<Garment>> filteredGarmentsProvider =
         final bool matchesLaundry =
             filters.laundryStatus == null ||
             garment.laundryStatus == filters.laundryStatus;
+        final bool matchesAvailability =
+            filters.availabilityStatus == null ||
+            garment.availabilityStatus == filters.availabilityStatus;
+        final bool matchesLocation =
+            filters.locationId == null ||
+            garment.locationId == filters.locationId;
+        final bool matchesStitching =
+            filters.stitchingStatus == null ||
+            garment.stitchingStatus == filters.stitchingStatus;
+        final bool matchesIroning =
+            filters.ironingStatus == null ||
+            garment.ironingStatus == filters.ironingStatus;
+        final bool matchesOuterwearSubcategory =
+            filters.outerwearSubcategory == null ||
+            (garment.category == GarmentCategory.outerwear &&
+                garment.subcategory?.toLowerCase() ==
+                    filters.outerwearSubcategory!.toLowerCase());
 
         return matchesSearch &&
             matchesCategory &&
@@ -85,7 +111,12 @@ final Provider<List<Garment>> filteredGarmentsProvider =
             matchesOccasion &&
             matchesSeason &&
             matchesMood &&
-            matchesLaundry;
+            matchesLaundry &&
+            matchesAvailability &&
+            matchesLocation &&
+            matchesStitching &&
+            matchesIroning &&
+            matchesOuterwearSubcategory;
       }).toList();
 
       _sortGarments(filtered, filters.sortOption);
@@ -148,6 +179,36 @@ class WardrobeFilterNotifier extends StateNotifier<WardrobeFilters> {
         : state.copyWith(laundryStatus: value);
   }
 
+  void setAvailabilityStatus(GarmentAvailabilityStatus? value) {
+    state = value == null
+        ? state.copyWith(clearAvailabilityStatus: true)
+        : state.copyWith(availabilityStatus: value);
+  }
+
+  void setLocation({String? id, String? name}) {
+    state = id == null
+        ? state.copyWith(clearLocation: true)
+        : state.copyWith(locationId: id, locationName: name);
+  }
+
+  void setStitchingStatus(StitchingStatus? value) {
+    state = value == null
+        ? state.copyWith(clearStitchingStatus: true)
+        : state.copyWith(stitchingStatus: value);
+  }
+
+  void setIroningStatus(IroningStatus? value) {
+    state = value == null
+        ? state.copyWith(clearIroningStatus: true)
+        : state.copyWith(ironingStatus: value);
+  }
+
+  void setOuterwearSubcategory(String? value) {
+    state = value == null
+        ? state.copyWith(clearOuterwearSubcategory: true)
+        : state.copyWith(outerwearSubcategory: value);
+  }
+
   void setSortOption(WardrobeSortOption value) {
     state = state.copyWith(sortOption: value);
   }
@@ -155,7 +216,6 @@ class WardrobeFilterNotifier extends StateNotifier<WardrobeFilters> {
   void clearFilters() {
     state = WardrobeFilters(
       searchQuery: state.searchQuery,
-      sortOption: state.sortOption,
     );
   }
 

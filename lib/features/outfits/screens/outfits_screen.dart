@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/features/ootd/providers/ootd_provider.dart';
@@ -11,7 +12,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class OutfitsScreen extends ConsumerWidget {
-  const OutfitsScreen({super.key});
+  const OutfitsScreen({
+    super.key,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
+  });
+
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +29,12 @@ class OutfitsScreen extends ConsumerWidget {
     final actionState = ref.watch(ootdActionControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Outfits')),
+      appBar: AppBar(
+        leading: canNavigateBack
+            ? BackArrowButton(onPressed: onNavigateBack)
+            : null,
+        title: const Text('My Outfits'),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/outfits/new'),
         icon: const Icon(Icons.add),

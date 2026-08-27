@@ -15,18 +15,18 @@ enum WardrobeSortOption {
   nameZA;
 
   String get label => switch (this) {
-    WardrobeSortOption.newestAdded => 'Newest added',
-    WardrobeSortOption.oldestAdded => 'Oldest added',
-    WardrobeSortOption.mostWorn => 'Most worn',
-    WardrobeSortOption.leastWorn => 'Least worn',
-    WardrobeSortOption.recentlyWorn => 'Recently worn',
-    WardrobeSortOption.leastRecentlyWorn => 'Least recently worn',
-    WardrobeSortOption.priceHighToLow => 'Price: high to low',
-    WardrobeSortOption.priceLowToHigh => 'Price: low to high',
-    WardrobeSortOption.purchaseNewest => 'Purchase date: newest',
-    WardrobeSortOption.purchaseOldest => 'Purchase date: oldest',
-    WardrobeSortOption.nameAZ => 'Name: A–Z',
-    WardrobeSortOption.nameZA => 'Name: Z–A',
+    WardrobeSortOption.newestAdded => 'Newest Added',
+    WardrobeSortOption.oldestAdded => 'Oldest Added',
+    WardrobeSortOption.mostWorn => 'Most Worn',
+    WardrobeSortOption.leastWorn => 'Least Worn',
+    WardrobeSortOption.recentlyWorn => 'Recently Worn',
+    WardrobeSortOption.leastRecentlyWorn => 'Least Recently Worn',
+    WardrobeSortOption.priceHighToLow => 'Price: High To Low',
+    WardrobeSortOption.priceLowToHigh => 'Price: Low To High',
+    WardrobeSortOption.purchaseNewest => 'Purchase Date: Newest',
+    WardrobeSortOption.purchaseOldest => 'Purchase Date: Oldest',
+    WardrobeSortOption.nameAZ => 'Name: A-Z',
+    WardrobeSortOption.nameZA => 'Name: Z-A',
   };
 }
 
@@ -41,7 +41,13 @@ class WardrobeFilters {
     this.season,
     this.mood,
     this.laundryStatus,
-    this.sortOption = WardrobeSortOption.newestAdded,
+    this.availabilityStatus,
+    this.locationId,
+    this.locationName,
+    this.stitchingStatus,
+    this.ironingStatus,
+    this.outerwearSubcategory,
+    this.sortOption = WardrobeSortOption.leastWorn,
   });
 
   final String searchQuery;
@@ -53,6 +59,12 @@ class WardrobeFilters {
   final String? season;
   final String? mood;
   final LaundryStatus? laundryStatus;
+  final GarmentAvailabilityStatus? availabilityStatus;
+  final String? locationId;
+  final String? locationName;
+  final StitchingStatus? stitchingStatus;
+  final IroningStatus? ironingStatus;
+  final String? outerwearSubcategory;
   final WardrobeSortOption sortOption;
 
   int get activeFilterCount {
@@ -66,6 +78,11 @@ class WardrobeFilters {
     if (season != null) count++;
     if (mood != null) count++;
     if (laundryStatus != null) count++;
+    if (availabilityStatus != null) count++;
+    if (locationId != null) count++;
+    if (stitchingStatus != null) count++;
+    if (ironingStatus != null) count++;
+    if (outerwearSubcategory != null) count++;
 
     return count;
   }
@@ -83,6 +100,12 @@ class WardrobeFilters {
     String? season,
     String? mood,
     LaundryStatus? laundryStatus,
+    GarmentAvailabilityStatus? availabilityStatus,
+    String? locationId,
+    String? locationName,
+    StitchingStatus? stitchingStatus,
+    IroningStatus? ironingStatus,
+    String? outerwearSubcategory,
     WardrobeSortOption? sortOption,
     bool clearCategory = false,
     bool clearColor = false,
@@ -92,6 +115,11 @@ class WardrobeFilters {
     bool clearSeason = false,
     bool clearMood = false,
     bool clearLaundryStatus = false,
+    bool clearAvailabilityStatus = false,
+    bool clearLocation = false,
+    bool clearStitchingStatus = false,
+    bool clearIroningStatus = false,
+    bool clearOuterwearSubcategory = false,
   }) {
     return WardrobeFilters(
       searchQuery: searchQuery ?? this.searchQuery,
@@ -105,6 +133,20 @@ class WardrobeFilters {
       laundryStatus: clearLaundryStatus
           ? null
           : laundryStatus ?? this.laundryStatus,
+      availabilityStatus: clearAvailabilityStatus
+          ? null
+          : availabilityStatus ?? this.availabilityStatus,
+      locationId: clearLocation ? null : locationId ?? this.locationId,
+      locationName: clearLocation ? null : locationName ?? this.locationName,
+      stitchingStatus: clearStitchingStatus
+          ? null
+          : stitchingStatus ?? this.stitchingStatus,
+      ironingStatus: clearIroningStatus
+          ? null
+          : ironingStatus ?? this.ironingStatus,
+      outerwearSubcategory: clearOuterwearSubcategory
+          ? null
+          : outerwearSubcategory ?? this.outerwearSubcategory,
       sortOption: sortOption ?? this.sortOption,
     );
   }

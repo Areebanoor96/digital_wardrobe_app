@@ -53,6 +53,8 @@ class OutfitRecommendationService {
           (Garment garment) =>
               !garment.isArchived &&
               garment.laundryStatus == LaundryStatus.clean &&
+              garment.availabilityStatus.isPhysicallyAvailable &&
+              garment.ironingStatus != IroningStatus.needsIroning &&
               (memberId == null || garment.memberId == memberId),
         )
         .toList();
@@ -97,7 +99,7 @@ class OutfitRecommendationService {
       return const OutfitRecommendation(
         garments: <Garment>[],
         reason:
-            'Add clean, available garments that can form a top-bottom-shoes or dress-shoes outfit.',
+            'Add clean, available, ready-to-wear garments that can form a top-bottom-shoes or dress-shoes outfit.',
       );
     }
 

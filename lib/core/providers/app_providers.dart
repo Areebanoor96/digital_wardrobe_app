@@ -4,15 +4,19 @@ import 'package:digital_wardrobe_app/core/services/image_service.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:digital_wardrobe_app/data/models/garment_location.dart';
 import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/lending_record.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/data/repositories/alerts_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/analytics_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/family_repository.dart';
+import 'package:digital_wardrobe_app/data/repositories/garment_location_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/garment_repository.dart';
+import 'package:digital_wardrobe_app/data/repositories/lending_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/outfit_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/wear_log_repository.dart';
@@ -33,6 +37,16 @@ final Provider<ImageService> imageServiceProvider = Provider<ImageService>(
 final Provider<GarmentRepository> garmentRepositoryProvider =
     Provider<GarmentRepository>(
       (Ref ref) => GarmentRepository(SupabaseService.client),
+    );
+
+final Provider<GarmentLocationRepository> garmentLocationRepositoryProvider =
+    Provider<GarmentLocationRepository>(
+      (Ref ref) => GarmentLocationRepository(SupabaseService.client),
+    );
+
+final Provider<LendingRepository> lendingRepositoryProvider =
+    Provider<LendingRepository>(
+      (Ref ref) => LendingRepository(SupabaseService.client),
     );
 
 final Provider<AnalyticsRepository> analyticsRepositoryProvider =
@@ -98,6 +112,28 @@ final FutureProvider<List<Garment>> garmentsProvider =
           .fetchGarments(memberId: selectedMember.id);
     });
 
+final FutureProvider<List<GarmentLocation>> garmentLocationsProvider =
+    FutureProvider<List<GarmentLocation>>((Ref ref) async {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
+
+      if (selectedMember == null) {
+        return const <GarmentLocation>[];
+      }
+
+      return ref
+          .watch(garmentLocationRepositoryProvider)
+          .fetchLocations(memberId: selectedMember.id);
+    });
+
+final FutureProvider<Map<String, int>> familyMemberPieceCountsProvider =
+    FutureProvider<Map<String, int>>((Ref ref) {
+      return ref
+          .watch(garmentRepositoryProvider)
+          .fetchActiveGarmentCountsByMember();
+    });
+
 final garmentProvider = FutureProvider.family<Garment, String>((
   Ref ref,
   String garmentId,
@@ -112,6 +148,21 @@ final garmentProvider = FutureProvider.family<Garment, String>((
       .watch(garmentRepositoryProvider)
       .fetchGarment(id: garmentId, memberId: selectedMember.id);
 });
+
+final activeLendingRecordProvider =
+    FutureProvider.family<LendingRecord?, String>((Ref ref, String garmentId) {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
+
+      if (selectedMember == null) {
+        return null;
+      }
+
+      return ref
+          .watch(lendingRepositoryProvider)
+          .fetchActiveRecord(memberId: selectedMember.id, garmentId: garmentId);
+    });
 final FutureProvider<List<Garment>> archivedGarmentsProvider =
     FutureProvider<List<Garment>>((Ref ref) async {
       final FamilyMember? selectedMember = ref.watch(
@@ -267,6 +318,16 @@ final garmentArchiveControllerProvider =
       GarmentArchiveController.new,
     );
 
+final garmentLocationControllerProvider =
+    AutoDisposeAsyncNotifierProvider<GarmentLocationController, void>(
+      GarmentLocationController.new,
+    );
+
+final lendingControllerProvider =
+    AutoDisposeAsyncNotifierProvider<LendingController, void>(
+      LendingController.new,
+    );
+
 class WearLogController extends AutoDisposeAsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
@@ -276,7 +337,7 @@ class WearLogController extends AutoDisposeAsyncNotifier<void> {
     DateTime? wornDate,
     String? eventName,
     String? notes,
-    LaundryStatus laundryStatusAfter = LaundryStatus.dirty,
+    LaundryStatus? laundryStatusAfter,
   }) async {
     final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
@@ -411,6 +472,122 @@ class GarmentArchiveController extends AutoDisposeAsyncNotifier<void> {
   }
 }
 
+class GarmentLocationController extends AutoDisposeAsyncNotifier<void> {
+  @override
+  FutureOr<void> build() {}
+
+  Future<void> create({required String name}) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(
+      () => ref
+          .read(garmentLocationRepositoryProvider)
+          .createLocation(memberId: selectedMember.id, name: name),
+    );
+
+    if (!state.hasError) {
+      ref.invalidate(garmentLocationsProvider);
+    }
+  }
+
+  Future<void> rename({
+    required String locationId,
+    required String name,
+  }) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(
+      () => ref.read(garmentLocationRepositoryProvider).renameLocation(
+            memberId: selectedMember.id,
+            locationId: locationId,
+            name: name,
+          ),
+    );
+
+    if (!state.hasError) {
+      ref.invalidate(garmentLocationsProvider);
+      ref.invalidate(garmentsProvider);
+    }
+  }
+
+  Future<void> delete({required String locationId}) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(
+      () => ref.read(garmentLocationRepositoryProvider).deleteLocation(
+            memberId: selectedMember.id,
+            locationId: locationId,
+          ),
+    );
+
+    if (!state.hasError) {
+      ref.invalidate(garmentLocationsProvider);
+    }
+  }
+}
+
+class LendingController extends AutoDisposeAsyncNotifier<void> {
+  @override
+  FutureOr<void> build() {}
+
+  Future<void> markReturned({required String garmentId}) async {
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      state = AsyncError<void>(
+        StateError('No profile selected.'),
+        StackTrace.current,
+      );
+      return;
+    }
+
+    state = const AsyncLoading<void>();
+
+    state = await AsyncValue.guard(
+      () => ref
+          .read(lendingRepositoryProvider)
+          .markReturned(memberId: selectedMember.id, garmentId: garmentId),
+    );
+
+    if (!state.hasError) {
+      ref.invalidate(activeLendingRecordProvider(garmentId));
+      ref.invalidate(garmentProvider(garmentId));
+      ref.invalidate(garmentsProvider);
+      ref.invalidate(alerts.alertsProvider);
+    }
+  }
+}
+
 class OutfitMutationController extends AutoDisposeAsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
@@ -542,6 +719,7 @@ class WearOutfitController extends AutoDisposeAsyncNotifier<void> {
           .wearOutfitAtomically(
         memberId: selectedMember.id,
         outfitId: outfit.id,
+        laundryStatusAfter: null,
       );
     });
 

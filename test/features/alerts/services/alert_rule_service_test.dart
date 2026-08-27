@@ -355,55 +355,122 @@ void main() {
   // ============================================================
 
   group('AlertRuleService - Unused Alerts', () {
-    test('unworn garment purchased more than 7 days ago needs alert', () {
+    final AlertRuleService fixedDateService = AlertRuleService(
+      now: () => DateTime(2026, 8, 10),
+    );
+
+    test('unworn garment under 3 calendar months does not need alert', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
+        purchaseDate: DateTime(2026, 5, 11),
       );
 
-      expect(service.shouldHaveUnusedAlert(garment), isTrue);
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isFalse);
     });
 
-    test('recently purchased unworn garment does not need alert', () {
+    test('unworn garment at exactly 3 calendar months needs alert', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 3)),
+        purchaseDate: DateTime(2026, 5, 10),
       );
 
-      expect(service.shouldHaveUnusedAlert(garment), isFalse);
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isTrue);
     });
 
-    test('unworn garment without purchase date does not need alert', () {
+    test('unworn garment over 3 calendar months needs alert', () {
+      final Garment garment = _makeGarment(
+        wearCount: 0,
+        purchaseDate: DateTime(2026, 5, 9),
+      );
+
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isTrue);
+    });
+
+    test('out-of-season garment suppresses unused alert', () {
+      final Garment garment = _makeGarment(
+        wearCount: 0,
+        purchaseDate: DateTime(2026, 5, 9),
+        seasons: const <String>['winter'],
+      );
+
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isFalse);
+    });
+
+    test('all-season garment keeps unused alert behavior year-round', () {
+      final Garment garment = _makeGarment(
+        wearCount: 0,
+        purchaseDate: DateTime(2026, 5, 9),
+        seasons: const <String>['all'],
+      );
+
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isTrue);
+    });
+
+    test('in-season garment keeps unused alert behavior', () {
+      final AlertRuleService winterService = AlertRuleService(
+        now: _winterDate,
+      );
+      final Garment garment = _makeGarment(
+        wearCount: 0,
+        purchaseDate: DateTime(2026, 9, 1),
+        seasons: const <String>['winter'],
+      );
+
+      expect(winterService.shouldHaveUnusedAlert(garment), isTrue);
+    });
+
+    test('unworn garment falls back to createdAt when purchase date is absent', () {
+      final Garment garment = _makeGarment(
+        wearCount: 0,
+        createdAt: DateTime(2026, 5, 10),
+      );
+
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isTrue);
+    });
+
+    test('unworn garment without purchase date or createdAt does not alert', () {
       final Garment garment = _makeGarment(wearCount: 0);
 
-      expect(service.shouldHaveUnusedAlert(garment), isFalse);
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isFalse);
     });
 
-    test('garment not worn for more than 30 days needs alert', () {
+    test('previously worn garment uses last worn date at 3 calendar months', () {
       final Garment garment = _makeGarment(
         wearCount: 5,
-        lastWornDate: DateTime.now().subtract(const Duration(days: 31)),
+        lastWornDate: DateTime(2026, 5, 10),
       );
 
-      expect(service.shouldHaveUnusedAlert(garment), isTrue);
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isTrue);
     });
 
     test('recently worn garment does not need unused alert', () {
       final Garment garment = _makeGarment(
         wearCount: 5,
-        lastWornDate: DateTime.now().subtract(const Duration(days: 5)),
+        lastWornDate: DateTime(2026, 5, 11),
       );
 
-      expect(service.shouldHaveUnusedAlert(garment), isFalse);
+      expect(fixedDateService.shouldHaveUnusedAlert(garment), isFalse);
+    });
+
+    test('calendar month threshold handles end-of-month safely', () {
+      final AlertRuleService endOfMonthService = AlertRuleService(
+        now: () => DateTime(2026, 4, 30),
+      );
+      final Garment garment = _makeGarment(
+        wearCount: 0,
+        purchaseDate: DateTime(2026, 1, 31),
+      );
+
+      expect(endOfMonthService.shouldHaveUnusedAlert(garment), isTrue);
     });
 
     test('buildGarmentAlerts creates unused alert when condition is met', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
+        purchaseDate: DateTime(2026, 5, 10),
       );
 
-      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = fixedDateService.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -421,10 +488,10 @@ void main() {
     test('does not create unused alert when preference is disabled', () {
       final Garment garment = _makeGarment(
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
+        purchaseDate: DateTime(2026, 5, 10),
       );
 
-      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = fixedDateService.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -440,10 +507,10 @@ void main() {
       final Garment garment = _makeGarment(
         id: 'shirt-1',
         wearCount: 0,
-        purchaseDate: DateTime.now().subtract(const Duration(days: 8)),
+        purchaseDate: DateTime(2026, 5, 10),
       );
 
-      final List<Map<String, dynamic>> alerts = service.buildGarmentAlerts(
+      final List<Map<String, dynamic>> alerts = fixedDateService.buildGarmentAlerts(
         garment: garment,
         userId: 'user-1',
         memberId: 'member-1',
@@ -555,6 +622,8 @@ Garment _makeGarment({
   int wearCount = 0,
   DateTime? purchaseDate,
   DateTime? lastWornDate,
+  DateTime? createdAt,
+  List<String> seasons = const <String>[],
 }) {
   return Garment(
     id: id,
@@ -566,5 +635,9 @@ Garment _makeGarment({
     wearCount: wearCount,
     purchaseDate: purchaseDate,
     lastWornDate: lastWornDate,
+    createdAt: createdAt,
+    seasons: seasons,
   );
 }
+
+DateTime _winterDate() => DateTime(2026, 12, 10);

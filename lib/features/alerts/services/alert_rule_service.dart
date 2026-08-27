@@ -6,9 +6,11 @@ import 'package:digital_wardrobe_app/features/profile/Family/services/growth_int
 class AlertRuleService {
   const AlertRuleService({
     this.growthIntelligenceService = const GrowthIntelligenceService(),
+    this.now = _defaultNow,
   });
 
   final GrowthIntelligenceService growthIntelligenceService;
+  final DateTime Function() now;
 
   List<Map<String, dynamic>> buildGarmentAlerts({
     required Garment garment,
@@ -57,11 +59,7 @@ class AlertRuleService {
     }
 
     if (garment.wearCount == 0) {
-      final int daysSincePurchase = garment.purchaseDate == null
-          ? 0
-          : DateTime.now().difference(garment.purchaseDate!).inDays;
-
-      if (daysSincePurchase >= 7) {
+      if (shouldHaveUnusedAlert(garment)) {
         alerts.add(<String, dynamic>{
           'user_id': userId,
           'member_id': memberId,
@@ -79,11 +77,11 @@ class AlertRuleService {
     }
 
     if (garment.lastWornDate != null && garment.wearCount > 0) {
-      final int daysSinceLastWorn = DateTime.now()
-          .difference(garment.lastWornDate!)
-          .inDays;
+      if (shouldHaveUnusedAlert(garment)) {
+        final int daysSinceLastWorn = now()
+            .difference(garment.lastWornDate!)
+            .inDays;
 
-      if (daysSinceLastWorn >= 30) {
         alerts.add(<String, dynamic>{
           'user_id': userId,
           'member_id': memberId,
@@ -187,7 +185,11 @@ class AlertRuleService {
     }
 
     final bool needsReminder = growthIntelligenceService
-        .needsMeasurementReminder(member: member, measurements: measurements);
+        .needsMeasurementReminder(
+          member: member,
+          measurements: measurements,
+          now: now(),
+        );
 
     if (needsReminder) {
       if (hasReminderForLatestCycle) {
@@ -260,6 +262,7 @@ class AlertRuleService {
     if (growthIntelligenceService.needsMeasurementReminder(
       member: member,
       measurements: measurements,
+      now: now(),
     )) {
       return true;
     }
@@ -285,26 +288,24 @@ class AlertRuleService {
   }
 
   bool shouldHaveUnusedAlert(Garment garment) {
-    final DateTime now = DateTime.now();
+    final DateTime today = _dateOnly(now());
+
+    if (!_isInRelevantSeason(garment, today)) {
+      return false;
+    }
 
     if (garment.wearCount == 0) {
-      if (garment.purchaseDate == null) {
+      final DateTime? referenceDate = garment.purchaseDate ?? garment.createdAt;
+
+      if (referenceDate == null) {
         return false;
       }
 
-      final int daysSincePurchase = now
-          .difference(garment.purchaseDate!)
-          .inDays;
-
-      return daysSincePurchase >= 7;
+      return !today.isBefore(_addCalendarMonths(referenceDate, 3));
     }
 
     if (garment.lastWornDate != null && garment.wearCount > 0) {
-      final int daysSinceLastWorn = now
-          .difference(garment.lastWornDate!)
-          .inDays;
-
-      return daysSinceLastWorn >= 30;
+      return !today.isBefore(_addCalendarMonths(garment.lastWornDate!, 3));
     }
 
     return false;
@@ -313,4 +314,40 @@ class AlertRuleService {
   bool shouldHaveLaundryAlert(Garment garment) {
     return garment.laundryStatus == LaundryStatus.dirty;
   }
+
+  bool _isInRelevantSeason(Garment garment, DateTime today) {
+    final Set<String> seasons = garment.seasons
+        .map((String season) => season.trim().toLowerCase())
+        .where((String season) => season.isNotEmpty)
+        .toSet();
+
+    if (seasons.isEmpty || seasons.contains('all')) {
+      return true;
+    }
+
+    return seasons.contains(_localSeason(today));
+  }
+
+  String _localSeason(DateTime date) {
+    return switch (date.month) {
+      12 || 1 || 2 => 'winter',
+      3 || 4 => 'spring',
+      5 || 6 || 7 || 8 || 9 => 'summer',
+      _ => 'autumn',
+    };
+  }
+
+  DateTime _addCalendarMonths(DateTime date, int months) {
+    final DateTime source = _dateOnly(date);
+    final int targetMonthIndex = source.month - 1 + months;
+    final int year = source.year + targetMonthIndex ~/ 12;
+    final int month = targetMonthIndex % 12 + 1;
+    final int lastDay = DateTime(year, month + 1, 0).day;
+
+    return DateTime(year, month, source.day.clamp(1, lastDay).toInt());
+  }
+
+  DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 }
+
+DateTime _defaultNow() => DateTime.now();

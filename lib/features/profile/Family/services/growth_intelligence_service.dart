@@ -97,7 +97,13 @@ class GrowthIntelligenceService {
     final DateTime today = now ?? DateTime.now();
     final GrowthMeasurement latest = sorted.first;
 
-    return today.difference(latest.recordedAt).inDays >= 90;
+    final DateTime currentMonth = DateTime(today.year, today.month);
+    final DateTime latestMonth = DateTime(
+      latest.recordedAt.year,
+      latest.recordedAt.month,
+    );
+
+    return latestMonth.isBefore(currentMonth);
   }
 
   int _ageInYears(DateTime birthDate) {

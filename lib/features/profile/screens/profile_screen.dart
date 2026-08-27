@@ -1,5 +1,6 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
@@ -11,7 +12,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends ConsumerWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({
+    super.key,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
+  });
+
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider);
@@ -19,7 +27,12 @@ class ProfileScreen extends ConsumerWidget {
     final selectedMember = ref.watch(selectedFamilyMemberProvider);
     final String email = SupabaseService.client.auth.currentUser?.email ?? '';
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        leading: canNavigateBack
+            ? BackArrowButton(onPressed: onNavigateBack)
+            : null,
+        title: const Text('Profile'),
+      ),
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('Could not load profile.')),
@@ -214,5 +227,6 @@ class ProfileScreen extends ConsumerWidget {
     );
 
     ref.invalidate(profileProvider);
+    ref.invalidate(alertsProvider);
   }
 }

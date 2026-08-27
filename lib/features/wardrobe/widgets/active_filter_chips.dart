@@ -1,4 +1,3 @@
-import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +12,11 @@ class ActiveFilterChips extends StatelessWidget {
     required this.onSeasonRemoved,
     required this.onMoodRemoved,
     required this.onLaundryStatusRemoved,
+    required this.onAvailabilityStatusRemoved,
+    required this.onLocationRemoved,
+    required this.onStitchingStatusRemoved,
+    required this.onIroningStatusRemoved,
+    required this.onOuterwearSubcategoryRemoved,
   });
 
   final WardrobeFilters filters;
@@ -23,6 +27,11 @@ class ActiveFilterChips extends StatelessWidget {
   final VoidCallback onSeasonRemoved;
   final VoidCallback onMoodRemoved;
   final VoidCallback onLaundryStatusRemoved;
+  final VoidCallback onAvailabilityStatusRemoved;
+  final VoidCallback onLocationRemoved;
+  final VoidCallback onStitchingStatusRemoved;
+  final VoidCallback onIroningStatusRemoved;
+  final VoidCallback onOuterwearSubcategoryRemoved;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +75,31 @@ class ActiveFilterChips extends StatelessWidget {
             _ActiveFilterChip(
               label: filters.laundryStatus!.label,
               onDeleted: onLaundryStatusRemoved,
+            ),
+          if (filters.availabilityStatus != null)
+            _ActiveFilterChip(
+              label: filters.availabilityStatus!.label,
+              onDeleted: onAvailabilityStatusRemoved,
+            ),
+          if (filters.locationId != null)
+            _ActiveFilterChip(
+              label: 'Location: ${filters.locationName ?? 'Selected'}',
+              onDeleted: onLocationRemoved,
+            ),
+          if (filters.stitchingStatus != null)
+            _ActiveFilterChip(
+              label: filters.stitchingStatus!.label,
+              onDeleted: onStitchingStatusRemoved,
+            ),
+          if (filters.ironingStatus != null)
+            _ActiveFilterChip(
+              label: filters.ironingStatus!.label,
+              onDeleted: onIroningStatusRemoved,
+            ),
+          if (filters.outerwearSubcategory != null)
+            _ActiveFilterChip(
+              label: 'Outerwear: ${filters.outerwearSubcategory}',
+              onDeleted: onOuterwearSubcategoryRemoved,
             ),
         ],
       ),

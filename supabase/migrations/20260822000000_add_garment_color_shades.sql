@@ -1,0 +1,9 @@
+-- Migration 20260822000000 was previously applied directly/elsewhere
+-- to the remote database.
+--
+-- It created the multi-shade garment color schema with one designated
+-- primary shade.
+--
+-- This local placeholder exists only to restore migration-history
+-- alignment. Do not re-run the original SQL because the remote schema
+-- already contains those changes.

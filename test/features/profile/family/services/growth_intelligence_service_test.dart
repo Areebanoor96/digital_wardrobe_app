@@ -122,7 +122,7 @@ void main() {
       expect(result!.shoeSizeChanged, isTrue);
     });
 
-    test('measurement reminder is needed after 90 days', () {
+    test('measurement reminder is needed in a new calendar month', () {
       final FamilyMember child = FamilyMember(
         id: 'member-1',
         name: 'Child',
@@ -137,7 +137,7 @@ void main() {
           id: 'measurement-1',
           memberId: child.id,
           heightCm: 140,
-          recordedAt: now.subtract(const Duration(days: 90)),
+          recordedAt: DateTime(2026, 7, 31),
         ),
       ];
 
@@ -151,7 +151,7 @@ void main() {
       );
     });
 
-    test('measurement reminder is needed after 91 days', () {
+    test('measurement reminder is not needed within the same calendar month', () {
       final FamilyMember child = FamilyMember(
         id: 'member-1',
         name: 'Child',
@@ -166,36 +166,7 @@ void main() {
           id: 'measurement-1',
           memberId: child.id,
           heightCm: 140,
-          recordedAt: now.subtract(const Duration(days: 91)),
-        ),
-      ];
-
-      expect(
-        service.needsMeasurementReminder(
-          member: child,
-          measurements: measurements,
-          now: now,
-        ),
-        isTrue,
-      );
-    });
-
-    test('measurement reminder is not needed before 90 days', () {
-      final FamilyMember child = FamilyMember(
-        id: 'member-1',
-        name: 'Child',
-        relationship: RelationshipType.child,
-        birthDate: DateTime(2015, 1, 1),
-      );
-
-      final DateTime now = DateTime(2026, 8, 13);
-
-      final List<GrowthMeasurement> measurements = <GrowthMeasurement>[
-        GrowthMeasurement(
-          id: 'measurement-1',
-          memberId: child.id,
-          heightCm: 140,
-          recordedAt: now.subtract(const Duration(days: 89)),
+          recordedAt: DateTime(2026, 8, 1),
         ),
       ];
 
@@ -209,7 +180,7 @@ void main() {
       );
     });
 
-    test('recent measurement does not need reminder', () {
+    test('measurement reminder is not needed later in the same month', () {
       final FamilyMember child = FamilyMember(
         id: 'member-1',
         name: 'Child',
@@ -224,7 +195,36 @@ void main() {
           id: 'measurement-1',
           memberId: child.id,
           heightCm: 140,
-          recordedAt: now.subtract(const Duration(days: 30)),
+          recordedAt: DateTime(2026, 8, 10),
+        ),
+      ];
+
+      expect(
+        service.needsMeasurementReminder(
+          member: child,
+          measurements: measurements,
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+
+    test('same-month measurement does not need reminder', () {
+      final FamilyMember child = FamilyMember(
+        id: 'member-1',
+        name: 'Child',
+        relationship: RelationshipType.child,
+        birthDate: DateTime(2015, 1, 1),
+      );
+
+      final DateTime now = DateTime(2026, 8, 13);
+
+      final List<GrowthMeasurement> measurements = <GrowthMeasurement>[
+        GrowthMeasurement(
+          id: 'measurement-1',
+          memberId: child.id,
+          heightCm: 140,
+          recordedAt: now.subtract(const Duration(days: 3)),
         ),
       ];
 

@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
@@ -171,6 +172,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
     );
     return Scaffold(
       appBar: AppBar(
+        leading: const BackArrowButton(),
         title: Text(widget.outfit == null ? 'Build outfit' : 'Edit outfit'),
       ),
       body: garments.when(
@@ -184,7 +186,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                 padding: const EdgeInsets.all(20),
                 child: TextField(
                   controller: _name,
-                  decoration: const InputDecoration(labelText: 'Outfit name'),
+                  decoration: const InputDecoration(labelText: 'Outfit Name'),
                 ),
               ),
               Padding(
@@ -350,7 +352,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                                           );
                                         },
                                         icon: const Icon(Icons.check),
-                                        label: const Text('Use this outfit'),
+                                        label: const Text('Use This Outfit'),
                                       ),
                                     ),
                                   ],
@@ -364,7 +366,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                       DropdownButtonFormField<String>(
                         initialValue: outfitContext.heroGarment?.id,
                         decoration: const InputDecoration(
-                          labelText: 'Hero garment',
+                          labelText: 'Hero Garment',
                         ),
                         items: items
                             .map(
@@ -400,16 +402,16 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                         items:
                             const <String>[
                                   'casual',
-                                  'work',
-                                  'formal',
-                                  'party',
-                                  'wedding',
                                   'college',
+                                  'ethnic',
+                                  'formal',
+                                  'home',
+                                  'party',
+                                  'sleep',
                                   'sport',
                                   'travel',
-                                  'home',
-                                  'sleep',
-                                  'ethnic',
+                                  'wedding',
+                                  'work',
                                 ]
                                 .map(
                                   (String value) => DropdownMenuItem<String>(
@@ -441,7 +443,6 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                                   'winter',
                                   'spring',
                                   'autumn',
-                                  'rainy',
                                   'all',
                                 ]
                                 .map(
@@ -467,14 +468,14 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                         decoration: const InputDecoration(labelText: 'Mood'),
                         items:
                             const <String>[
-                                  'relaxed',
-                                  'professional',
+                                  'bold',
                                   'cozy',
                                   'elegant',
-                                  'sporty',
                                   'minimal',
-                                  'bold',
                                   'party',
+                                  'professional',
+                                  'relaxed',
+                                  'sporty',
                                 ]
                                 .map(
                                   (String value) => DropdownMenuItem<String>(

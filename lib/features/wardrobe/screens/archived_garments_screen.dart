@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_feedback.dart';
@@ -20,7 +21,10 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Closet Vault')),
+      appBar: AppBar(
+        leading: const BackArrowButton(),
+        title: const Text('Closet Vault'),
+      ),
       body: archived.when(
         loading: () => const GarmentGridShimmer(),
         error: (_, _) => WardrobeEmptyState(
@@ -51,7 +55,7 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: .62,
+                childAspectRatio: .7,
               ),
               itemBuilder: (BuildContext context, int index) {
                 final Garment garment = garments[index];
@@ -125,5 +129,8 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('${garment.name} was restored.')));
+
+    ref.invalidate(garmentsProvider);
+    ref.invalidate(archivedGarmentsProvider);
   }
 }

@@ -12,6 +12,7 @@ import 'package:digital_wardrobe_app/features/outfits/screens/outfit_detail_scre
 import 'package:digital_wardrobe_app/features/profile/screens/profile_selection_screen.dart';
 import 'package:digital_wardrobe_app/features/shell/screens/app_shell_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_screen.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_locations_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/archived_garments_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/forgot_password_screen.dart';
@@ -106,6 +107,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/garments/archived',
         builder: (_, _) => const ArchivedGarmentsScreen(),
+      ),
+      GoRoute(
+        path: '/garment-locations',
+        builder: (_, _) => const GarmentLocationsScreen(),
       ),
       GoRoute(
         path: '/garments/:id',

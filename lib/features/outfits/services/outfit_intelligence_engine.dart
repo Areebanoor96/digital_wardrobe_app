@@ -54,7 +54,7 @@ class OutfitIntelligenceEngine {
     final Garment? hero = context.heroGarment;
 
     final List<Garment> recommendedGarments = <Garment>[
-      if (hero != null) hero,
+      ?hero,
       ...selected.map((_ScoredGarment item) => item.garment),
     ];
 
@@ -91,6 +91,11 @@ class OutfitIntelligenceEngine {
       // because of its laundry state.
       if (context.requireCleanGarments &&
           garment.laundryStatus != LaundryStatus.clean) {
+        return false;
+      }
+
+      if (!garment.availabilityStatus.isPhysicallyAvailable ||
+          garment.ironingStatus == IroningStatus.needsIroning) {
         return false;
       }
 
@@ -236,6 +241,11 @@ class OutfitIntelligenceEngine {
       // Respect laundry availability.
       if (context.requireCleanGarments &&
           garment.laundryStatus != LaundryStatus.clean) {
+        return false;
+      }
+
+      if (!garment.availabilityStatus.isPhysicallyAvailable ||
+          garment.ironingStatus == IroningStatus.needsIroning) {
         return false;
       }
 

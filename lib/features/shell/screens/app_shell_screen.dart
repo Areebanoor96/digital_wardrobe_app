@@ -19,33 +19,20 @@ class AppShellScreen extends ConsumerStatefulWidget {
 }
 
 class _AppShellScreenState extends ConsumerState<AppShellScreen> {
-  static const int _wardrobeIndex = 0;
   static const Duration _exitConfirmationWindow = Duration(seconds: 2);
 
   int _index = 0;
+  final List<int> _tabHistory = <int>[0];
   DateTime? _lastBackPressAt;
 
   bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
-
-  static const List<Widget> _screens = <Widget>[
-    WardrobeScreen(),
-    OutfitsScreen(),
-    CalendarScreen(),
-    AlertsScreen(),
-    AnalyticsScreen(),
-    ProfileScreen(),
-  ];
 
   void _handleBackPress(bool didPop, Object? result) {
     if (didPop) {
       return;
     }
 
-    if (_index != _wardrobeIndex) {
-      setState(() {
-        _index = _wardrobeIndex;
-        _lastBackPressAt = null;
-      });
+    if (_navigateToPreviousTab()) {
       return;
     }
 
@@ -70,6 +57,34 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     SystemNavigator.pop();
   }
 
+  void _selectTab(int value) {
+    if (value == _index) {
+      return;
+    }
+
+    setState(() {
+      _index = value;
+      _tabHistory
+        ..remove(value)
+        ..add(value);
+      _lastBackPressAt = null;
+    });
+  }
+
+  bool _navigateToPreviousTab() {
+    if (_tabHistory.length <= 1) {
+      return false;
+    }
+
+    setState(() {
+      _tabHistory.removeLast();
+      _index = _tabHistory.last;
+      _lastBackPressAt = null;
+    });
+
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
@@ -78,18 +93,42 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         ?.where((Alert alert) => !alert.isRead)
         .length ??
         0;
+    final bool canNavigateBack = _tabHistory.length > 1;
+    final List<Widget> screens = <Widget>[
+      WardrobeScreen(
+        canNavigateBack: canNavigateBack,
+        onNavigateBack: _navigateToPreviousTab,
+      ),
+      OutfitsScreen(
+        canNavigateBack: canNavigateBack,
+        onNavigateBack: _navigateToPreviousTab,
+      ),
+      CalendarScreen(
+        canNavigateBack: canNavigateBack,
+        onNavigateBack: _navigateToPreviousTab,
+      ),
+      AlertsScreen(
+        canNavigateBack: canNavigateBack,
+        onNavigateBack: _navigateToPreviousTab,
+      ),
+      AnalyticsScreen(
+        canNavigateBack: canNavigateBack,
+        onNavigateBack: _navigateToPreviousTab,
+      ),
+      ProfileScreen(
+        canNavigateBack: canNavigateBack,
+        onNavigateBack: _navigateToPreviousTab,
+      ),
+    ];
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: _handleBackPress,
       child: Scaffold(
-        body: IndexedStack(index: _index, children: _screens),
+        body: IndexedStack(index: _index, children: screens),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
-          onDestinationSelected: (int value) =>
-              setState(() {
-                _index = value;
-                _lastBackPressAt = null;
-              }),
+          onDestinationSelected: _selectTab,
         destinations: <NavigationDestination>[
           const NavigationDestination(
             icon: Icon(Icons.checkroom_outlined),

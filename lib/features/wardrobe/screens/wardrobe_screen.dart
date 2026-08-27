@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/active_filter_chips.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
@@ -17,7 +18,14 @@ import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_t
 import 'package:go_router/go_router.dart';
 
 class WardrobeScreen extends ConsumerStatefulWidget {
-  const WardrobeScreen({super.key});
+  const WardrobeScreen({
+    super.key,
+    this.canNavigateBack = false,
+    this.onNavigateBack,
+  });
+
+  final bool canNavigateBack;
+  final VoidCallback? onNavigateBack;
 
   @override
   ConsumerState<WardrobeScreen> createState() => _WardrobeScreenState();
@@ -41,6 +49,12 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
     final List<FamilyMember> members = await ref.read(
       familyMembersProvider.future,
     );
+    Map<String, int> pieceCounts = const <String, int>{};
+    try {
+      pieceCounts = await ref.read(familyMemberPieceCountsProvider.future);
+    } catch (_) {
+      pieceCounts = const <String, int>{};
+    }
 
     if (!mounted) {
       return;
@@ -75,7 +89,10 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                       radius: 22,
                     ),
                     title: Text(member.name),
-                    subtitle: Text(member.relationship.label),
+                    subtitle: Text(
+                      '${member.relationship.label} · '
+                      '${pieceCounts[member.id] ?? 0} Pieces',
+                    ),
                     trailing: member.id == selectedMember.id
                         ? const Icon(Icons.check_circle)
                         : null,
@@ -136,6 +153,9 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: widget.canNavigateBack
+            ? BackArrowButton(onPressed: widget.onNavigateBack)
+            : null,
         title: const Text('My Wardrobe'),
         actions: <Widget>[
           if (selectedMember != null)
@@ -253,6 +273,21 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                       onLaundryStatusRemoved: () => ref
                           .read(wardrobeFilterProvider.notifier)
                           .setLaundryStatus(null),
+                      onAvailabilityStatusRemoved: () => ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setAvailabilityStatus(null),
+                      onLocationRemoved: () => ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setLocation(),
+                      onStitchingStatusRemoved: () => ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setStitchingStatus(null),
+                      onIroningStatusRemoved: () => ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setIroningStatus(null),
+                      onOuterwearSubcategoryRemoved: () => ref
+                          .read(wardrobeFilterProvider.notifier)
+                          .setOuterwearSubcategory(null),
                     ),
                   ),
 
@@ -291,7 +326,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: .62,
+                            childAspectRatio: .7,
                           ),
                     ),
                   ),
