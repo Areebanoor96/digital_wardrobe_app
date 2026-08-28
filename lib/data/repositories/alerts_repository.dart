@@ -3,15 +3,24 @@ import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
+import 'package:digital_wardrobe_app/data/models/ootd_recommendation_snapshot.dart';
+import 'package:digital_wardrobe_app/data/models/wear_log.dart';
+import 'package:digital_wardrobe_app/data/repositories/ootd_recommendation_repository.dart';
 import 'package:digital_wardrobe_app/features/alerts/services/alert_rule_service.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
+import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AlertsRepository {
-  AlertsRepository(this._client, {this.ruleService = const AlertRuleService()});
+  AlertsRepository(
+    this._client, {
+    this.ruleService = const AlertRuleService(),
+    OotdRecommendationRepository? ootdRecommendationRepository,
+  }) : _ootdRecommendationRepository = ootdRecommendationRepository;
 
   final SupabaseClient _client;
   final AlertRuleService ruleService;
+  final OotdRecommendationRepository? _ootdRecommendationRepository;
 
   Future<List<Alert>> fetchAlerts({required String memberId}) async {
     final String userId = _client.auth.currentUser!.id;
@@ -37,7 +46,10 @@ class AlertsRepository {
 
     await _client
         .from('alerts')
-        .update(<String, bool>{'is_read': true})
+        .update(<String, Object?>{
+          'is_read': true,
+          'read_at': DateTime.now().toUtc().toIso8601String(),
+        })
         .eq('id', alertId)
         .eq('user_id', userId);
   }
@@ -47,7 +59,10 @@ class AlertsRepository {
 
     await _client
         .from('alerts')
-        .update(<String, bool>{'is_dismissed': true})
+        .update(<String, Object?>{
+          'is_dismissed': true,
+          'dismissed_at': DateTime.now().toUtc().toIso8601String(),
+        })
         .eq('id', alertId)
         .eq('user_id', userId);
   }
@@ -199,9 +214,10 @@ class AlertsRepository {
     }
 
     // Generate today's OOTD alert if allowed and the wardrobe is eligible.
-    final Map<String, dynamic>? ootdAlert = ruleService.buildOotdAlert(
+    final Map<String, dynamic>? ootdAlert = await _buildOotdAlert(
       userId: userId,
       memberId: memberId,
+      garments: garments,
       enabled: profile.ootdAlertsEnabled,
       hasOotdAlertToday: hasOotdAlertToday,
       isOotdEligible: isOotdEligible,
@@ -233,6 +249,84 @@ class AlertsRepository {
     await _client.from('alerts').insert(newAlerts);
 
     return newAlerts.length;
+  }
+
+  Future<Map<String, dynamic>?> _buildOotdAlert({
+    required String userId,
+    required String memberId,
+    required List<Garment> garments,
+    required bool enabled,
+    required bool hasOotdAlertToday,
+    required bool isOotdEligible,
+  }) async {
+    if (!enabled || hasOotdAlertToday || !isOotdEligible) {
+      return null;
+    }
+
+    final OotdRecommendationRepository? snapshotRepository =
+        _ootdRecommendationRepository;
+
+    if (snapshotRepository == null) {
+      return null;
+    }
+
+    final List<WearLog> wearLogs = await _fetchOotdWearHistory(
+      userId: userId,
+      memberId: memberId,
+    );
+    final OutfitRecommendation recommendation =
+        const OutfitRecommendationService().recommend(
+          allGarments: garments,
+          wearLogs: wearLogs,
+          context: const OutfitContext(),
+          memberId: memberId,
+        );
+
+    if (recommendation.garments.isEmpty) {
+      return null;
+    }
+
+    final OotdRecommendationSnapshot snapshot = await snapshotRepository
+        .createSnapshot(
+          memberId: memberId,
+          recommendation: recommendation,
+          context: const OutfitContext(),
+        );
+
+    return ruleService.buildOotdAlert(
+      userId: userId,
+      memberId: memberId,
+      enabled: enabled,
+      hasOotdAlertToday: hasOotdAlertToday,
+      isOotdEligible: isOotdEligible,
+      snapshotId: snapshot.id,
+    );
+  }
+
+  Future<List<WearLog>> _fetchOotdWearHistory({
+    required String userId,
+    required String memberId,
+  }) async {
+    final DateTime start = DateTime.now().subtract(const Duration(days: 90));
+    final String startDate =
+        '${start.year}-'
+        '${start.month.toString().padLeft(2, '0')}-'
+        '${start.day.toString().padLeft(2, '0')}';
+
+    final List<dynamic> rows = await _client
+        .from('wear_log')
+        .select()
+        .eq('user_id', userId)
+        .eq('member_id', memberId)
+        .gte('worn_date', startDate)
+        .order('worn_date', ascending: false);
+
+    return rows
+        .map(
+          (dynamic row) =>
+              WearLog.fromJson(Map<String, dynamic>.from(row as Map)),
+        )
+        .toList();
   }
 
   Future<void> _resolveGarmentAlerts({

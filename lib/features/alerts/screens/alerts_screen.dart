@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/alert.dart';
+import 'package:digital_wardrobe_app/features/alerts/navigation/alert_target_resolver.dart';
 import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:digital_wardrobe_app/features/alerts/widgets/alert_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class AlertsScreen extends ConsumerWidget {
   const AlertsScreen({
@@ -18,11 +22,7 @@ class AlertsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
-    final AsyncValue<void> mutationState = ref.watch(
-      alertMutationControllerProvider,
-    );
-
-    final bool isMutating = mutationState.isLoading;
+    final bool isRefreshing = alerts.isLoading;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,11 +33,11 @@ class AlertsScreen extends ConsumerWidget {
         actions: <Widget>[
           IconButton(
             tooltip: 'Refresh alerts',
-            onPressed: isMutating
+            onPressed: isRefreshing
                 ? null
                 : () async {
                     await ref
-                        .read(alertMutationControllerProvider.notifier)
+                        .read(alertsProvider.notifier)
                         .regenerateAlerts();
                   },
             icon: const Icon(Icons.refresh),
@@ -58,7 +58,8 @@ class AlertsScreen extends ConsumerWidget {
         data: (List<Alert> items) {
           if (items.isEmpty) {
             return RefreshIndicator(
-              onRefresh: () => ref.refresh(alertsProvider.future),
+              onRefresh: () =>
+                  ref.read(alertsProvider.notifier).regenerateAlerts(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const <Widget>[
@@ -74,7 +75,8 @@ class AlertsScreen extends ConsumerWidget {
           }
 
           return RefreshIndicator(
-            onRefresh: () => ref.refresh(alertsProvider.future),
+            onRefresh: () =>
+                ref.read(alertsProvider.notifier).regenerateAlerts(),
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -86,20 +88,12 @@ class AlertsScreen extends ConsumerWidget {
 
                 return AlertCard(
                   alert: alert,
-                  onTap: isMutating || alert.isRead
-                      ? null
-                      : () async {
-                          await ref
-                              .read(alertMutationControllerProvider.notifier)
-                              .markAsRead(alert.id);
-                        },
-                  onDismiss: isMutating
-                      ? null
-                      : () async {
-                          await ref
-                              .read(alertMutationControllerProvider.notifier)
-                              .dismissAlert(alert.id);
-                        },
+                  onTap: () {
+                    _handleAlertTap(context, ref, alert);
+                  },
+                  onDismiss: () async {
+                    await _dismissAlert(context, ref, alert);
+                  },
                 );
               },
             ),
@@ -107,6 +101,54 @@ class AlertsScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  void _handleAlertTap(BuildContext context, WidgetRef ref, Alert alert) {
+    final String? route = routeForAlert(alert);
+
+    if (!alert.isRead) {
+      unawaited(
+        ref
+            .read(alertsProvider.notifier)
+            .markAsRead(alert.id)
+            .catchError((Object error, StackTrace stackTrace) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not mark alert as read.'),
+                  ),
+                );
+              }
+            }),
+      );
+    }
+
+    if (route == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This alert target is no longer available.')),
+      );
+      return;
+    }
+
+    context.push(route);
+  }
+
+  Future<void> _dismissAlert(
+    BuildContext context,
+    WidgetRef ref,
+    Alert alert,
+  ) async {
+    try {
+      await ref.read(alertsProvider.notifier).dismissAlert(alert.id);
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not dismiss alert.')),
+      );
+    }
   }
 }
 

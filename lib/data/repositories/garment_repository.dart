@@ -61,6 +61,35 @@ class GarmentRepository {
     return _withSignedUrls(row);
   }
 
+  Future<List<Garment>> fetchGarmentsByIds({
+    required String memberId,
+    required List<String> garmentIds,
+  }) async {
+    if (garmentIds.isEmpty) {
+      return const <Garment>[];
+    }
+
+    final List<dynamic> rows = await _client
+        .from('garments')
+        .select(_garmentSelect)
+        .eq('member_id', memberId)
+        .inFilter('id', garmentIds);
+
+    final List<Garment> garments = await Future.wait(
+      rows.map(
+        (dynamic row) => _withSignedUrls(Map<String, dynamic>.from(row as Map)),
+      ),
+    );
+    final Map<String, Garment> byId = <String, Garment>{
+      for (final Garment garment in garments) garment.id: garment,
+    };
+
+    return garmentIds
+        .map((String id) => byId[id])
+        .whereType<Garment>()
+        .toList();
+  }
+
   Future<Garment> saveGarment(Garment garment, {required bool isNew}) async {
     final User? currentUser = _client.auth.currentUser;
     if (currentUser == null) {

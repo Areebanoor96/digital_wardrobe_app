@@ -65,6 +65,9 @@ class AlertRuleService {
           'member_id': memberId,
           'type': 'unused',
           'garment_id': garment.id,
+          'target_type': 'garment',
+          'target_id': garment.id,
+          'action_payload': <String, dynamic>{'route': '/garments/${garment.id}'},
           'title': 'Unworn garment',
           'body':
               '${garment.name} has not been worn yet. Try styling it into an outfit!',
@@ -87,6 +90,9 @@ class AlertRuleService {
           'member_id': memberId,
           'type': 'unused',
           'garment_id': garment.id,
+          'target_type': 'garment',
+          'target_id': garment.id,
+          'action_payload': <String, dynamic>{'route': '/garments/${garment.id}'},
           'title': 'Not worn recently',
           'body':
               '${garment.name} hasn\'t been worn in $daysSinceLastWorn days. Time to rotate it back in!',
@@ -116,6 +122,9 @@ class AlertRuleService {
         'member_id': memberId,
         'type': 'laundry',
         'garment_id': garment.id,
+        'target_type': 'garment',
+        'target_id': garment.id,
+        'action_payload': <String, dynamic>{'route': '/garments/${garment.id}'},
         'title': 'Laundry needed',
         'body': '${garment.name} is marked as dirty. Time for a wash!',
         'is_read': false,
@@ -130,6 +139,7 @@ class AlertRuleService {
     required bool enabled,
     required bool hasOotdAlertToday,
     required bool isOotdEligible,
+    required String snapshotId,
   }) {
     if (!enabled) {
       return null;
@@ -148,6 +158,11 @@ class AlertRuleService {
       'member_id': memberId,
       'type': 'ootd',
       'garment_id': null,
+      'target_type': 'ootd_recommendation',
+      'target_id': snapshotId,
+      'action_payload': <String, dynamic>{
+        'route': '/ootd/recommendations/$snapshotId',
+      },
       'title': 'Your outfit suggestion is ready',
       'body': 'Check your Outfit of the Day for a fresh wardrobe suggestion.',
       'is_read': false,
@@ -201,6 +216,12 @@ class AlertRuleService {
         'member_id': member.id,
         'type': 'growth',
         'garment_id': null,
+        'target_type': 'family_member',
+        'target_id': member.id,
+        'action_payload': <String, dynamic>{
+          'route': '/family/${member.id}',
+          'section': 'growth',
+        },
         'title': 'Time for a growth check',
         'body':
             'Update ${member.name}\'s measurements to keep their wardrobe sizes current.',
@@ -242,6 +263,12 @@ class AlertRuleService {
       'member_id': member.id,
       'type': 'growth',
       'garment_id': null,
+      'target_type': 'family_member',
+      'target_id': member.id,
+      'action_payload': <String, dynamic>{
+        'route': '/family/${member.id}',
+        'section': 'growth',
+      },
       'title': 'Growth detected',
       'body':
           '${member.name} has ${_joinChanges(changes)}. '

@@ -59,11 +59,11 @@ class WearStatsRow extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: <Widget>[
       Expanded(
-        child: _WearStat(label: 'Times worn', value: '${garment.wearCount}'),
+        child: _WearStat(label: 'Times Worn', value: '${garment.wearCount}'),
       ),
       Expanded(
         child: _WearStat(
-          label: 'Last worn',
+          label: 'Last Worn',
           value: garment.lastWornDate == null
               ? 'Not yet'
               : _shortDate(garment.lastWornDate!),

@@ -2,9 +2,9 @@ import 'dart:io';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/garment_color.dart';
 import 'package:digital_wardrobe_app/data/models/garment_location.dart';
 import 'package:digital_wardrobe_app/data/models/lending_record.dart';
-import 'package:digital_wardrobe_app/data/models/garment_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,7 +87,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   List<String> _buildSizeItems() {
     final List<String> result = <String>[..._sizeOptions];
 
-    for (final String size in widget.garment?.effectiveSizes ?? const <String>[]) {
+    for (final String size
+        in widget.garment?.effectiveSizes ?? const <String>[]) {
       if (!result.contains(size)) {
         result.add(size);
       }
@@ -199,7 +200,6 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     'Short Sleeve',
     'Three-Quarter Sleeve',
     'Long Sleeve',
-    'Not Applicable',
   ];
 
   late String? _selectedFit = _cleanOptional(widget.garment?.fit);
@@ -207,7 +207,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   late String? _selectedFabricWeight = _cleanOptional(
     widget.garment?.fabricWeight,
   );
-  late String? _selectedSleeveLength = _cleanOptional(
+  late String? _selectedSleeveLength = _cleanSleeveLength(
     widget.garment?.sleeveLength,
   );
 
@@ -245,6 +245,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   late IroningStatus? _ironingStatus = widget.garment?.ironingStatus;
 
   late String? _selectedLocationId = widget.garment?.locationId;
+  GarmentLocation? _createdLocationFallback;
 
   final TextEditingController _lendingPerson = TextEditingController();
   final TextEditingController _lendingDateController = TextEditingController();
@@ -276,6 +277,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   String? _selectedNewCoverPath;
 
   bool _saving = false;
+  static const String _addNewLocationValue = '__add_new_location__';
   static const List<String> _occasionOptions = <String>[
     'casual',
     'college',
@@ -382,6 +384,15 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   String? _cleanOptional(String? value) {
     final String trimmed = value?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _cleanSleeveLength(String? value) {
+    final String? cleaned = _cleanOptional(value);
+    if (cleaned == null || cleaned.toLowerCase() == 'not applicable') {
+      return null;
+    }
+
+    return cleaned;
   }
 
   static List<GarmentColorShade> _initialColorShades(Garment? garment) {
@@ -518,10 +529,17 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.attach_file),
-                    title: const Text('Attach image file'),
+                    title: const Text('Attach from Files'),
                     subtitle: const Text('JPG, JPEG, PNG or WEBP'),
                     onTap: () {
                       Navigator.pop(sheetContext, _GarmentImageSource.file);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.close),
+                    title: const Text('Cancel'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
                     },
                   ),
                 ],
@@ -533,6 +551,26 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     if (source == null) {
       return;
     }
+
+    if (source == _GarmentImageSource.camera) {
+      final XFile? image = await ref.read(imageServiceProvider).takePhoto();
+
+      if (image == null || !mounted) {
+        return;
+      }
+
+      setState(() {
+        _newImages.add(image);
+
+        if (_selectedExistingCoverPath == null &&
+            _selectedNewCoverPath == null) {
+          _selectedNewCoverPath = image.path;
+        }
+      });
+
+      return;
+    }
+
     if (source == _GarmentImageSource.file) {
       final XFile? image = await ref.read(imageServiceProvider).pickImageFile();
 
@@ -814,7 +852,9 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       await ref
           .read(garmentRepositoryProvider)
           .saveGarment(garment, isNew: widget.garment == null);
-      await ref.read(lendingRepositoryProvider).syncForAvailability(
+      await ref
+          .read(lendingRepositoryProvider)
+          .syncForAvailability(
             memberId: selectedMember.id,
             garmentId: garment.id,
             status: _availabilityStatus,
@@ -860,6 +900,59 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         });
       }
     }
+  }
+
+  Future<void> _showAddLocationDialog() async {
+    final selectedMember = ref.read(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a profile before adding a location.'),
+        ),
+      );
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) => _AddLocationDialog(
+        onSave: (String name) async {
+          final GarmentLocation location = await ref
+              .read(garmentLocationRepositoryProvider)
+              .createLocation(memberId: selectedMember.id, name: name);
+
+          if (!mounted) {
+            return;
+          }
+
+          setState(() {
+            _selectedLocationId = location.id;
+            _createdLocationFallback = location;
+          });
+
+          try {
+            final List<GarmentLocation> refreshedLocations = await ref.refresh(
+              garmentLocationsProvider.future,
+            );
+            if (!mounted) {
+              return;
+            }
+
+            setState(() {
+              _selectedLocationId = location.id;
+              if (refreshedLocations.any(
+                (GarmentLocation item) => item.id == location.id,
+              )) {
+                _createdLocationFallback = null;
+              }
+            });
+          } catch (error) {
+            debugPrint('Could not refresh garment locations: $error');
+          }
+        },
+      ),
+    );
   }
 
   String? _optional(String value) {
@@ -1127,8 +1220,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 controller: _lendingPerson,
                 textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
-                  labelText: _availabilityStatus ==
-                          GarmentAvailabilityStatus.borrowed
+                  labelText:
+                      _availabilityStatus == GarmentAvailabilityStatus.borrowed
                       ? 'Borrowed From *'
                       : 'Lent To *',
                 ),
@@ -1153,8 +1246,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 readOnly: true,
                 onTap: _saving ? null : _pickLendingDate,
                 decoration: InputDecoration(
-                  labelText: _availabilityStatus ==
-                          GarmentAvailabilityStatus.borrowed
+                  labelText:
+                      _availabilityStatus == GarmentAvailabilityStatus.borrowed
                       ? 'Borrowed Date'
                       : 'Lent Date',
                   hintText: 'Defaults to today',
@@ -1207,7 +1300,18 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 label: const Text('Retry Locations'),
               ),
               data: (List<GarmentLocation> items) {
-                final bool containsSelected = items.any(
+                final List<GarmentLocation> locationItems = <GarmentLocation>[
+                  ...items,
+                ];
+                final GarmentLocation? fallback = _createdLocationFallback;
+                if (fallback != null &&
+                    !locationItems.any(
+                      (GarmentLocation location) => location.id == fallback.id,
+                    )) {
+                  locationItems.add(fallback);
+                }
+
+                final bool containsSelected = locationItems.any(
                   (GarmentLocation location) =>
                       location.id == _selectedLocationId,
                 );
@@ -1217,6 +1321,9 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                   children: <Widget>[
                     Expanded(
                       child: DropdownButtonFormField<String?>(
+                        key: ValueKey<String?>(
+                          containsSelected ? _selectedLocationId : null,
+                        ),
                         initialValue: containsSelected
                             ? _selectedLocationId
                             : null,
@@ -1228,17 +1335,30 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                         items: <DropdownMenuItem<String?>>[
                           const DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('Not specified'),
+                            child: Text('Not Specified'),
                           ),
-                          ...items.map(
+                          ...locationItems.map(
                             (GarmentLocation location) =>
                                 DropdownMenuItem<String?>(
                                   value: location.id,
                                   child: Text(location.name),
                                 ),
                           ),
+                          const DropdownMenuItem<String?>(
+                            value: _addNewLocationValue,
+                            child: Text('+ Add New Location'),
+                          ),
                         ],
-                        onChanged: (String? value) {
+                        onChanged: (String? value) async {
+                          if (value == _addNewLocationValue) {
+                            await Future<void>.delayed(Duration.zero);
+                            if (!mounted) {
+                              return;
+                            }
+                            await _showAddLocationDialog();
+                            return;
+                          }
+
                           setState(() {
                             _selectedLocationId = value;
                           });
@@ -1850,10 +1970,10 @@ class _GarmentColorSelection extends StatelessWidget {
                         size: 14,
                         color:
                             (_colorFromHex(shade.hex)?.computeLuminance() ??
-                                        0) >
-                                    0.5
-                                ? Colors.black87
-                                : Colors.white,
+                                    0) >
+                                0.5
+                            ? Colors.black87
+                            : Colors.white,
                       )
                     : null,
               ),
@@ -1977,6 +2097,96 @@ class _GarmentColorPickerSheet extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _AddLocationDialog extends StatefulWidget {
+  const _AddLocationDialog({required this.onSave});
+
+  final Future<void> Function(String name) onSave;
+
+  @override
+  State<_AddLocationDialog> createState() => _AddLocationDialogState();
+}
+
+class _AddLocationDialogState extends State<_AddLocationDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _saving = false;
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Location'),
+      content: TextField(
+        controller: _controller,
+        enabled: !_saving,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(
+          labelText: 'Location Name',
+          hintText: 'Bedroom Almirah',
+        ).copyWith(errorText: _errorText),
+        onSubmitted: _saving ? null : (_) => _submit(),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _submit,
+          child: _saving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    if (_saving) {
+      return;
+    }
+
+    final String name = _controller.text.trim();
+    if (name.isEmpty) {
+      setState(() {
+        _errorText = 'Enter a location name';
+      });
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _saving = true;
+      _errorText = null;
+    });
+
+    try {
+      await widget.onSave(name);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _saving = false;
+        _errorText = 'Could not add this location';
+      });
+    }
   }
 }
 

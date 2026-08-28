@@ -20,6 +20,9 @@ class GarmentDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<void> wearState = ref.watch(wearLogControllerProvider);
+    final AsyncValue<void> archiveState = ref.watch(
+      garmentArchiveControllerProvider,
+    );
     final AsyncValue<List<WearLog>> history = ref.watch(
       garmentWearHistoryProvider(garmentId),
     );
@@ -50,14 +53,28 @@ class GarmentDetailScreen extends ConsumerWidget {
                 ),
                 if (!garment.isArchived)
                   IconButton(
-                    onPressed: () => _archive(context, ref, garment),
-                    icon: const Icon(Icons.archive_outlined),
+                    onPressed: archiveState.isLoading
+                        ? null
+                        : () => _archive(context, ref, garment),
+                    icon: archiveState.isLoading
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.archive_outlined),
                     tooltip: 'Move To Closet Vault',
                   )
                 else
                   IconButton(
-                    onPressed: () => _restore(context, ref, garment),
-                    icon: const Icon(Icons.unarchive_outlined),
+                    onPressed: archiveState.isLoading
+                        ? null
+                        : () => _restore(context, ref, garment),
+                    icon: archiveState.isLoading
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.unarchive_outlined),
                     tooltip: 'Return To Wardrobe',
                   ),
               ],
@@ -77,25 +94,27 @@ class GarmentDetailScreen extends ConsumerWidget {
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        _summaryLine(garment),
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      if (_colorsForGarment(garment).isNotEmpty) ...<Widget>[
-                        const SizedBox(height: 24),
-                        _Section(
-                          title: 'Colors',
-                          child: _ColorSwatchList(
-                            shades: _colorsForGarment(garment),
-                          ),
-                        ),
-                      ],
+                      _GarmentDetailTags(garment: garment),
                       const SizedBox(height: 20),
                       if (garment.isArchived)
                         FilledButton.icon(
-                          onPressed: () => _restore(context, ref, garment),
-                          icon: const Icon(Icons.unarchive_outlined),
-                          label: const Text('Restore To Wardrobe'),
+                          onPressed: archiveState.isLoading
+                              ? null
+                              : () => _restore(context, ref, garment),
+                          icon: archiveState.isLoading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.unarchive_outlined),
+                          label: Text(
+                            archiveState.isLoading
+                                ? 'Restoring...'
+                                : 'Restore To Wardrobe',
+                          ),
                         )
                       else
                         FilledButton.icon(
@@ -141,22 +160,23 @@ class GarmentDetailScreen extends ConsumerWidget {
                           activeLending: activeLending,
                           onMarkReturned: () =>
                               _markReturned(context, ref, garment),
-                          isReturning: ref.watch(lendingControllerProvider)
+                          isReturning: ref
+                              .watch(lendingControllerProvider)
                               .isLoading,
                           formatDate: _formatDate,
                         ),
                       ],
-                      const SizedBox(height: 24),
-                      _Section(
-                        title: 'Care & Readiness',
-                        child: _DetailsList(
-                          values: <String, String?>{
-                            'Laundry Status': garment.laundryStatus.label,
-                            'Ironing': garment.ironingStatus?.label,
-                            'Wash Instructions': garment.washInstructions,
-                          },
+                      if (_hasCareInformation(garment)) ...<Widget>[
+                        const SizedBox(height: 24),
+                        _Section(
+                          title: 'Care & Readiness',
+                          child: _DetailsList(
+                            values: <String, String?>{
+                              'Wash Instructions': garment.washInstructions,
+                            },
+                          ),
                         ),
-                      ),
+                      ],
                       if (_hasWardrobeInformation(garment)) ...<Widget>[
                         const SizedBox(height: 24),
                         _Section(
@@ -164,13 +184,8 @@ class GarmentDetailScreen extends ConsumerWidget {
                           child: _DetailsList(
                             values: <String, String?>{
                               'Location': garment.locationName,
-                              'Sizes': GarmentMetadataFormatter
-                                  .detailListSummary(garment.effectiveSizes),
-                              'Season': GarmentMetadataFormatter.seasonSummary(
-                                garment.seasons,
-                              ),
-                              'Occasions': GarmentMetadataFormatter
-                                  .detailListSummary(
+                              'Occasions':
+                                  GarmentMetadataFormatter.detailListSummary(
                                     garment.occasions.map(_titleCase).toList(),
                                   ),
                             },
@@ -183,7 +198,6 @@ class GarmentDetailScreen extends ConsumerWidget {
                           title: 'Garment Details',
                           child: _DetailsList(
                             values: <String, String?>{
-                              'Category': garment.category.label,
                               'Subcategory':
                                   garment.category == GarmentCategory.outerwear
                                   ? garment.subcategory
@@ -198,9 +212,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                                   _supportsSleeveLength(garment.category)
                                   ? garment.sleeveLength
                                   : null,
-                              'Stitching': _supportsStitching(
-                                garment.category,
-                              )
+                              'Stitching': _supportsStitching(garment.category)
                                   ? garment.stitchingStatus?.label
                                   : null,
                               'Details': garment.details,
@@ -312,9 +324,9 @@ class GarmentDetailScreen extends ConsumerWidget {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Wear Record Deleted.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Wear Record Deleted.')));
   }
 
   Future<void> _archive(
@@ -347,6 +359,10 @@ class GarmentDetailScreen extends ConsumerWidget {
       return;
     }
 
+    if (ref.read(garmentArchiveControllerProvider).isLoading) {
+      return;
+    }
+
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
@@ -360,9 +376,15 @@ class GarmentDetailScreen extends ConsumerWidget {
     if (garment.memberId != selectedMember.id) {
       messenger.showSnackBar(
         const SnackBar(
-          content: Text('This garment does not belong to the selected profile.'),
+          content: Text(
+            'This garment does not belong to the selected profile.',
+          ),
         ),
       );
+      return;
+    }
+
+    if (ref.read(garmentArchiveControllerProvider).isLoading) {
       return;
     }
 
@@ -387,13 +409,8 @@ class GarmentDetailScreen extends ConsumerWidget {
       ref.invalidate(garmentsProvider);
       ref.invalidate(archivedGarmentsProvider);
       ref.invalidate(garmentProvider(garmentId));
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Moved To Closet Vault. Refresh May Take A Moment.'),
-        ),
-      );
-      return;
+    } catch (error) {
+      debugPrint('Could not refresh garment providers after archive: $error');
     }
 
     if (Navigator.of(context).canPop()) {
@@ -410,6 +427,10 @@ class GarmentDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Garment garment,
   ) async {
+    if (ref.read(garmentArchiveControllerProvider).isLoading) {
+      return;
+    }
+
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
 
     await ref
@@ -429,9 +450,13 @@ class GarmentDetailScreen extends ConsumerWidget {
       return;
     }
 
-    ref.invalidate(garmentsProvider);
-    ref.invalidate(archivedGarmentsProvider);
-    ref.invalidate(garmentProvider(garmentId));
+    try {
+      ref.invalidate(garmentsProvider);
+      ref.invalidate(archivedGarmentsProvider);
+      ref.invalidate(garmentProvider(garmentId));
+    } catch (error) {
+      debugPrint('Could not refresh garment providers after restore: $error');
+    }
 
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -468,31 +493,17 @@ class GarmentDetailScreen extends ConsumerWidget {
     );
   }
 
-  String _summaryLine(Garment garment) {
-    final List<String> values = <String>[
-      garment.category.label,
-      garment.availabilityStatus.label,
-    ];
-    final String sizeSummary = GarmentMetadataFormatter.sizeSummary(
-      garment.effectiveSizes,
-    );
-    if (sizeSummary.isNotEmpty) {
-      values.add(sizeSummary);
-    }
-
-    return values.join(' - ');
-  }
-
   bool _hasWardrobeInformation(Garment garment) {
     return (garment.locationName?.trim().isNotEmpty ?? false) ||
-        garment.effectiveSizes.isNotEmpty ||
-        garment.seasons.any((String season) => season.trim().isNotEmpty) ||
         garment.occasions.any((String occasion) => occasion.trim().isNotEmpty);
   }
 
+  bool _hasCareInformation(Garment garment) {
+    return garment.washInstructions?.trim().isNotEmpty ?? false;
+  }
+
   bool _hasGarmentDetails(Garment garment) {
-    return garment.category.label.trim().isNotEmpty ||
-        (garment.category == GarmentCategory.outerwear &&
+    return (garment.category == GarmentCategory.outerwear &&
             (garment.subcategory?.trim().isNotEmpty ?? false)) ||
         (garment.fabric?.trim().isNotEmpty ?? false) ||
         (_supportsFit(garment.category) &&
@@ -511,25 +522,6 @@ class GarmentDetailScreen extends ConsumerWidget {
         (garment.purchaseStore?.trim().isNotEmpty ?? false) ||
         garment.price != null ||
         garment.purchaseDate != null;
-  }
-
-  List<GarmentColorShade> _colorsForGarment(Garment garment) {
-    if (garment.colorShades.isNotEmpty) {
-      return normalizeColorShades(garment.colorShades);
-    }
-
-    final String? name = garment.colorName?.trim();
-    if (name == null || name.isEmpty) {
-      return const <GarmentColorShade>[];
-    }
-
-    return <GarmentColorShade>[
-      GarmentColorShade(
-        name: name,
-        hex: garment.colorHex ?? '#CCCCCC',
-        isPrimary: true,
-      ),
-    ];
   }
 
   bool _supportsSleeveLength(GarmentCategory category) {
@@ -615,9 +607,10 @@ class _LendingSection extends StatelessWidget {
                           : 'Lent To'):
                       record.personName,
                   (record.direction == LendingDirection.borrowed
-                          ? 'Borrowed Date'
-                          : 'Lent Date'):
-                      formatDate(record.dateOut),
+                      ? 'Borrowed Date'
+                      : 'Lent Date'): formatDate(
+                    record.dateOut,
+                  ),
                   'Expected Return Date': record.expectedReturnDate == null
                       ? null
                       : formatDate(record.expectedReturnDate!),
@@ -646,18 +639,129 @@ class _LendingSection extends StatelessWidget {
   }
 }
 
-class _ColorSwatchList extends StatelessWidget {
-  const _ColorSwatchList({required this.shades});
+class _GarmentDetailTags extends StatelessWidget {
+  const _GarmentDetailTags({required this.garment});
 
-  final List<GarmentColorShade> shades;
+  final Garment garment;
 
   @override
   Widget build(BuildContext context) {
+    final List<GarmentColorShade> shades = _colorsForGarment(garment);
+
     return Wrap(
-      spacing: 16,
-      runSpacing: 10,
-      children: shades.map((GarmentColorShade shade) {
-        return Row(
+      spacing: 6,
+      runSpacing: 6,
+      children: <Widget>[
+        _DetailTag(
+          key: const ValueKey<String>('garment-detail-category-tag'),
+          label: garment.category.label,
+        ),
+        _DetailTag(
+          key: const ValueKey<String>('garment-detail-availability-tag'),
+          label: garment.availabilityStatus.label,
+        ),
+        for (final String size in garment.effectiveSizes)
+          if (size.trim().isNotEmpty)
+            _DetailTag(
+              key: ValueKey<String>('garment-detail-size-tag-${size.trim()}'),
+              label: size.trim(),
+            ),
+        for (final GarmentColorShade shade in shades)
+          _ColorDetailTag(
+            key: ValueKey<String>('garment-detail-color-tag-${shade.name}'),
+            shade: shade,
+          ),
+        for (final String season in garment.seasons)
+          if (season.trim().isNotEmpty)
+            _DetailTag(
+              key: ValueKey<String>(
+                'garment-detail-season-tag-${season.trim()}',
+              ),
+              label: _formatSeason(season),
+            ),
+        _DetailTag(
+          key: const ValueKey<String>('garment-detail-laundry-tag'),
+          label: garment.laundryStatus.label,
+        ),
+        if (garment.ironingStatus != null)
+          _DetailTag(
+            key: const ValueKey<String>('garment-detail-ironing-tag'),
+            label: garment.ironingStatus!.label,
+          ),
+      ],
+    );
+  }
+
+  static List<GarmentColorShade> _colorsForGarment(Garment garment) {
+    if (garment.colorShades.isNotEmpty) {
+      return normalizeColorShades(garment.colorShades);
+    }
+
+    final String? name = garment.colorName?.trim();
+    if (name == null || name.isEmpty) {
+      return const <GarmentColorShade>[];
+    }
+
+    return <GarmentColorShade>[
+      GarmentColorShade(
+        name: name,
+        hex: garment.colorHex ?? '#CCCCCC',
+        isPrimary: true,
+      ),
+    ];
+  }
+
+  static String _formatSeason(String season) {
+    final String clean = season.trim();
+    if (clean.toLowerCase() == 'all') {
+      return 'All Seasons';
+    }
+
+    if (clean.isEmpty) {
+      return '';
+    }
+
+    return clean[0].toUpperCase() + clean.substring(1).toLowerCase();
+  }
+}
+
+class _DetailTag extends StatelessWidget {
+  const _DetailTag({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+      ),
+    );
+  }
+}
+
+class _ColorDetailTag extends StatelessWidget {
+  const _ColorDetailTag({super.key, required this.shade});
+
+  final GarmentColorShade shade;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             DecoratedBox(
@@ -665,25 +769,21 @@ class _ColorSwatchList extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: Theme.of(context).dividerColor),
               ),
-              child: CircleAvatar(
-                radius: 7,
-                backgroundColor: _colorFromHex(shade.hex),
+              child: SizedBox.square(
+                dimension: 8,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _colorFromHex(shade.hex),
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 6),
-            Text(shade.name),
-            if (shade.isPrimary) ...<Widget>[
-              const SizedBox(width: 4),
-              Icon(
-                Icons.check_circle,
-                size: 14,
-                color: Theme.of(context).colorScheme.primary,
-                semanticLabel: 'Primary',
-              ),
-            ],
+            const SizedBox(width: 5),
+            Text(shade.name, style: Theme.of(context).textTheme.labelSmall),
           ],
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
 
@@ -796,13 +896,14 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
         : _selectedEvent == _otherEventValue
         ? customEvent
         : _selectedEvent;
+    final String cleanEventName = eventName?.trim() ?? '';
 
     final bool success;
     try {
       success = await widget.onSubmit(
         _WearEntryData(
           wornDate: _selectedWornDate,
-          eventName: eventName?.trim().isEmpty ?? true ? null : eventName,
+          eventName: cleanEventName.isEmpty ? null : cleanEventName,
           notes: notes.isEmpty ? null : notes,
           laundryStatusAfter: _selectedLaundryStatus,
         ),

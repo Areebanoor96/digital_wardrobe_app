@@ -55,7 +55,7 @@ class ArchivedGarmentsScreen extends ConsumerWidget {
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: .7,
+                childAspectRatio: .58,
               ),
               itemBuilder: (BuildContext context, int index) {
                 final Garment garment = garments[index];

@@ -6,54 +6,64 @@ import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/repositories/alerts_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final FutureProvider<List<Alert>> alertsProvider = FutureProvider<List<Alert>>((
-  Ref ref,
-) async {
-  final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
+final AsyncNotifierProvider<AlertsController, List<Alert>> alertsProvider =
+    AsyncNotifierProvider<AlertsController, List<Alert>>(AlertsController.new);
 
-  if (selectedMember == null) {
-    return const <Alert>[];
+class AlertsController extends AsyncNotifier<List<Alert>> {
+  @override
+  FutureOr<List<Alert>> build() async {
+    final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
+
+    if (selectedMember == null) {
+      return const <Alert>[];
+    }
+
+    final AlertsRepository repository = ref.watch(alertsRepositoryProvider);
+    await repository.generateAndInsertAlerts(memberId: selectedMember.id);
+
+    return repository.fetchAlerts(memberId: selectedMember.id);
   }
 
-  final AlertsRepository repository = ref.watch(alertsRepositoryProvider);
-
-  await repository.generateAndInsertAlerts(memberId: selectedMember.id);
-
-  ref.keepAlive();
-
-  return repository.fetchAlerts(memberId: selectedMember.id);
-});
-
-final alertMutationControllerProvider =
-    AutoDisposeAsyncNotifierProvider<AlertMutationController, void>(
-      AlertMutationController.new,
-    );
-
-class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
-  @override
-  FutureOr<void> build() {}
-
   Future<void> markAsRead(String alertId) async {
-    state = const AsyncLoading<void>();
+    final AsyncValue<List<Alert>> previous = state;
+    final List<Alert>? current = previous.valueOrNull;
 
-    state = await AsyncValue.guard(
-      () => ref.read(alertsRepositoryProvider).markAsRead(alertId),
-    );
+    if (current != null) {
+      final DateTime now = DateTime.now().toUtc();
+      state = AsyncData<List<Alert>>(
+        current
+            .map(
+              (Alert alert) => alert.id == alertId
+                  ? alert.copyWith(isRead: true, readAt: now)
+                  : alert,
+            )
+            .toList(),
+      );
+    }
 
-    if (!state.hasError) {
-      ref.invalidate(alertsProvider);
+    try {
+      await ref.read(alertsRepositoryProvider).markAsRead(alertId);
+    } catch (_) {
+      state = previous;
+      rethrow;
     }
   }
 
   Future<void> dismissAlert(String alertId) async {
-    state = const AsyncLoading<void>();
+    final AsyncValue<List<Alert>> previous = state;
+    final List<Alert>? current = previous.valueOrNull;
 
-    state = await AsyncValue.guard(
-      () => ref.read(alertsRepositoryProvider).dismissAlert(alertId),
-    );
+    if (current != null) {
+      state = AsyncData<List<Alert>>(
+        current.where((Alert alert) => alert.id != alertId).toList(),
+      );
+    }
 
-    if (!state.hasError) {
-      ref.invalidate(alertsProvider);
+    try {
+      await ref.read(alertsRepositoryProvider).dismissAlert(alertId);
+    } catch (_) {
+      state = previous;
+      rethrow;
     }
   }
 
@@ -61,23 +71,18 @@ class AlertMutationController extends AutoDisposeAsyncNotifier<void> {
     final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
     if (selectedMember == null) {
-      state = AsyncError<void>(
+      state = AsyncError<List<Alert>>(
         StateError('No profile selected.'),
         StackTrace.current,
       );
       return;
     }
 
-    state = const AsyncLoading<void>();
-
-    state = await AsyncValue.guard(
-      () => ref
-          .read(alertsRepositoryProvider)
-          .generateAndInsertAlerts(memberId: selectedMember.id),
-    );
-
-    if (!state.hasError) {
-      ref.invalidate(alertsProvider);
-    }
+    state = const AsyncLoading<List<Alert>>();
+    state = await AsyncValue.guard(() async {
+      final AlertsRepository repository = ref.read(alertsRepositoryProvider);
+      await repository.generateAndInsertAlerts(memberId: selectedMember.id);
+      return repository.fetchAlerts(memberId: selectedMember.id);
+    });
   }
 }

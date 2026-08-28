@@ -326,7 +326,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: .7,
+                            childAspectRatio: .58,
                           ),
                     ),
                   ),

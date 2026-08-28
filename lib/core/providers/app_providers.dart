@@ -8,6 +8,7 @@ import 'package:digital_wardrobe_app/data/models/garment_location.dart';
 import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/lending_record.dart';
+import 'package:digital_wardrobe_app/data/models/ootd_recommendation_snapshot.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
@@ -17,6 +18,7 @@ import 'package:digital_wardrobe_app/data/repositories/family_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/garment_location_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/garment_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/lending_repository.dart';
+import 'package:digital_wardrobe_app/data/repositories/ootd_recommendation_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/outfit_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/wear_log_repository.dart';
@@ -94,8 +96,42 @@ growthMeasurementsProvider =
 
 final Provider<AlertsRepository> alertsRepositoryProvider =
     Provider<AlertsRepository>(
-      (Ref ref) => AlertsRepository(SupabaseService.client),
+      (Ref ref) => AlertsRepository(
+        SupabaseService.client,
+        ootdRecommendationRepository: ref.watch(
+          ootdRecommendationRepositoryProvider,
+        ),
+      ),
     );
+
+final Provider<OotdRecommendationRepository> ootdRecommendationRepositoryProvider =
+    Provider<OotdRecommendationRepository>(
+      (Ref ref) => OotdRecommendationRepository(
+        SupabaseService.client,
+        ref.watch(garmentRepositoryProvider),
+      ),
+    );
+
+final ootdRecommendationSnapshotProvider =
+    FutureProvider.family<RestoredOotdRecommendation, String>((
+      Ref ref,
+      String snapshotId,
+    ) {
+      final FamilyMember? selectedMember = ref.watch(
+        selectedFamilyMemberProvider,
+      );
+
+      if (selectedMember == null) {
+        throw StateError('No profile selected.');
+      }
+
+      return ref
+          .watch(ootdRecommendationRepositoryProvider)
+          .fetchRestoredRecommendation(
+            snapshotId: snapshotId,
+            memberId: selectedMember.id,
+          );
+    });
 
 final FutureProvider<List<Garment>> garmentsProvider =
     FutureProvider<List<Garment>>((Ref ref) async {

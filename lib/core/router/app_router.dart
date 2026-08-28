@@ -7,8 +7,10 @@ import 'package:digital_wardrobe_app/features/auth/screens/onboarding_screen.dar
 import 'package:digital_wardrobe_app/features/auth/screens/setup_wizard_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/splash_screen.dart';
 import 'package:digital_wardrobe_app/features/garment_form/screens/garment_form_screen.dart';
+import 'package:digital_wardrobe_app/features/ootd/screens/ootd_recommendation_screen.dart';
 import 'package:digital_wardrobe_app/features/outfits/screens/outfit_builder_screen.dart';
 import 'package:digital_wardrobe_app/features/outfits/screens/outfit_detail_screen.dart';
+import 'package:digital_wardrobe_app/features/profile/Family/screens/family_member_detail_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/profile_selection_screen.dart';
 import 'package:digital_wardrobe_app/features/shell/screens/app_shell_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_screen.dart';
@@ -113,6 +115,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         builder: (_, _) => const GarmentLocationsScreen(),
       ),
       GoRoute(
+        path: '/family/:id',
+        builder: (_, GoRouterState state) {
+          return FamilyMemberDetailRouteScreen(
+            memberId: state.pathParameters['id']!,
+          );
+        },
+      ),
+      GoRoute(
         path: '/garments/:id',
         builder: (_, GoRouterState state) {
           return GarmentDetailScreen(garmentId: state.pathParameters['id']!);
@@ -132,6 +142,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         path: '/outfits/:id',
         builder: (_, GoRouterState state) {
           return OutfitDetailScreen(outfitId: state.pathParameters['id']!);
+        },
+      ),
+      GoRoute(
+        path: '/ootd/recommendations/:id',
+        builder: (_, GoRouterState state) {
+          return OotdRecommendationScreen(
+            snapshotId: state.pathParameters['id']!,
+          );
         },
       ),
       GoRoute(

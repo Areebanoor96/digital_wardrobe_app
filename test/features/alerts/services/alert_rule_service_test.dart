@@ -535,12 +535,15 @@ void main() {
         enabled: true,
         hasOotdAlertToday: false,
         isOotdEligible: true,
+        snapshotId: 'snapshot-1',
       );
 
       expect(alert, isNotNull);
       expect(alert!['type'], 'ootd');
       expect(alert['member_id'], 'member-1');
       expect(alert['garment_id'], isNull);
+      expect(alert['target_type'], 'ootd_recommendation');
+      expect(alert['target_id'], 'snapshot-1');
       expect(alert['title'], 'Your outfit suggestion is ready');
     });
 
@@ -551,6 +554,7 @@ void main() {
         enabled: false,
         hasOotdAlertToday: false,
         isOotdEligible: true,
+        snapshotId: 'snapshot-1',
       );
 
       expect(alert, isNull);
@@ -563,6 +567,7 @@ void main() {
         enabled: true,
         hasOotdAlertToday: true,
         isOotdEligible: true,
+        snapshotId: 'snapshot-1',
       );
 
       expect(alert, isNull);
@@ -575,6 +580,7 @@ void main() {
         enabled: true,
         hasOotdAlertToday: false,
         isOotdEligible: false,
+        snapshotId: 'snapshot-1',
       );
 
       expect(alert, isNull);

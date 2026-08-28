@@ -30,6 +30,15 @@ enum AlertType {
   };
 }
 
+class AlertTargetTypes {
+  const AlertTargetTypes._();
+
+  static const String garment = 'garment';
+  static const String familyMember = 'family_member';
+  static const String ootdRecommendation = 'ootd_recommendation';
+  static const String outfit = 'outfit';
+}
+
 class Alert {
   const Alert({
     required this.id,
@@ -41,6 +50,11 @@ class Alert {
     this.body,
     this.isRead = false,
     this.isDismissed = false,
+    this.targetType,
+    this.targetId,
+    this.actionPayload = const <String, dynamic>{},
+    this.readAt,
+    this.dismissedAt,
     this.createdAt,
   });
 
@@ -53,6 +67,11 @@ class Alert {
   final String? body;
   final bool isRead;
   final bool isDismissed;
+  final String? targetType;
+  final String? targetId;
+  final Map<String, dynamic> actionPayload;
+  final DateTime? readAt;
+  final DateTime? dismissedAt;
   final DateTime? createdAt;
 
   factory Alert.fromJson(Map<String, dynamic> json) => Alert(
@@ -65,9 +84,48 @@ class Alert {
     body: json['body'] as String?,
     isRead: json['is_read'] as bool? ?? false,
     isDismissed: json['is_dismissed'] as bool? ?? false,
+    targetType: json['target_type'] as String?,
+    targetId: json['target_id'] as String?,
+    actionPayload: _payloadFromJson(json['action_payload']),
+    readAt: DateTime.tryParse(json['read_at'] as String? ?? ''),
+    dismissedAt: DateTime.tryParse(json['dismissed_at'] as String? ?? ''),
     createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
   );
+
+  Alert copyWith({
+    bool? isRead,
+    bool? isDismissed,
+    DateTime? readAt,
+    DateTime? dismissedAt,
+  }) {
+    return Alert(
+      id: id,
+      memberId: memberId,
+      userId: userId,
+      type: type,
+      garmentId: garmentId,
+      title: title,
+      body: body,
+      isRead: isRead ?? this.isRead,
+      isDismissed: isDismissed ?? this.isDismissed,
+      targetType: targetType,
+      targetId: targetId,
+      actionPayload: actionPayload,
+      readAt: readAt ?? this.readAt,
+      dismissedAt: dismissedAt ?? this.dismissedAt,
+      createdAt: createdAt,
+    );
+  }
 }
+
+Map<String, dynamic> _payloadFromJson(dynamic value) {
+  if (value is! Map) {
+    return const <String, dynamic>{};
+  }
+
+  return Map<String, dynamic>.from(value);
+}
+
 AlertType _alertTypeFromJson(String value) {
   return switch (value) {
     'unused' => AlertType.unused,

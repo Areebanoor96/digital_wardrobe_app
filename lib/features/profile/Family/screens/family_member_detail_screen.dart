@@ -7,6 +7,70 @@ import 'package:digital_wardrobe_app/features/profile/Family/widgets/add_growth_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+class FamilyMemberDetailRouteScreen extends ConsumerWidget {
+  const FamilyMemberDetailRouteScreen({super.key, required this.memberId});
+
+  final String memberId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<FamilyMember?> member = ref.watch(
+      familyMemberProvider(memberId),
+    );
+
+    return member.when(
+      loading: () => const Scaffold(
+        appBar: _FamilyMemberLoadingAppBar(),
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, _) => const _FamilyMemberUnavailableScreen(),
+      data: (FamilyMember? value) {
+        if (value == null) {
+          return const _FamilyMemberUnavailableScreen();
+        }
+
+        return FamilyMemberDetailScreen(member: value);
+      },
+    );
+  }
+}
+
+class _FamilyMemberLoadingAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
+  const _FamilyMemberLoadingAppBar();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(leading: const BackArrowButton(), title: const Text('Family'));
+  }
+}
+
+class _FamilyMemberUnavailableScreen extends StatelessWidget {
+  const _FamilyMemberUnavailableScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: const BackArrowButton(),
+        title: const Text('Family'),
+      ),
+      body: const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Text(
+            'This family member is no longer available.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class FamilyMemberDetailScreen extends ConsumerWidget {
   const FamilyMemberDetailScreen({super.key, required this.member});
 

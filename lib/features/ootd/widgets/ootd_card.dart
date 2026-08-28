@@ -8,9 +8,9 @@ class OotdCard extends StatelessWidget {
   const OotdCard({
     super.key,
     required this.recommendation,
-    required this.onRefresh,
+    this.onRefresh,
     required this.outfitContext,
-    required this.onContextChanged,
+    this.onContextChanged,
     this.onSave,
     this.onWear,
     this.isSaving = false,
@@ -18,13 +18,13 @@ class OotdCard extends StatelessWidget {
   });
 
   final OutfitRecommendation recommendation;
-  final VoidCallback onRefresh;
+  final VoidCallback? onRefresh;
   final VoidCallback? onSave;
   final VoidCallback? onWear;
   final bool isSaving;
   final bool isWearing;
   final OutfitContext outfitContext;
-  final ValueChanged<OutfitContext> onContextChanged;
+  final ValueChanged<OutfitContext>? onContextChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -82,18 +82,20 @@ class OotdCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  onPressed: () => _showPersonalizeSheet(context),
-                  icon: const Icon(Icons.tune),
-                  tooltip: 'Personalize outfit',
-                  visualDensity: VisualDensity.compact,
-                ),
-                IconButton(
-                  onPressed: onRefresh,
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh suggestion',
-                  visualDensity: VisualDensity.compact,
-                ),
+                if (onContextChanged != null)
+                  IconButton(
+                    onPressed: () => _showPersonalizeSheet(context),
+                    icon: const Icon(Icons.tune),
+                    tooltip: 'Personalize outfit',
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (onRefresh != null)
+                  IconButton(
+                    onPressed: onRefresh,
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Refresh suggestion',
+                    visualDensity: VisualDensity.compact,
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -496,7 +498,7 @@ class OotdCard extends StatelessWidget {
     );
 
     if (updatedContext != null) {
-      onContextChanged(updatedContext);
+      onContextChanged?.call(updatedContext);
     }
   }
 }
