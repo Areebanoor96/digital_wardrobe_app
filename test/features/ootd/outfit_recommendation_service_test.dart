@@ -417,4 +417,151 @@ void main() {
       expect(result.reasons.join(' '), contains('Weather is unavailable'));
     });
   });
+
+  group('refresh rotation', () {
+    List<Garment> rotationWardrobe() {
+      return <Garment>[
+        ...baseWardrobe(),
+        garment(
+          id: 'dress',
+          name: 'Green Dress',
+          category: GarmentCategory.dress,
+          colorHex: '#2E7D32',
+          fabric: 'Cotton',
+        ),
+        garment(
+          id: 'flats',
+          name: 'Black Flats',
+          category: GarmentCategory.shoe,
+          colorHex: '#000000',
+        ),
+      ];
+    }
+
+    List<OutfitRecommendation> run({int rotateBy = 0}) {
+      return service.recommendMany(
+        allGarments: rotationWardrobe(),
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
+        rotateBy: rotateBy,
+      );
+    }
+
+    String primaryKey(OutfitRecommendation recommendation) {
+      final List<String> ids = recommendation.garments
+          .map((Garment garment) => garment.id)
+          .toList()
+        ..sort();
+      return ids.join(',');
+    }
+
+    List<String> poolKeys(List<OutfitRecommendation> results) {
+      final List<String> keys = <String>[
+        primaryKey(results.first),
+        ...results.first.alternatives.map(primaryKey),
+      ]..sort();
+      return keys;
+    }
+
+    test('rotating changes the primary recommendation without changing the pool', () {
+      final List<OutfitRecommendation> base = run(rotateBy: 0);
+      final List<OutfitRecommendation> rotated = run(rotateBy: 1);
+
+      expect(base, isNotEmpty);
+      expect(rotated, isNotEmpty);
+      expect(base.first.alternatives, isNotEmpty);
+      expect(
+        primaryKey(rotated.first),
+        isNot(primaryKey(base.first)),
+      );
+      expect(poolKeys(rotated), unorderedEquals(poolKeys(base)));
+    });
+
+    test('alternatives of the rotated primary cover the rest of the pool', () {
+      final List<OutfitRecommendation> base = run(rotateBy: 0);
+      final List<OutfitRecommendation> rotated = run(rotateBy: 1);
+
+      expect(rotated.length, base.length);
+      expect(rotated.first.alternatives.length, base.first.alternatives.length);
+      expect(
+        rotated.first.alternatives.map(primaryKey),
+        isNot(contains(primaryKey(rotated.first))),
+      );
+    });
+
+    test('rotateBy wraps around deterministically', () {
+      final List<OutfitRecommendation> base = run(rotateBy: 0);
+      final int poolLength = 1 + base.first.alternatives.length;
+
+      final List<OutfitRecommendation> wrapped = run(rotateBy: poolLength);
+      expect(primaryKey(wrapped.first), primaryKey(base.first));
+      expect(poolKeys(wrapped), poolKeys(base));
+    });
+
+    test('negative rotateBy is normalized like a backward rotation', () {
+      final List<OutfitRecommendation> base = run(rotateBy: 0);
+      final int poolLength = 1 + base.first.alternatives.length;
+
+      final List<OutfitRecommendation> backward = run(rotateBy: poolLength - 1);
+      final List<OutfitRecommendation> negative = run(rotateBy: -1);
+      expect(primaryKey(negative.first), primaryKey(backward.first));
+    });
+
+    test('recommend honors rotateBy and still attaches alternatives', () {
+      final OutfitRecommendation result = service.recommend(
+        allGarments: rotationWardrobe(),
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
+        rotateBy: 1,
+      );
+
+      expect(result.alternatives, isNotEmpty);
+      expect(
+        primaryKey(result),
+        primaryKey(run(rotateBy: 1).first),
+      );
+    });
+
+    test('hard rules hold for every rotated recommendation', () {
+      final List<OutfitRecommendation> results = service.recommendMany(
+        allGarments: <Garment>[
+          ...rotationWardrobe(),
+          garment(
+            id: 'dirty',
+            name: 'Dirty Shirt',
+            category: GarmentCategory.top,
+            laundryStatus: LaundryStatus.dirty,
+          ),
+          garment(
+            id: 'archived',
+            name: 'Archived Shoes',
+            category: GarmentCategory.shoe,
+            isArchived: true,
+          ),
+          garment(
+            id: 'other',
+            name: 'Other Member Trousers',
+            category: GarmentCategory.bottom,
+            memberId: 'member-2',
+          ),
+        ],
+        memberId: 'member-1',
+        now: DateTime(2026, 8, 24),
+        rotateBy: 1,
+      );
+
+      final List<OutfitRecommendation> all = <OutfitRecommendation>[
+        results.first,
+        ...results.first.alternatives,
+      ];
+      for (final OutfitRecommendation recommendation in all) {
+        final Iterable<String> ids = recommendation.garments.map(
+          (Garment garment) => garment.id,
+        );
+        expect(ids, isNot(contains('dirty')));
+        expect(ids, isNot(contains('archived')));
+        expect(ids, isNot(contains('other')));
+      }
+    });
+  });
 }

@@ -1,4 +1,6 @@
+import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/garment_location.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
 import 'package:flutter/material.dart';
@@ -25,10 +27,13 @@ class WardrobeFilterSheet extends ConsumerWidget {
       garments.expand((Garment garment) => garment.effectiveSizes),
     );
 
+    final List<GarmentLocation> memberLocations =
+        ref.watch(garmentLocationsProvider).valueOrNull ??
+        const <GarmentLocation>[];
+
     final Map<String, String> locations = <String, String>{
-      for (final Garment garment in garments)
-        if (garment.locationId != null && garment.locationName != null)
-          garment.locationId!: garment.locationName!,
+      for (final GarmentLocation location in memberLocations)
+        location.id: location.name,
     };
 
     final List<String> outerwearSubcategories = _uniqueValues(
@@ -254,7 +259,14 @@ class WardrobeFilterSheet extends ConsumerWidget {
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<String?>(
-                      initialValue: filters.locationId,
+                      key: ValueKey<String?>(
+                        locations.containsKey(filters.locationId)
+                            ? filters.locationId
+                            : null,
+                      ),
+                      initialValue: locations.containsKey(filters.locationId)
+                          ? filters.locationId
+                          : null,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.place_outlined),
                         labelText: 'Location',

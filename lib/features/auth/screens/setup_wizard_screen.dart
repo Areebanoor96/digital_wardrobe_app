@@ -27,7 +27,6 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   bool _unusedAlerts = true;
   bool _laundryAlerts = true;
   bool _ootdAlerts = true;
-  bool _growthAlerts = true;
 
   @override
   void dispose() {
@@ -47,7 +46,6 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
     _unusedAlerts = profile.unusedAlertsEnabled;
     _laundryAlerts = profile.laundryAlertsEnabled;
     _ootdAlerts = profile.ootdAlertsEnabled;
-    _growthAlerts = profile.growthAlertsEnabled;
   }
 
   void _next() {
@@ -80,7 +78,6 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
         unusedAlertsEnabled: _unusedAlerts,
         laundryAlertsEnabled: _laundryAlerts,
         ootdAlertsEnabled: _ootdAlerts,
-        growthAlertsEnabled: _growthAlerts,
       );
 
       ref.invalidate(profileProvider);
@@ -335,20 +332,6 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                                     ? null
                                     : (bool value) => setState(
                                           () => _ootdAlerts = value,
-                                        ),
-                              ),
-                              SwitchListTile(
-                                contentPadding: EdgeInsets.zero,
-                                secondary: const Icon(Icons.trending_up),
-                                title: const Text('Kids growth alerts'),
-                                subtitle: const Text(
-                                  'Remind me about sizes and measurements.',
-                                ),
-                                value: _growthAlerts,
-                                onChanged: _saving
-                                    ? null
-                                    : (bool value) => setState(
-                                          () => _growthAlerts = value,
                                         ),
                               ),
                             ],

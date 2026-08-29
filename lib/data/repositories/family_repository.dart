@@ -143,6 +143,17 @@ class FamilyRepository {
         .eq('user_id', _requireUserId());
   }
 
+  Future<void> updateMemberShoeSize({
+    required String id,
+    required String? shoeSize,
+  }) async {
+    await _client
+        .from('family_members')
+        .update(<String, dynamic>{'shoe_size': shoeSize})
+        .eq('id', id)
+        .eq('user_id', _requireUserId());
+  }
+
   Future<FamilyMember?> getFamilyMemberById(String id) async {
     final response = await _client
         .from('family_members')

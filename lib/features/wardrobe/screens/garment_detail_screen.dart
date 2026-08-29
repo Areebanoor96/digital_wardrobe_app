@@ -49,7 +49,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                   onPressed: () =>
                       context.push('/garments/$garmentId/edit', extra: garment),
                   icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Edit Garment',
+                  tooltip: 'Edit Item',
                 ),
                 if (!garment.isArchived)
                   IconButton(
@@ -143,7 +143,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 24),
                       _Section(
-                        title: 'Garment Status',
+                        title: 'Item Status',
                         child: _DetailsList(
                           values: <String, String?>{
                             'Availability': garment.availabilityStatus.label,
@@ -195,27 +195,28 @@ class GarmentDetailScreen extends ConsumerWidget {
                       if (_hasGarmentDetails(garment)) ...<Widget>[
                         const SizedBox(height: 24),
                         _Section(
-                          title: 'Garment Details',
+                          title: 'Item Details',
                           child: _DetailsList(
                             values: <String, String?>{
-                              'Subcategory':
-                                  garment.category == GarmentCategory.outerwear
-                                  ? garment.subcategory
-                                  : null,
-                              'Fabric': garment.fabric,
-                              'Fit': _supportsFit(garment.category)
-                                  ? garment.fit
-                                  : null,
-                              'Pattern': garment.pattern,
-                              'Fabric Weight': garment.fabricWeight,
-                              'Sleeve Length':
-                                  _supportsSleeveLength(garment.category)
-                                  ? garment.sleeveLength
-                                  : null,
-                              'Stitching': _supportsStitching(garment.category)
-                                  ? garment.stitchingStatus?.label
-                                  : null,
-                              'Details': garment.details,
+                              if (_supportsSubcategory(garment.category))
+                                _subcategoryLabel(
+                                  garment.category,
+                                ): _supportsSubcategory(garment.category)
+                                    ? garment.subcategory
+                                    : null,
+                              if (_isClothing(garment.category))
+                                ...<String, String?>{
+                                  'Fabric': garment.fabric,
+                                  'Fit': garment.fit,
+                                  'Pattern': garment.pattern,
+                                  'Fabric Weight': garment.fabricWeight,
+                                },
+                              if (_supportsSleeveLength(garment.category))
+                                'Sleeve Length': garment.sleeveLength,
+                              if (_supportsStitching(garment.category))
+                                'Stitching': garment.stitchingStatus?.label,
+                              if (garment.details?.trim().isNotEmpty ?? false)
+                                'Details': garment.details,
                             },
                           ),
                         ),
@@ -503,13 +504,18 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   bool _hasGarmentDetails(Garment garment) {
-    return (garment.category == GarmentCategory.outerwear &&
-            (garment.subcategory?.trim().isNotEmpty ?? false)) ||
-        (garment.fabric?.trim().isNotEmpty ?? false) ||
-        (_supportsFit(garment.category) &&
-            (garment.fit?.trim().isNotEmpty ?? false)) ||
-        (garment.pattern?.trim().isNotEmpty ?? false) ||
-        (garment.fabricWeight?.trim().isNotEmpty ?? false) ||
+    final bool clothingDetails =
+        _isClothing(garment.category) &&
+        ((garment.fabric?.trim().isNotEmpty ?? false) ||
+            (garment.fit?.trim().isNotEmpty ?? false) ||
+            (garment.pattern?.trim().isNotEmpty ?? false) ||
+            (garment.fabricWeight?.trim().isNotEmpty ?? false));
+    final bool subcategoryDetails =
+        _supportsSubcategory(garment.category) &&
+        (garment.subcategory?.trim().isNotEmpty ?? false);
+
+    return subcategoryDetails ||
+        clothingDetails ||
         (_supportsSleeveLength(garment.category) &&
             (garment.sleeveLength?.trim().isNotEmpty ?? false)) ||
         (_supportsStitching(garment.category) &&
@@ -530,12 +536,30 @@ class GarmentDetailScreen extends ConsumerWidget {
         category == GarmentCategory.outerwear;
   }
 
-  bool _supportsFit(GarmentCategory category) {
+  bool _isClothing(GarmentCategory category) {
     return category == GarmentCategory.top ||
         category == GarmentCategory.bottom ||
         category == GarmentCategory.dress ||
-        category == GarmentCategory.outerwear ||
-        category == GarmentCategory.shoe;
+        category == GarmentCategory.outerwear;
+  }
+
+  bool _supportsSubcategory(GarmentCategory category) {
+    return category == GarmentCategory.outerwear ||
+        category == GarmentCategory.shoe ||
+        category == GarmentCategory.bag ||
+        category == GarmentCategory.accessory ||
+        category == GarmentCategory.jewelry;
+  }
+
+  String _subcategoryLabel(GarmentCategory category) {
+    return switch (category) {
+      GarmentCategory.outerwear => 'Outerwear Subcategory',
+      GarmentCategory.shoe => 'Shoe Type',
+      GarmentCategory.bag => 'Bag Type',
+      GarmentCategory.accessory => 'Accessory Type',
+      GarmentCategory.jewelry => 'Jewelry Type',
+      _ => 'Subcategory',
+    };
   }
 
   bool _supportsStitching(GarmentCategory category) {
@@ -647,6 +671,12 @@ class _GarmentDetailTags extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<GarmentColorShade> shades = _colorsForGarment(garment);
+    final String sizeLabel = GarmentMetadataFormatter.sizeSummary(
+      garment.effectiveSizes,
+    );
+    final String seasonLabel = GarmentMetadataFormatter.seasonTagLabel(
+      garment.seasons,
+    );
 
     return Wrap(
       spacing: 6,
@@ -654,31 +684,27 @@ class _GarmentDetailTags extends StatelessWidget {
       children: <Widget>[
         _DetailTag(
           key: const ValueKey<String>('garment-detail-category-tag'),
-          label: garment.category.label,
+          label: GarmentMetadataFormatter.categoryLabel(garment.category),
         ),
         _DetailTag(
           key: const ValueKey<String>('garment-detail-availability-tag'),
           label: garment.availabilityStatus.label,
         ),
-        for (final String size in garment.effectiveSizes)
-          if (size.trim().isNotEmpty)
-            _DetailTag(
-              key: ValueKey<String>('garment-detail-size-tag-${size.trim()}'),
-              label: size.trim(),
-            ),
-        for (final GarmentColorShade shade in shades)
-          _ColorDetailTag(
-            key: ValueKey<String>('garment-detail-color-tag-${shade.name}'),
-            shade: shade,
+        if (sizeLabel.isNotEmpty && _supportsSizePersistence(garment.category))
+          _DetailTag(
+            key: const ValueKey<String>('garment-detail-size-tag'),
+            label: sizeLabel,
           ),
-        for (final String season in garment.seasons)
-          if (season.trim().isNotEmpty)
-            _DetailTag(
-              key: ValueKey<String>(
-                'garment-detail-season-tag-${season.trim()}',
-              ),
-              label: _formatSeason(season),
-            ),
+        if (shades.isNotEmpty)
+          _ColorDetailTag(
+            key: const ValueKey<String>('garment-detail-color-tag'),
+            shades: shades,
+          ),
+        if (seasonLabel.isNotEmpty)
+          _DetailTag(
+            key: const ValueKey<String>('garment-detail-season-tag'),
+            label: seasonLabel,
+          ),
         _DetailTag(
           key: const ValueKey<String>('garment-detail-laundry-tag'),
           label: garment.laundryStatus.label,
@@ -710,19 +736,6 @@ class _GarmentDetailTags extends StatelessWidget {
       ),
     ];
   }
-
-  static String _formatSeason(String season) {
-    final String clean = season.trim();
-    if (clean.toLowerCase() == 'all') {
-      return 'All Seasons';
-    }
-
-    if (clean.isEmpty) {
-      return '';
-    }
-
-    return clean[0].toUpperCase() + clean.substring(1).toLowerCase();
-  }
 }
 
 class _DetailTag extends StatelessWidget {
@@ -739,17 +752,20 @@ class _DetailTag extends StatelessWidget {
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          label,
+          style: _tagTextStyle(context),
+        ),
       ),
     );
   }
 }
 
 class _ColorDetailTag extends StatelessWidget {
-  const _ColorDetailTag({super.key, required this.shade});
+  const _ColorDetailTag({super.key, required this.shades});
 
-  final GarmentColorShade shade;
+  final List<GarmentColorShade> shades;
 
   @override
   Widget build(BuildContext context) {
@@ -760,27 +776,41 @@ class _ColorDetailTag extends StatelessWidget {
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Theme.of(context).dividerColor),
-              ),
-              child: SizedBox.square(
-                dimension: 8,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: _colorFromHex(shade.hex),
-                    shape: BoxShape.circle,
+            for (int index = 0; index < shades.length; index++) ...<Widget>[
+              if (index > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    '·',
+                    style: _tagTextStyle(context)?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Theme.of(context).dividerColor),
+                ),
+                child: SizedBox.square(
+                  dimension: 8,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: _colorFromHex(shades[index].hex),
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 5),
-            Text(shade.name, style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(width: 5),
+              Text(shades[index].name, style: _tagTextStyle(context)),
+            ],
           ],
         ),
       ),
@@ -796,6 +826,20 @@ class _ColorDetailTag extends StatelessWidget {
 
     return Color(0xFF000000 | value);
   }
+}
+
+TextStyle? _tagTextStyle(BuildContext context) {
+  return Theme.of(
+    context,
+  ).textTheme.labelMedium?.copyWith(fontSize: 12);
+}
+
+bool _supportsSizePersistence(GarmentCategory category) {
+  return category == GarmentCategory.top ||
+      category == GarmentCategory.bottom ||
+      category == GarmentCategory.dress ||
+      category == GarmentCategory.outerwear ||
+      category == GarmentCategory.shoe;
 }
 
 class _WearEntryData {

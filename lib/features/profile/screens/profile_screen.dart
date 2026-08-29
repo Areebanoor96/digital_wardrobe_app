@@ -138,22 +138,6 @@ class ProfileScreen extends ConsumerWidget {
                 );
               },
             ),
-            SwitchListTile(
-              secondary: const Icon(Icons.trending_up),
-              title: const Text('Kids growth alerts'),
-              subtitle: const Text(
-                'Remind me about measurements and important size changes.',
-              ),
-              value: user.growthAlertsEnabled,
-              onChanged: (bool value) async {
-                await ref
-                    .read(profileRepositoryProvider)
-                    .updateGrowthAlertsEnabled(value);
-
-                ref.invalidate(profileProvider);
-                ref.invalidate(alertsProvider);
-              },
-            ),
 
             const Divider(),
             ListTile(

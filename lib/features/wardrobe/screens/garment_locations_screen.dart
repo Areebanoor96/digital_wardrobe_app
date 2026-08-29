@@ -134,37 +134,10 @@ class GarmentLocationsScreen extends ConsumerWidget {
     WidgetRef ref, {
     GarmentLocation? location,
   }) async {
-    final TextEditingController controller = TextEditingController(
-      text: location?.name ?? '',
-    );
-
     final String? name = await showDialog<String>(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(location == null ? 'Add Location' : 'Rename Location'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Location Name'),
-            onSubmitted: (String value) => Navigator.pop(dialogContext, value),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, controller.text),
-              child: Text(location == null ? 'Create' : 'Save'),
-            ),
-          ],
-        );
-      },
+      builder: (_) => _LocationDialog(location: location),
     );
-
-    controller.dispose();
 
     if (name == null || name.trim().isEmpty || !context.mounted) {
       return;
@@ -254,6 +227,57 @@ class GarmentLocationsScreen extends ConsumerWidget {
               : success,
         ),
       ),
+    );
+  }
+}
+
+class _LocationDialog extends StatefulWidget {
+  const _LocationDialog({this.location});
+
+  final GarmentLocation? location;
+
+  @override
+  State<_LocationDialog> createState() => _LocationDialogState();
+}
+
+class _LocationDialogState extends State<_LocationDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.location?.name ?? '');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit(String value) => Navigator.pop(context, value);
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.location == null ? 'Add Location' : 'Rename Location'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(labelText: 'Location Name'),
+        onSubmitted: _submit,
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => _submit(_controller.text),
+          child: Text(widget.location == null ? 'Create' : 'Save'),
+        ),
+      ],
     );
   }
 }

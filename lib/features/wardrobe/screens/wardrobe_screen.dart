@@ -1,6 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/garment_location.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/active_filter_chips.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
@@ -151,6 +152,13 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
 
     final List<Garment> filtered = ref.watch(filteredGarmentsProvider);
 
+    final Map<String, String> locationNames = <String, String>{
+      for (final GarmentLocation location
+          in ref.watch(garmentLocationsProvider).valueOrNull ??
+              const <GarmentLocation>[])
+        location.id: location.name,
+    };
+
     return Scaffold(
       appBar: AppBar(
         leading: widget.canNavigateBack
@@ -252,6 +260,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                   SliverToBoxAdapter(
                     child: ActiveFilterChips(
                       filters: filters,
+                      locationNames: locationNames,
                       onColorRemoved: () => ref
                           .read(wardrobeFilterProvider.notifier)
                           .setColor(null),

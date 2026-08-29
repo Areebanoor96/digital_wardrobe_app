@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
+import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/garment_color.dart';
 import 'package:digital_wardrobe_app/data/models/garment_location.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 enum _GarmentImageSource { camera, gallery, file }
@@ -82,20 +84,23 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     ...?widget.garment?.effectiveSizes,
   };
 
-  late final List<String> _sizeItems = _buildSizeItems();
+  static const List<String> _shoeSizeOptions = <String>[
+    '36',
+    '37',
+    '38',
+    '39',
+    '40',
+    '41',
+    '42',
+  ];
 
-  List<String> _buildSizeItems() {
-    final List<String> result = <String>[..._sizeOptions];
+  List<String> get _categorySizeOptions =>
+      _category == GarmentCategory.shoe ? _shoeSizeOptions : _sizeOptions;
 
-    for (final String size
-        in widget.garment?.effectiveSizes ?? const <String>[]) {
-      if (!result.contains(size)) {
-        result.add(size);
-      }
-    }
-
-    return result;
-  }
+  List<String> get _sizeItems => _optionsWithSavedValue(
+      _categorySizeOptions,
+      _selectedSizes.isEmpty ? null : _selectedSizes.first,
+    );
 
   static const List<String> _outerwearSubcategoryOptions = <String>[
     'Blazer',
@@ -106,6 +111,49 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     'Shawl',
     'Sweater',
     'Vest',
+    'Other',
+  ];
+
+  static const List<String> _shoeSubcategoryOptions = <String>[
+    'Athletic',
+    'Boots',
+    'Clogs',
+    'Flats',
+    'Heels',
+    'Loafers',
+    'Sandals',
+    'Sneakers',
+    'Other',
+  ];
+
+  static const List<String> _bagSubcategoryOptions = <String>[
+    'Backpack',
+    'Clutch',
+    'Crossbody',
+    'Handbag',
+    'Tote',
+    'Wallet',
+    'Other',
+  ];
+
+  static const List<String> _accessorySubcategoryOptions = <String>[
+    'Belt',
+    'Eyewear',
+    'Hair Accessory',
+    'Hat',
+    'Scarf',
+    'Sunglasses',
+    'Watch',
+    'Other',
+  ];
+
+  static const List<String> _jewelrySubcategoryOptions = <String>[
+    'Anklet',
+    'Bracelet',
+    'Earrings',
+    'Necklace',
+    'Pendant',
+    'Ring',
     'Other',
   ];
 
@@ -278,6 +326,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
   bool _saving = false;
   static const String _addNewLocationValue = '__add_new_location__';
+
+  FamilyMember? _mismatchedGarmentMember;
   static const List<String> _occasionOptions = <String>[
     'casual',
     'college',
@@ -759,12 +809,19 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     }
 
     if (widget.garment != null &&
+        widget.garment!.memberId != null &&
         widget.garment!.memberId != selectedMember.id) {
       if (mounted) {
+        final FamilyMember? owner = _mismatchedGarmentMember;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'This garment does not belong to the selected profile.',
+              owner == null
+                  ? 'This garment belongs to a different profile. '
+                        'Switch to that profile before saving it.'
+                  : 'This garment belongs to "${owner.name}", but '
+                        '"${selectedMember.name}" is selected. '
+                        'Switch to ${owner.name}’s profile to save this item.',
             ),
           ),
         );
@@ -814,9 +871,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         memberId: selectedMember.id,
         photoPaths: photoPaths,
         photoUrls: widget.garment?.photoUrls ?? const <String>[],
-        subcategory: _category == GarmentCategory.outerwear
-            ? _selectedSubcategory
-            : widget.garment?.subcategory,
+        subcategory: _showSubcategory ? _selectedSubcategory : null,
         brand: _optional(_brand.text),
         purchaseStore: _optional(_purchaseStore.text),
         colorName: primaryShade.name,
@@ -824,17 +879,17 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         secondaryColorName: secondaryShade?.name,
         secondaryColorHex: secondaryShade?.hex,
         colorShades: colorShades,
-        size: _selectedSizes.firstOrNull,
-        sizes: _selectedSizes.toList(),
+        size: _selectedSizes.isEmpty ? null : _selectedSizes.first,
+        sizes: _showSizes ? _selectedSizes.toList() : const <String>[],
         price: double.tryParse(_price.text.trim()),
         currency: widget.garment?.currency ?? 'PKR',
         occasions: _selectedOccasions.toList(),
         seasons: _selectedSeasons.toList(),
         moods: _selectedMoods.toList(),
-        fabric: _selectedFabric,
-        fit: _selectedFit,
-        pattern: _selectedPattern,
-        fabricWeight: _selectedFabricWeight,
+        fabric: _isClothing ? _selectedFabric : null,
+        fit: _isClothing ? _selectedFit : null,
+        pattern: _isClothing ? _selectedPattern : null,
+        fabricWeight: _isClothing ? _selectedFabricWeight : null,
         sleeveLength: _showSleeveLength ? _selectedSleeveLength : null,
         details: _optional(_details.text),
         washInstructions: widget.garment?.washInstructions,
@@ -842,8 +897,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         lastWornDate: widget.garment?.lastWornDate,
         purchaseDate: _purchaseDate,
         laundryStatus: widget.garment?.laundryStatus ?? LaundryStatus.clean,
-        ironingStatus: _ironingStatus,
-        stitchingStatus: _stitchingStatus,
+        ironingStatus: _isClothing ? _ironingStatus : null,
+        stitchingStatus: _isClothing ? _stitchingStatus : null,
         availabilityStatus: _availabilityStatus,
         locationId: _selectedLocationId,
         isArchived: widget.garment?.isArchived ?? false,
@@ -918,6 +973,14 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       context: context,
       builder: (BuildContext dialogContext) => _AddLocationDialog(
         onSave: (String name) async {
+          final List<GarmentLocation> currentLocations =
+              ref.read(garmentLocationsProvider).valueOrNull ??
+              const <GarmentLocation>[];
+
+          if (hasDuplicateLocationName(currentLocations, name)) {
+            throw LocationNameConflict(name.trim());
+          }
+
           final GarmentLocation location = await ref
               .read(garmentLocationRepositoryProvider)
               .createLocation(memberId: selectedMember.id, name: name);
@@ -1012,15 +1075,49 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       _category == GarmentCategory.dress ||
       _category == GarmentCategory.outerwear;
 
-  List<String> get _subcategoryOptions {
-    if (_category != GarmentCategory.outerwear) {
-      return const <String>[];
-    }
+  bool get _showSizes =>
+      _category == GarmentCategory.top ||
+      _category == GarmentCategory.bottom ||
+      _category == GarmentCategory.dress ||
+      _category == GarmentCategory.outerwear ||
+      _category == GarmentCategory.shoe;
 
-    return _optionsWithSavedValue(
-      _outerwearSubcategoryOptions,
-      _selectedSubcategory,
-    );
+  bool get _showSubcategory =>
+      _category == GarmentCategory.outerwear ||
+      _category == GarmentCategory.shoe ||
+      _category == GarmentCategory.bag ||
+      _category == GarmentCategory.accessory ||
+      _category == GarmentCategory.jewelry;
+
+  bool get _isClothing =>
+      _category == GarmentCategory.top ||
+      _category == GarmentCategory.bottom ||
+      _category == GarmentCategory.dress ||
+      _category == GarmentCategory.outerwear;
+
+  String get _subcategoryLabel => switch (_category) {
+    GarmentCategory.outerwear => 'Outerwear Subcategory',
+    GarmentCategory.shoe => 'Shoe Type',
+    GarmentCategory.bag => 'Bag Type',
+    GarmentCategory.accessory => 'Accessory Type',
+    GarmentCategory.jewelry => 'Jewelry Type',
+    _ => 'Subcategory',
+  };
+
+  String get _sizeLabel => _category == GarmentCategory.shoe
+      ? 'Shoe Sizes'
+      : 'Sizes';
+
+  List<String> get _subcategoryOptions {
+    final List<String> options = switch (_category) {
+      GarmentCategory.shoe => _shoeSubcategoryOptions,
+      GarmentCategory.bag => _bagSubcategoryOptions,
+      GarmentCategory.accessory => _accessorySubcategoryOptions,
+      GarmentCategory.jewelry => _jewelrySubcategoryOptions,
+      _ => _outerwearSubcategoryOptions,
+    };
+
+    return _optionsWithSavedValue(options, _selectedSubcategory);
   }
 
   List<String> _optionsWithSavedValue(List<String> options, String? saved) {
@@ -1037,6 +1134,23 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       garmentLocationsProvider,
     );
 
+    final FamilyMember? selectedMember = ref.watch(
+      selectedFamilyMemberProvider,
+    );
+
+    final bool memberMismatch =
+        widget.garment != null &&
+        widget.garment!.memberId != null &&
+        selectedMember != null &&
+        widget.garment!.memberId != selectedMember.id;
+
+    if (memberMismatch) {
+      _mismatchedGarmentMember =
+          ref.watch(familyMemberProvider(widget.garment!.memberId!)).valueOrNull;
+    } else {
+      _mismatchedGarmentMember = null;
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: const BackArrowButton(),
@@ -1047,6 +1161,36 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: <Widget>[
+            if (memberMismatch) ...<Widget>[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      Icons.person_off_outlined,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'This item belongs to "${_mismatchedGarmentMember?.name ?? 'another profile'}", '
+                        'but "${selectedMember.name}" is currently selected. '
+                        'Switch to ${_mismatchedGarmentMember?.name ?? 'its'} profile to edit this item.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Text(
               'Garment photos',
               style: Theme.of(context).textTheme.titleMedium,
@@ -1129,8 +1273,11 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 if (value != null) {
                   setState(() {
                     _category = value;
-                    if (_category != GarmentCategory.outerwear) {
+                    if (!_showSubcategory) {
                       _selectedSubcategory = null;
+                    }
+                    if (!_showSizes) {
+                      _selectedSizes.clear();
                     }
                     if (!_showSleeveLength) {
                       _selectedSleeveLength = null;
@@ -1139,15 +1286,15 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 }
               },
             ),
-            if (_category == GarmentCategory.outerwear) ...<Widget>[
+            if (_showSubcategory) ...<Widget>[
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
                 initialValue: _subcategoryOptions.contains(_selectedSubcategory)
                     ? _selectedSubcategory
                     : null,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Outerwear Subcategory',
+                decoration: InputDecoration(
+                  labelText: _subcategoryLabel,
                   hintText: 'Optional',
                 ),
                 items: <DropdownMenuItem<String?>>[
@@ -1194,7 +1341,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             DropdownButtonFormField<GarmentAvailabilityStatus>(
               initialValue: _availabilityStatus,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Garment Status'),
+              decoration: const InputDecoration(labelText: 'Item Status'),
               items: GarmentAvailabilityStatus.values
                   .map(
                     (GarmentAvailabilityStatus status) =>
@@ -1378,179 +1525,185 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               },
             ),
             const SizedBox(height: 12),
-            _SizeMultiSelect(
-              sizes: _sizeItems,
-              selectedSizes: _selectedSizes,
-              enabled: !_saving,
-              onChanged: (Set<String> values) {
-                setState(() {
-                  _selectedSizes
-                    ..clear()
-                    ..addAll(values);
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<StitchingStatus?>(
-              initialValue: _stitchingStatus,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Stitching Status',
-                hintText: 'Optional',
+            if (_showSizes) ...<Widget>[
+              _SizeMultiSelect(
+                label: _sizeLabel,
+                sizes: _sizeItems,
+                selectedSizes: _selectedSizes,
+                enabled: !_saving,
+                onChanged: (Set<String> values) {
+                  setState(() {
+                    _selectedSizes
+                      ..clear()
+                      ..addAll(values);
+                  });
+                },
               ),
-              items: <DropdownMenuItem<StitchingStatus?>>[
-                const DropdownMenuItem<StitchingStatus?>(
-                  value: null,
-                  child: Text('Not specified'),
+              const SizedBox(height: 12),
+            ],
+            if (_isClothing) ...<Widget>[
+              DropdownButtonFormField<StitchingStatus?>(
+                initialValue: _stitchingStatus,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Stitching Status',
+                  hintText: 'Optional',
                 ),
-                ...StitchingStatus.values.map(
-                  (StitchingStatus status) =>
-                      DropdownMenuItem<StitchingStatus?>(
-                        value: status,
-                        child: Text(status.label),
-                      ),
-                ),
-              ],
-              onChanged: (StitchingStatus? value) {
-                setState(() {
-                  _stitchingStatus = value;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<IroningStatus?>(
-              initialValue: _ironingStatus,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Ironing Status',
-                hintText: 'Optional',
-              ),
-              items: <DropdownMenuItem<IroningStatus?>>[
-                const DropdownMenuItem<IroningStatus?>(
-                  value: null,
-                  child: Text('Not specified'),
-                ),
-                ...IroningStatus.values.map(
-                  (IroningStatus status) => DropdownMenuItem<IroningStatus?>(
-                    value: status,
-                    child: Text(status.label),
+                items: <DropdownMenuItem<StitchingStatus?>>[
+                  const DropdownMenuItem<StitchingStatus?>(
+                    value: null,
+                    child: Text('Not specified'),
                   ),
-                ),
-              ],
-              onChanged: (IroningStatus? value) {
-                setState(() {
-                  _ironingStatus = value;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              initialValue: _selectedFabric,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Fabric',
-                hintText: 'Select a fabric (optional)',
-              ),
-              items: <DropdownMenuItem<String?>>[
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Not specified'),
-                ),
-                ..._fabricDropdownItems.map(
-                  (String fabric) => DropdownMenuItem<String?>(
-                    value: fabric,
-                    child: Text(fabric),
+                  ...StitchingStatus.values.map(
+                    (StitchingStatus status) =>
+                        DropdownMenuItem<StitchingStatus?>(
+                          value: status,
+                          child: Text(status.label),
+                        ),
                   ),
-                ),
-              ],
-              onChanged: (String? value) {
-                setState(() {
-                  _selectedFabric = value;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              initialValue: _selectedFit,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Fit',
-                hintText: 'Select a fit (optional)',
+                ],
+                onChanged: (StitchingStatus? value) {
+                  setState(() {
+                    _stitchingStatus = value;
+                  });
+                },
               ),
-              items: <DropdownMenuItem<String?>>[
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Not specified'),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<IroningStatus?>(
+                initialValue: _ironingStatus,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Ironing Status',
+                  hintText: 'Optional',
                 ),
-                ..._optionsWithSavedValue(_fitOptions, _selectedFit).map(
-                  (String fit) =>
-                      DropdownMenuItem<String?>(value: fit, child: Text(fit)),
-                ),
-              ],
-              onChanged: (String? value) {
-                setState(() {
-                  _selectedFit = value;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              initialValue: _selectedPattern,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Pattern',
-                hintText: 'Select a pattern (optional)',
-              ),
-              items: <DropdownMenuItem<String?>>[
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Not specified'),
-                ),
-                ..._optionsWithSavedValue(
-                  _patternOptions,
-                  _selectedPattern,
-                ).map(
-                  (String pattern) => DropdownMenuItem<String?>(
-                    value: pattern,
-                    child: Text(pattern),
+                items: <DropdownMenuItem<IroningStatus?>>[
+                  const DropdownMenuItem<IroningStatus?>(
+                    value: null,
+                    child: Text('Not specified'),
                   ),
-                ),
-              ],
-              onChanged: (String? value) {
-                setState(() {
-                  _selectedPattern = value;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              initialValue: _selectedFabricWeight,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Fabric Weight',
-                hintText: 'Select a fabric weight (optional)',
-              ),
-              items: <DropdownMenuItem<String?>>[
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Not specified'),
-                ),
-                ..._optionsWithSavedValue(
-                  _fabricWeightOptions,
-                  _selectedFabricWeight,
-                ).map(
-                  (String weight) => DropdownMenuItem<String?>(
-                    value: weight,
-                    child: Text(weight),
+                  ...IroningStatus.values.map(
+                    (IroningStatus status) => DropdownMenuItem<IroningStatus?>(
+                      value: status,
+                      child: Text(status.label),
+                    ),
                   ),
+                ],
+                onChanged: (IroningStatus? value) {
+                  setState(() {
+                    _ironingStatus = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _selectedFabric,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Fabric',
+                  hintText: 'Select a fabric (optional)',
                 ),
-              ],
-              onChanged: (String? value) {
-                setState(() {
-                  _selectedFabricWeight = value;
-                });
-              },
-            ),
+                items: <DropdownMenuItem<String?>>[
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not specified'),
+                  ),
+                  ..._fabricDropdownItems.map(
+                    (String fabric) => DropdownMenuItem<String?>(
+                      value: fabric,
+                      child: Text(fabric),
+                    ),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  setState(() {
+                    _selectedFabric = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _selectedFit,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Fit',
+                  hintText: 'Select a fit (optional)',
+                ),
+                items: <DropdownMenuItem<String?>>[
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not specified'),
+                  ),
+                  ..._optionsWithSavedValue(_fitOptions, _selectedFit).map(
+                    (String fit) =>
+                        DropdownMenuItem<String?>(value: fit, child: Text(fit)),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  setState(() {
+                    _selectedFit = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _selectedPattern,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Pattern',
+                  hintText: 'Select a pattern (optional)',
+                ),
+                items: <DropdownMenuItem<String?>>[
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not specified'),
+                  ),
+                  ..._optionsWithSavedValue(
+                    _patternOptions,
+                    _selectedPattern,
+                  ).map(
+                    (String pattern) => DropdownMenuItem<String?>(
+                      value: pattern,
+                      child: Text(pattern),
+                    ),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  setState(() {
+                    _selectedPattern = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _selectedFabricWeight,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Fabric Weight',
+                  hintText: 'Select a fabric weight (optional)',
+                ),
+                items: <DropdownMenuItem<String?>>[
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not specified'),
+                  ),
+                  ..._optionsWithSavedValue(
+                    _fabricWeightOptions,
+                    _selectedFabricWeight,
+                  ).map(
+                    (String weight) => DropdownMenuItem<String?>(
+                      value: weight,
+                      child: Text(weight),
+                    ),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  setState(() {
+                    _selectedFabricWeight = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
             if (_showSleeveLength) ...<Widget>[
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
@@ -1748,7 +1901,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
             const SizedBox(height: 28),
             FilledButton.icon(
-              onPressed: _saving ? null : _save,
+              onPressed: (_saving || memberMismatch) ? null : _save,
               icon: _saving
                   ? const SizedBox(
                       width: 18,
@@ -1756,7 +1909,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.check),
-              label: Text(_saving ? 'Saving Garment...' : 'Save Garment'),
+              label: Text(_saving ? 'Saving Item...' : 'Save Item'),
             ),
           ],
         ),
@@ -1767,12 +1920,14 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
 
 class _SizeMultiSelect extends StatelessWidget {
   const _SizeMultiSelect({
+    required this.label,
     required this.sizes,
     required this.selectedSizes,
     required this.enabled,
     required this.onChanged,
   });
 
+  final String label;
   final List<String> sizes;
   final Set<String> selectedSizes;
   final bool enabled;
@@ -1781,8 +1936,8 @@ class _SizeMultiSelect extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Sizes',
+      decoration: InputDecoration(
+        labelText: label,
         hintText: 'Optional',
       ),
       child: Wrap(
@@ -1950,7 +2105,7 @@ class _GarmentColorSelection extends StatelessWidget {
   Widget build(BuildContext context) {
     return InputDecorator(
       decoration: InputDecoration(
-        labelText: 'Garment shades *',
+        labelText: 'Shades *',
         errorText: showError && shades.isEmpty
             ? 'Select at least one shade'
             : null,
@@ -2177,6 +2332,26 @@ class _AddLocationDialogState extends State<_AddLocationDialog> {
       if (mounted) {
         Navigator.pop(context);
       }
+    } on LocationNameConflict catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _saving = false;
+        _errorText = error.message;
+      });
+    } on PostgrestException catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _saving = false;
+        _errorText = error.code == '23505'
+            ? 'A location named "$name" already exists.'
+            : 'Could not add this location';
+      });
     } catch (_) {
       if (!mounted) {
         return;

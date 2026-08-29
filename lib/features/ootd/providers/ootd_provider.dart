@@ -14,6 +14,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final StateProvider<OutfitContext> ootdContextProvider =
     StateProvider<OutfitContext>((Ref ref) => const OutfitContext());
 
+final StateProvider<int> ootdRefreshTokenProvider =
+    StateProvider<int>((Ref ref) => 0);
+
 final FutureProvider<List<WearLog>> ootdWearHistoryProvider =
     FutureProvider<List<WearLog>>((Ref ref) async {
       final selectedMember = ref.watch(selectedFamilyMemberProvider);
@@ -38,6 +41,8 @@ final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
 
   final OutfitContext context = ref.watch(ootdContextProvider);
 
+  final int rotateBy = ref.watch(ootdRefreshTokenProvider);
+
   const OutfitRecommendationService service = OutfitRecommendationService();
 
   final String? memberId = ref.watch(selectedFamilyMemberProvider)?.id;
@@ -57,6 +62,7 @@ final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
     context: context,
     weather: weather,
     memberId: memberId,
+    rotateBy: rotateBy,
   );
 });
 

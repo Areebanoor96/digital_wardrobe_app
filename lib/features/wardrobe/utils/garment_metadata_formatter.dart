@@ -1,3 +1,5 @@
+import 'package:digital_wardrobe_app/data/models/garment.dart';
+
 class GarmentMetadataFormatter {
   const GarmentMetadataFormatter._();
 
@@ -59,6 +61,32 @@ class GarmentMetadataFormatter {
     }
 
     return '${labels.length} seasons - ${labels.join(', ')}';
+  }
+
+  static String seasonTagLabel(List<String> seasons) {
+    final List<String> clean = _dedupeClean(seasons);
+    if (clean.isEmpty) {
+      return '';
+    }
+
+    if (clean.any((String season) => season.toLowerCase() == 'all')) {
+      return 'All Seasons';
+    }
+
+    return clean.map(_titleCase).join(' · ');
+  }
+
+  static String categoryLabel(GarmentCategory category) {
+    return switch (category) {
+      GarmentCategory.top => 'Top',
+      GarmentCategory.bottom => 'Bottom',
+      GarmentCategory.dress => 'Dress',
+      GarmentCategory.outerwear => 'Outerwear',
+      GarmentCategory.shoe => 'Shoe',
+      GarmentCategory.accessory => 'Accessory',
+      GarmentCategory.jewelry => 'Jewelry',
+      GarmentCategory.bag => 'Bag',
+    };
   }
 
   static String detailListSummary(List<String> values) {

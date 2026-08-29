@@ -1,8 +1,6 @@
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
-import 'package:digital_wardrobe_app/data/models/family_member.dart';
-import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/data/models/ootd_recommendation_snapshot.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/data/repositories/ootd_recommendation_repository.dart';
@@ -69,51 +67,9 @@ class AlertsRepository {
 
   Future<int> generateAndInsertAlerts({required String memberId}) async {
     final String userId = _client.auth.currentUser!.id;
-    final Map<String, dynamic>? memberRow = await _client
-        .from('family_members')
-        .select()
-        .eq('id', memberId)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    final FamilyMember? familyMember = memberRow == null
-        ? null
-        : FamilyMember.fromJson(memberRow);
-
-    final List<dynamic> measurementRows = await _client
-        .from('growth_measurements')
-        .select()
-        .eq('user_id', userId)
-        .eq('member_id', memberId)
-        .order('recorded_at', ascending: false);
-
-    final List<GrowthMeasurement> growthMeasurements = measurementRows
-        .map(
-          (dynamic row) =>
-              GrowthMeasurement.fromJson(Map<String, dynamic>.from(row as Map)),
-        )
-        .toList();
 
     final DateTime now = DateTime.now();
     final DateTime startOfToday = DateTime(now.year, now.month, now.day);
-    final DateTime startOfCurrentMonth = DateTime(now.year, now.month);
-
-    final List<dynamic> reminderRows = familyMember == null
-        ? const <dynamic>[]
-        : await _client
-              .from('alerts')
-              .select('id')
-              .eq('user_id', userId)
-              .eq('member_id', memberId)
-              .eq('type', 'growth')
-              .eq('title', 'Time for a growth check')
-              .gte(
-                'created_at',
-                startOfCurrentMonth.toUtc().toIso8601String(),
-              )
-              .limit(1);
-
-    final bool hasReminderForLatestCycle = reminderRows.isNotEmpty;
 
     // Fetch the user's alert preferences.
     final Map<String, dynamic> profileRow = Map<String, dynamic>.from(
@@ -123,8 +79,7 @@ class AlertsRepository {
                 'id, '
                 'unused_alerts_enabled, '
                 'laundry_alerts_enabled, '
-                'ootd_alerts_enabled, '
-                'growth_alerts_enabled',
+                'ootd_alerts_enabled',
               )
               .eq('id', userId)
               .single()
@@ -177,14 +132,6 @@ class AlertsRepository {
       enabled: profile.ootdAlertsEnabled,
       isOotdEligible: isOotdEligible,
     );
-    if (familyMember != null) {
-      await _resolveGrowthAlert(
-        userId: userId,
-        member: familyMember,
-        measurements: growthMeasurements,
-        enabled: profile.growthAlertsEnabled,
-      );
-    }
     // Active alerts are used to prevent duplicate garment alerts.
     final List<dynamic> existingRows = await _client
         .from('alerts')
@@ -225,21 +172,6 @@ class AlertsRepository {
 
     if (ootdAlert != null) {
       newAlerts.add(ootdAlert);
-    }
-
-    if (familyMember != null) {
-      final Map<String, dynamic>? growthAlert = ruleService.buildGrowthAlert(
-        member: familyMember,
-        measurements: growthMeasurements,
-        userId: userId,
-        existingKeys: existingKeys,
-        enabled: profile.growthAlertsEnabled,
-        hasReminderForLatestCycle: hasReminderForLatestCycle,
-      );
-
-      if (growthAlert != null) {
-        newAlerts.add(growthAlert);
-      }
     }
 
     if (newAlerts.isEmpty) {
@@ -382,32 +314,6 @@ class AlertsRepository {
         .eq('user_id', userId)
         .eq('member_id', memberId)
         .eq('type', 'ootd')
-        .eq('is_dismissed', false);
-  }
-
-  Future<void> _resolveGrowthAlert({
-    required String userId,
-    required FamilyMember member,
-    required List<GrowthMeasurement> measurements,
-    required bool enabled,
-  }) async {
-    final bool shouldExist =
-        enabled &&
-        ruleService.shouldHaveGrowthAlert(
-          member: member,
-          measurements: measurements,
-        );
-
-    if (shouldExist) {
-      return;
-    }
-
-    await _client
-        .from('alerts')
-        .update(<String, bool>{'is_dismissed': true})
-        .eq('user_id', userId)
-        .eq('member_id', member.id)
-        .eq('type', 'growth')
         .eq('is_dismissed', false);
   }
 }

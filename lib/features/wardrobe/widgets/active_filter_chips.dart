@@ -17,9 +17,11 @@ class ActiveFilterChips extends StatelessWidget {
     required this.onStitchingStatusRemoved,
     required this.onIroningStatusRemoved,
     required this.onOuterwearSubcategoryRemoved,
+    this.locationNames = const <String, String>{},
   });
 
   final WardrobeFilters filters;
+  final Map<String, String> locationNames;
   final VoidCallback onColorRemoved;
   final VoidCallback onBrandRemoved;
   final VoidCallback onSizeRemoved;
@@ -83,7 +85,8 @@ class ActiveFilterChips extends StatelessWidget {
             ),
           if (filters.locationId != null)
             _ActiveFilterChip(
-              label: 'Location: ${filters.locationName ?? 'Selected'}',
+              label:
+                  'Location: ${locationNames[filters.locationId] ?? filters.locationName ?? 'Selected'}',
               onDeleted: onLocationRemoved,
             ),
           if (filters.stitchingStatus != null)

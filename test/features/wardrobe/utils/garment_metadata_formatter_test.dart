@@ -1,3 +1,4 @@
+import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/utils/garment_metadata_formatter.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -51,6 +52,44 @@ void main() {
         GarmentMetadataFormatter.seasonSummary(const <String>['all']),
         'All Seasons',
       );
+    });
+  });
+
+  group('GarmentMetadataFormatter.seasonTagLabel', () {
+    test('formats one season', () {
+      expect(
+        GarmentMetadataFormatter.seasonTagLabel(const <String>['winter']),
+        'Winter',
+      );
+    });
+
+    test('formats multiple seasons into one label', () {
+      expect(
+        GarmentMetadataFormatter.seasonTagLabel(
+          const <String>['winter', 'autumn', 'summer'],
+        ),
+        'Winter · Autumn · Summer',
+      );
+    });
+
+    test('formats all seasons', () {
+      expect(
+        GarmentMetadataFormatter.seasonTagLabel(const <String>['all']),
+        'All Seasons',
+      );
+    });
+  });
+
+  group('GarmentMetadataFormatter.categoryLabel', () {
+    test('uses singular labels', () {
+      expect(GarmentMetadataFormatter.categoryLabel(GarmentCategory.dress),
+          'Dress');
+      expect(GarmentMetadataFormatter.categoryLabel(GarmentCategory.top),
+          'Top');
+      expect(GarmentMetadataFormatter.categoryLabel(GarmentCategory.bottom),
+          'Bottom');
+      expect(GarmentMetadataFormatter.categoryLabel(GarmentCategory.bag),
+          'Bag');
     });
   });
 }

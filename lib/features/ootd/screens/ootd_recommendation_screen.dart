@@ -51,12 +51,12 @@ class OotdRecommendationScreen extends ConsumerWidget {
                 recommendation: restored.recommendation,
                 outfitContext: const OutfitContext(),
                 onSave: canUse && !actionState.isLoading
-                    ? () => ref
+                    ? (_) => ref
                           .read(ootdActionControllerProvider.notifier)
                           .saveAsOutfit(garments)
                     : null,
                 onWear: canUse && !actionState.isLoading
-                    ? () => ref
+                    ? (_) => ref
                           .read(ootdActionControllerProvider.notifier)
                           .wearOutfit(garments)
                     : null,

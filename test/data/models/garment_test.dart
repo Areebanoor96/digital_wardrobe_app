@@ -76,6 +76,26 @@ void main() {
       expect(garment.effectiveSizes, <String>['S', 'M']);
     });
 
+    test('fromJson treats a null location embed as unspecified', () {
+      final Garment garment = garmentFromJson(<String, dynamic>{
+        'category': 'top',
+        'garment_locations': null,
+      });
+
+      expect(garment.locationId, isNull);
+      expect(garment.locationName, isNull);
+    });
+
+    test('fromJson falls back to a legacy location_name column', () {
+      final Garment garment = garmentFromJson(<String, dynamic>{
+        'category': 'top',
+        'location_name': 'Old Shelf',
+      });
+
+      expect(garment.locationId, isNull);
+      expect(garment.locationName, 'Old Shelf');
+    });
+
     test('fromJson uses designated primary garment color shade', () {
       final Garment garment = garmentFromJson(<String, dynamic>{
         'category': 'top',

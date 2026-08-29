@@ -52,9 +52,7 @@ void main() {
     expect(notifier.state.sortOption, WardrobeSortOption.leastWorn);
   });
 
-  testWidgets('color filtering still matches palette and legacy colors', (
-    WidgetTester tester,
-  ) async {
+  test('color filtering still matches palette and legacy colors', () async {
     final List<Garment> garments = <Garment>[
       garment(id: 'palette', colorName: 'Navy', colorHex: '#000080'),
       garment(
@@ -99,9 +97,7 @@ void main() {
     ]);
   });
 
-  testWidgets('filters normalized sizes and garment management fields', (
-    WidgetTester tester,
-  ) async {
+  test('filters normalized sizes and garment management fields', () async {
     final List<Garment> garments = <Garment>[
       garment(
         id: 'match',
@@ -162,5 +158,74 @@ void main() {
     final List<Garment> filtered = container.read(filteredGarmentsProvider);
 
     expect(filtered.map((Garment garment) => garment.id), <String>['match']);
+  });
+
+  test('filtering by a location with no active garments yields nothing', () async {
+    final List<Garment> garments = <Garment>[
+      garment(
+        id: 'in-suitcase',
+        locationId: 'location-1',
+        locationName: 'Suitcase',
+      ),
+      garment(id: 'unspecified'),
+    ];
+
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        garmentsProvider.overrideWith((Ref ref) async => garments),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(garmentsProvider.future);
+
+    // The location exists for the profile, but no active garment uses it.
+    container
+        .read(wardrobeFilterProvider.notifier)
+        .setLocation(id: 'empty-location', name: 'Attic');
+
+    final List<Garment> filtered = container.read(filteredGarmentsProvider);
+
+    expect(filtered, isEmpty);
+  });
+
+  test('null/unspecified location garments are never location-matched', () async {
+    final List<Garment> garments = <Garment>[
+      garment(
+        id: 'in-suitcase',
+        locationId: 'location-1',
+        locationName: 'Suitcase',
+      ),
+      garment(id: 'unspecified'),
+    ];
+
+    final ProviderContainer container = ProviderContainer(
+      overrides: <Override>[
+        garmentsProvider.overrideWith((Ref ref) async => garments),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(garmentsProvider.future);
+
+    // With no location filter both garments are included.
+    expect(
+      container
+          .read(filteredGarmentsProvider)
+          .map((Garment garment) => garment.id),
+      <String>['in-suitcase', 'unspecified'],
+    );
+
+    // A specific location filter excludes the unspecified garment.
+    container
+        .read(wardrobeFilterProvider.notifier)
+        .setLocation(id: 'location-1', name: 'Suitcase');
+
+    expect(
+      container
+          .read(filteredGarmentsProvider)
+          .map((Garment garment) => garment.id),
+      <String>['in-suitcase'],
+    );
   });
 }

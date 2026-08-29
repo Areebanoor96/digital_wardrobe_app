@@ -81,7 +81,7 @@ void main() {
     (WidgetTester tester) async {
       await pumpForm(tester);
 
-      expect(find.text('Garment shades *'), findsOneWidget);
+      expect(find.text('Shades *'), findsOneWidget);
       expect(find.text('Add shade'), findsOneWidget);
 
       expect(find.text('Sizes'), findsOneWidget);
@@ -93,7 +93,7 @@ void main() {
       ]) {
         expect(find.text(size), findsOneWidget);
       }
-      expect(find.text('Garment Status'), findsWidgets);
+      expect(find.text('Item Status'), findsWidgets);
       expect(find.text('Location'), findsWidgets);
       expect(find.text('Stitching Status'), findsOneWidget);
       expect(find.text('Ironing Status'), findsOneWidget);
@@ -277,6 +277,143 @@ void main() {
     expect(find.text('Not specified'), findsWidgets);
   });
 
+  testWidgets('shoe items use numeric sizes and shoe types, hide clothing fields', (
+    WidgetTester tester,
+  ) async {
+    const Garment garment = Garment(
+      id: 'g-10',
+      name: 'Tennis Sneakers',
+      category: GarmentCategory.shoe,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      subcategory: 'Sneakers',
+      sizes: <String>['40'],
+    );
+
+    await pumpForm(tester, garment: garment);
+
+    expect(find.text('Shoe Sizes'), findsOneWidget);
+    for (final String size in <String>['36', '38', '40', '42']) {
+      expect(find.text(size), findsOneWidget);
+    }
+    expect(find.text('S'), findsNothing);
+    expect(find.text('Shoe Type'), findsOneWidget);
+    expect(find.text('Sneakers'), findsOneWidget);
+
+    expect(find.text('Sizes'), findsNothing);
+    expect(find.text('Stitching Status'), findsNothing);
+    expect(find.text('Ironing Status'), findsNothing);
+    expect(find.text('Fabric'), findsNothing);
+    expect(find.text('Fit'), findsNothing);
+    expect(find.text('Pattern'), findsNothing);
+    expect(find.text('Fabric Weight'), findsNothing);
+    expect(find.text('Sleeve Length'), findsNothing);
+  });
+
+  testWidgets('bag items show bag types and hide sizes and clothing fields', (
+    WidgetTester tester,
+  ) async {
+    const Garment garment = Garment(
+      id: 'g-11',
+      name: 'Everyday Tote',
+      category: GarmentCategory.bag,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      subcategory: 'Tote',
+    );
+
+    await pumpForm(tester, garment: garment);
+
+    expect(find.text('Bag Type'), findsOneWidget);
+    expect(find.text('Tote'), findsOneWidget);
+    expect(find.text('Sizes'), findsNothing);
+    expect(find.text('Shoe Sizes'), findsNothing);
+    expect(find.text('Stitching Status'), findsNothing);
+    expect(find.text('Ironing Status'), findsNothing);
+    expect(find.text('Fabric'), findsNothing);
+    expect(find.text('Fit'), findsNothing);
+    expect(find.text('Pattern'), findsNothing);
+    expect(find.text('Fabric Weight'), findsNothing);
+    expect(find.text('Sleeve Length'), findsNothing);
+  });
+
+  testWidgets('accessory items show type and hide clothing fields', (
+    WidgetTester tester,
+  ) async {
+    const Garment accessory = Garment(
+      id: 'g-12',
+      name: 'Summer Scarf',
+      category: GarmentCategory.accessory,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      subcategory: 'Scarf',
+    );
+
+    await pumpForm(tester, garment: accessory);
+
+    expect(find.text('Accessory Type'), findsOneWidget);
+    expect(find.text('Scarf'), findsOneWidget);
+    expect(find.text('Sizes'), findsNothing);
+    expect(find.text('Stitching Status'), findsNothing);
+    expect(find.text('Ironing Status'), findsNothing);
+    expect(find.text('Fabric'), findsNothing);
+    expect(find.text('Fit'), findsNothing);
+    expect(find.text('Pattern'), findsNothing);
+    expect(find.text('Fabric Weight'), findsNothing);
+  });
+
+  testWidgets('jewelry items show type and hide clothing fields', (
+    WidgetTester tester,
+  ) async {
+    const Garment jewelry = Garment(
+      id: 'g-13',
+      name: 'Gold Chain',
+      category: GarmentCategory.jewelry,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      subcategory: 'Necklace',
+    );
+
+    await pumpForm(tester, garment: jewelry);
+
+    expect(find.text('Jewelry Type'), findsOneWidget);
+    expect(find.text('Necklace'), findsOneWidget);
+    expect(find.text('Sizes'), findsNothing);
+    expect(find.text('Stitching Status'), findsNothing);
+    expect(find.text('Ironing Status'), findsNothing);
+    expect(find.text('Fabric'), findsNothing);
+    expect(find.text('Pattern'), findsNothing);
+    expect(find.text('Fabric Weight'), findsNothing);
+  });
+
+  testWidgets('switching category to Shoes swaps sizes and hides clothing fields', (
+    WidgetTester tester,
+  ) async {
+    await pumpForm(tester);
+
+    expect(find.text('Sizes'), findsOneWidget);
+    expect(find.text('Stitching Status'), findsOneWidget);
+
+    final Finder categoryDropdown = find.byType(DropdownButtonFormField<GarmentCategory>);
+    await tester.tap(categoryDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Shoes').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shoe Sizes'), findsOneWidget);
+    for (final String size in <String>['36', '42']) {
+      expect(find.text(size), findsOneWidget);
+    }
+    expect(find.text('Sizes'), findsNothing);
+    expect(find.text('Stitching Status'), findsNothing);
+    expect(find.text('Ironing Status'), findsNothing);
+    expect(find.text('Fabric'), findsNothing);
+    expect(find.text('Fit'), findsNothing);
+    expect(find.text('Pattern'), findsNothing);
+    expect(find.text('Fabric Weight'), findsNothing);
+    expect(find.text('Sleeve Length'), findsNothing);
+  });
+
   testWidgets('location selector is saved-only and can add and auto-select', (
     WidgetTester tester,
   ) async {
@@ -356,6 +493,79 @@ void main() {
     expect(locationRepository.createdNames, <String>['Hall Closet']);
     expect(find.text('Hall Closet'), findsOneWidget);
   });
+
+  testWidgets('add location shows a clear message for a duplicate name', (
+    WidgetTester tester,
+  ) async {
+    final _FakeLocationRepository locationRepository =
+        _FakeLocationRepository();
+
+    await pumpForm(
+      tester,
+      overrides: <Override>[
+        selectedFamilyMemberProvider.overrideWith((Ref ref) => _member),
+        garmentLocationRepositoryProvider.overrideWith(
+          (Ref ref) => locationRepository,
+        ),
+      ],
+    );
+
+    await tester.tap(find.text('Not Specified').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('+ Add New Location'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Location Name'),
+      'bedroom almirah',
+    );
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(locationRepository.createCalls, 0);
+    expect(
+      find.text('A location named "bedroom almirah" already exists.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'editing a garment owned by another profile is blocked with a clear message',
+    (WidgetTester tester) async {
+      const FamilyMember otherMember = FamilyMember(
+        id: 'member-2',
+        name: 'Mia',
+        relationship: RelationshipType.sister,
+      );
+      const Garment garment = Garment(
+        id: 'g-9',
+        name: 'Mia Kurta',
+        memberId: 'member-2',
+        category: GarmentCategory.top,
+        photoPaths: <String>[],
+        photoUrls: <String>[],
+      );
+
+      await pumpForm(
+        tester,
+        garment: garment,
+        overrides: <Override>[
+          selectedFamilyMemberProvider.overrideWith((Ref ref) => _member),
+          familyMemberProvider.overrideWith(
+            (Ref ref, String memberId) async =>
+                memberId == 'member-2' ? otherMember : null,
+          ),
+        ],
+      );
+
+      expect(find.textContaining('Mia'), findsWidgets);
+      expect(find.textContaining('another profile'), findsNothing);
+
+      final FilledButton saveButton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Save Item'),
+      );
+      expect(saveButton.onPressed, isNull);
+    },
+  );
 }
 
 class _FakeImageService extends ImageService {

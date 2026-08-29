@@ -27,6 +27,7 @@ import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.d
     as alerts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final selectedFamilyMemberProvider = StateProvider<FamilyMember?>(
   (Ref ref) => null,
@@ -523,12 +524,29 @@ class GarmentLocationController extends AutoDisposeAsyncNotifier<void> {
       return;
     }
 
+    if (hasDuplicateLocationName(_currentLocations(), name)) {
+      state = AsyncError<void>(
+        LocationNameConflict(name.trim()),
+        StackTrace.current,
+      );
+      return;
+    }
+
     state = const AsyncLoading<void>();
 
-    state = await AsyncValue.guard(
-      () => ref
-          .read(garmentLocationRepositoryProvider)
-          .createLocation(memberId: selectedMember.id, name: name),
+    state = await AsyncValue.guard<void>(
+      () async {
+        try {
+          await ref
+              .read(garmentLocationRepositoryProvider)
+              .createLocation(memberId: selectedMember.id, name: name);
+        } on PostgrestException catch (error) {
+          if (error.code == '23505') {
+            throw LocationNameConflict(name.trim());
+          }
+          rethrow;
+        }
+      },
     );
 
     if (!state.hasError) {
@@ -550,19 +568,59 @@ class GarmentLocationController extends AutoDisposeAsyncNotifier<void> {
       return;
     }
 
+    if (hasDuplicateLocationName(_currentLocations(), name, exceptId: locationId)) {
+      state = AsyncError<void>(
+        LocationNameConflict(name.trim()),
+        StackTrace.current,
+      );
+      return;
+    }
+
     state = const AsyncLoading<void>();
 
-    state = await AsyncValue.guard(
-      () => ref.read(garmentLocationRepositoryProvider).renameLocation(
-            memberId: selectedMember.id,
-            locationId: locationId,
-            name: name,
-          ),
+    state = await AsyncValue.guard<void>(
+      () async {
+        try {
+          await ref.read(garmentLocationRepositoryProvider).renameLocation(
+                memberId: selectedMember.id,
+                locationId: locationId,
+                name: name,
+              );
+        } on PostgrestException catch (error) {
+          if (error.code == '23505') {
+            throw LocationNameConflict(name.trim());
+          }
+          rethrow;
+        }
+      },
     );
 
     if (!state.hasError) {
       ref.invalidate(garmentLocationsProvider);
       ref.invalidate(garmentsProvider);
+      _invalidateGarmentDetailsAtLocation(locationId);
+    }
+  }
+
+  List<GarmentLocation> _currentLocations() {
+    return ref.read(garmentLocationsProvider).valueOrNull ??
+        const <GarmentLocation>[];
+  }
+
+  void _invalidateGarmentDetailsAtLocation(String locationId) {
+    final Set<String> ids = <String>{
+      for (final Garment garment
+          in ref.read(garmentsProvider).valueOrNull ??
+              const <Garment>[])
+        if (garment.locationId == locationId) garment.id,
+      for (final Garment garment
+          in ref.read(archivedGarmentsProvider).valueOrNull ??
+              const <Garment>[])
+        if (garment.locationId == locationId) garment.id,
+    };
+
+    for (final String id in ids) {
+      ref.invalidate(garmentProvider(id));
     }
   }
 

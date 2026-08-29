@@ -1,4 +1,4 @@
-alter table public.alerts
+lastalter table public.alerts
 add column if not exists target_type text,
 add column if not exists target_id uuid,
 add column if not exists action_payload jsonb not null default '{}'::jsonb,

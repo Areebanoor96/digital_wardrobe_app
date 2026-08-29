@@ -89,42 +89,21 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey<String>('garment-detail-size-tag-10-11Y')),
+      find.byKey(const ValueKey<String>('garment-detail-size-tag')),
       findsOneWidget,
     );
+    expect(find.text('10-13Y'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey<String>('garment-detail-size-tag-11-12Y')),
+      find.byKey(const ValueKey<String>('garment-detail-color-tag')),
       findsOneWidget,
     );
+    expect(find.text('Forest Green'), findsOneWidget);
+    expect(find.text('White'), findsOneWidget);
     expect(
-      find.byKey(const ValueKey<String>('garment-detail-size-tag-12-13Y')),
+      find.byKey(const ValueKey<String>('garment-detail-season-tag')),
       findsOneWidget,
     );
-    expect(
-      find.byKey(
-        const ValueKey<String>('garment-detail-color-tag-Forest Green'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('garment-detail-color-tag-White')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('garment-detail-season-tag-spring')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('garment-detail-season-tag-summer')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('garment-detail-season-tag-autumn')),
-      findsOneWidget,
-    );
-    expect(find.text('Spring'), findsOneWidget);
-    expect(find.text('Summer'), findsOneWidget);
-    expect(find.text('Autumn'), findsOneWidget);
+    expect(find.text('Spring · Summer · Autumn'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('garment-detail-laundry-tag')),
       findsOneWidget,
@@ -133,7 +112,7 @@ void main() {
       find.byKey(const ValueKey<String>('garment-detail-ironing-tag')),
       findsOneWidget,
     );
-    expect(find.text('Garment Status'), findsOneWidget);
+    expect(find.text('Item Status'), findsOneWidget);
     expect(find.text('Availability'), findsOneWidget);
     expect(find.text('Care & Readiness'), findsOneWidget);
     expect(find.text('Wash Instructions'), findsOneWidget);
@@ -142,7 +121,7 @@ void main() {
     expect(find.text('Ironing'), findsNothing);
     expect(find.text('Clean'), findsOneWidget);
     expect(find.text('Ironed'), findsOneWidget);
-    expect(find.text('Garment Details'), findsOneWidget);
+    expect(find.text('Item Details'), findsOneWidget);
     expect(find.text('Stitching'), findsOneWidget);
     expect(find.text('Stitched'), findsOneWidget);
     expect(find.text('Fabric'), findsOneWidget);
@@ -165,10 +144,39 @@ void main() {
     await _pumpDetail(tester, garment);
 
     expect(
-      find.byKey(const ValueKey<String>('garment-detail-season-tag-all')),
+      find.byKey(const ValueKey<String>('garment-detail-season-tag')),
       findsOneWidget,
     );
     expect(find.text('All Seasons'), findsOneWidget);
+  });
+
+  testWidgets('bag detail omits size tag and uses type label', (
+    WidgetTester tester,
+  ) async {
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Everyday Tote',
+      memberId: 'member-1',
+      category: GarmentCategory.bag,
+      subcategory: 'Tote',
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      sizes: <String>['One Size'],
+    );
+
+    await _pumpDetail(tester, garment);
+
+    expect(
+      find.byKey(const ValueKey<String>('garment-detail-size-tag')),
+      findsNothing,
+    );
+    expect(find.text('Item Details'), findsOneWidget);
+    expect(find.text('Bag Type'), findsOneWidget);
+    expect(find.text('Tote'), findsWidgets);
+    expect(find.text('Fabric'), findsNothing);
+    expect(find.text('Fit'), findsNothing);
+    expect(find.text('Stitching'), findsNothing);
+    expect(find.text('Wash Instructions'), findsNothing);
   });
 
   testWidgets('mark as worn dialog defaults laundry action to No Change', (

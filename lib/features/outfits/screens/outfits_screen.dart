@@ -4,8 +4,8 @@ import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/features/ootd/providers/ootd_provider.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
-import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:digital_wardrobe_app/features/ootd/widgets/ootd_card.dart';
+import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
 import 'package:digital_wardrobe_app/features/outfits/widgets/outfit_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,21 +75,22 @@ class OutfitsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: OotdCard(
                       recommendation: rec,
-                      onRefresh: () => ref.invalidate(ootdProvider),
+                      onRefresh: () =>
+                          ref.read(ootdRefreshTokenProvider.notifier).state++,
                       outfitContext: ref.watch(ootdContextProvider),
                       onContextChanged: (OutfitContext value) {
                         ref.read(ootdContextProvider.notifier).state = value;
                       },
                       onSave: actionState.isLoading
                           ? null
-                          : () => ref
+                          : (current) => ref
                                 .read(ootdActionControllerProvider.notifier)
-                                .saveAsOutfit(rec.garments),
+                                .saveAsOutfit(current.garments),
                       onWear: actionState.isLoading
                           ? null
-                          : () => ref
+                          : (current) => ref
                                 .read(ootdActionControllerProvider.notifier)
-                                .wearOutfit(rec.garments),
+                                .wearOutfit(current.garments),
                       isSaving: actionState.isLoading,
                       isWearing: actionState.isLoading,
                     ),

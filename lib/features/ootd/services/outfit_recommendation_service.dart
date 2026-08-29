@@ -40,6 +40,28 @@ class OutfitRecommendation {
   final int seasonScore;
   final String label;
   final List<OutfitRecommendation> alternatives;
+
+  OutfitRecommendation withAlternatives(
+    List<OutfitRecommendation> alternatives,
+  ) {
+    return OutfitRecommendation(
+      garments: garments,
+      reason: reason,
+      score: score,
+      heroGarment: heroGarment,
+      reasons: reasons,
+      weatherScore: weatherScore,
+      occasionScore: occasionScore,
+      colorScore: colorScore,
+      styleScore: styleScore,
+      rotationScore: rotationScore,
+      preferenceScore: preferenceScore,
+      noveltyScore: noveltyScore,
+      seasonScore: seasonScore,
+      label: label,
+      alternatives: alternatives,
+    );
+  }
 }
 
 class OutfitRecommendationService {
@@ -84,6 +106,7 @@ class OutfitRecommendationService {
     WeatherData? weather,
     String? memberId,
     DateTime? now,
+    int rotateBy = 0,
   }) {
     final List<OutfitRecommendation> recommendations = recommendMany(
       allGarments: allGarments,
@@ -93,6 +116,7 @@ class OutfitRecommendationService {
       weather: weather,
       memberId: memberId,
       now: now,
+      rotateBy: rotateBy,
     );
 
     if (recommendations.isEmpty) {
@@ -114,6 +138,7 @@ class OutfitRecommendationService {
     WeatherData? weather,
     String? memberId,
     DateTime? now,
+    int rotateBy = 0,
   }) {
     final DateTime resolvedNow = now ?? DateTime.now();
     final List<WearLog> resolvedLogs = wearLogs.isNotEmpty
@@ -155,9 +180,20 @@ class OutfitRecommendationService {
       return const <OutfitRecommendation>[];
     }
 
+    final int offset = rotateBy == 0
+        ? 0
+        : rotateBy > 0
+        ? rotateBy % mapped.length
+        : (mapped.length - (-rotateBy % mapped.length)) % mapped.length;
+
+    final List<OutfitRecommendation> rotated = <OutfitRecommendation>[
+      for (int index = 0; index < mapped.length; index++)
+        mapped[(index + offset) % mapped.length],
+    ];
+
     return <OutfitRecommendation>[
-      mapped.first.copyWithAlternatives(mapped.skip(1).toList()),
-      ...mapped.skip(1),
+      rotated.first.withAlternatives(rotated.skip(1).toList()),
+      ...rotated.skip(1),
     ];
   }
 
@@ -199,29 +235,5 @@ class OutfitRecommendationService {
         'Balanced across weather, occasion, color, style and rotation.';
 
     return '$label: ${score.total.round().clamp(0, 100).toInt()}% match. $firstReason';
-  }
-}
-
-extension on OutfitRecommendation {
-  OutfitRecommendation copyWithAlternatives(
-    List<OutfitRecommendation> alternatives,
-  ) {
-    return OutfitRecommendation(
-      garments: garments,
-      reason: reason,
-      score: score,
-      heroGarment: heroGarment,
-      reasons: reasons,
-      weatherScore: weatherScore,
-      occasionScore: occasionScore,
-      colorScore: colorScore,
-      styleScore: styleScore,
-      rotationScore: rotationScore,
-      preferenceScore: preferenceScore,
-      noveltyScore: noveltyScore,
-      seasonScore: seasonScore,
-      label: label,
-      alternatives: alternatives,
-    );
   }
 }
