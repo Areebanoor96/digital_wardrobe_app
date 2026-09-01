@@ -6,6 +6,7 @@ import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({
@@ -56,12 +57,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             children: <Widget>[
               _MonthHeader(
                 month: _month,
-                onPrevious: () => setState(
-                  () => _month = DateTime(_month.year, _month.month - 1),
-                ),
-                onNext: () => setState(
-                  () => _month = DateTime(_month.year, _month.month + 1),
-                ),
+                onPrevious: () => setState(() {
+                  _month = DateTime(_month.year, _month.month - 1);
+                  ref
+                      .read(selectedCalendarDayProvider.notifier)
+                      .state = null;
+                }),
+                onNext: () => setState(() {
+                  _month = DateTime(_month.year, _month.month + 1);
+                  ref
+                      .read(selectedCalendarDayProvider.notifier)
+                      .state = null;
+                }),
               ),
               const SizedBox(height: 16),
               _MonthGrid(
@@ -97,15 +104,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retry day history'),
                   ),
-                  data: (List<WearLog> dayLogs) => dayLogs.isEmpty
-                      ? const Text('No garments were worn on this day.')
-                      : Column(
-                          children: _buildWearTiles(
-                            dayLogs,
-                            garments,
-                            outfits,
-                          ),
+                  data: (List<WearLog> dayLogs) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (dayLogs.isEmpty)
+                        const Text('No garments were worn on this day.')
+                      else
+                        ..._buildWearTiles(
+                          dayLogs,
+                          garments,
+                          outfits,
                         ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () => context.push(
+                          '/ootd/plan/${_dateKey(selectedDay)}',
+                        ),
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('Plan outfit for this date'),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -449,3 +468,9 @@ String _formatLongDate(DateTime date) =>
     '${_monthName(date.month)} ${date.day}, ${date.year}';
 String _formatShortDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+String _dateKey(DateTime date) {
+  final String month = date.month.toString().padLeft(2, '0');
+  final String day = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$month-$day';
+}

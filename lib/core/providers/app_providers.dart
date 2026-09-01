@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:digital_wardrobe_app/core/services/app_info_service.dart';
 import 'package:digital_wardrobe_app/core/services/image_service.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
@@ -28,6 +29,15 @@ import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.d
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+final Provider<AppInfoService> appInfoServiceProvider =
+    Provider<AppInfoService>((Ref ref) => const AppInfoService());
+
+/// Installed application version/build metadata, exposed centrally so any
+/// screen (About, diagnostics, error reporting) can reuse it.
+final FutureProvider<AppInfo> appInfoProvider = FutureProvider<AppInfo>(
+  (Ref ref) => ref.watch(appInfoServiceProvider).read(),
+);
 
 final selectedFamilyMemberProvider = StateProvider<FamilyMember?>(
   (Ref ref) => null,

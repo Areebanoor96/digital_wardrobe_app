@@ -7,6 +7,7 @@ import 'package:digital_wardrobe_app/features/auth/screens/onboarding_screen.dar
 import 'package:digital_wardrobe_app/features/auth/screens/setup_wizard_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/splash_screen.dart';
 import 'package:digital_wardrobe_app/features/garment_form/screens/garment_form_screen.dart';
+import 'package:digital_wardrobe_app/features/ootd/screens/ootd_plan_screen.dart';
 import 'package:digital_wardrobe_app/features/ootd/screens/ootd_recommendation_screen.dart';
 import 'package:digital_wardrobe_app/features/outfits/screens/outfit_builder_screen.dart';
 import 'package:digital_wardrobe_app/features/outfits/screens/outfit_detail_screen.dart';
@@ -153,6 +154,14 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         },
       ),
       GoRoute(
+        path: '/ootd/plan/:date',
+        builder: (_, GoRouterState state) {
+          return OutfitPlanScreen(
+            date: _parseDate(state.pathParameters['date']!) ?? DateTime.now(),
+          );
+        },
+      ),
+      GoRoute(
         path: '/outfits/:id/edit',
         builder: (_, GoRouterState state) {
           return OutfitBuilderScreen(outfit: state.extra! as Outfit);
@@ -161,3 +170,17 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
     ],
   );
 });
+
+DateTime? _parseDate(String value) {
+  final List<String> parts = value.split('-');
+  if (parts.length != 3) {
+    return null;
+  }
+  final int? year = int.tryParse(parts[0]);
+  final int? month = int.tryParse(parts[1]);
+  final int? day = int.tryParse(parts[2]);
+  if (year == null || month == null || day == null) {
+    return null;
+  }
+  return DateTime(year, month, day);
+}

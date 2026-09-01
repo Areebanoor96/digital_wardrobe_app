@@ -1,3 +1,4 @@
+import 'package:digital_wardrobe_app/core/providers/theme_provider.dart';
 import 'package:digital_wardrobe_app/core/router/app_router.dart';
 import 'package:digital_wardrobe_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,8 @@ class DigitalWardrobeApp extends ConsumerWidget {
       title: 'Digital Wardrobe',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: router,
     );
   }

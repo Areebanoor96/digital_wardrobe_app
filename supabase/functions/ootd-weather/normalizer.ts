@@ -29,6 +29,10 @@ type ForecastEntry = {
     temp?: unknown;
     temp_min?: unknown;
     temp_max?: unknown;
+    humidity?: unknown;
+  };
+  wind?: {
+    speed?: unknown;
   };
   weather?: WeatherCondition[];
   pop?: unknown;
@@ -44,6 +48,8 @@ type ForecastPayload = {
 };
 
 export type NormalizedWeather = {
+  /** Whether a usable forecast is available for the requested date. */
+  available: boolean;
   temperature: number | null;
   feels_like: number | null;
   min_temperature: number | null;
@@ -79,7 +85,25 @@ export function normalizeWeather(params: {
   latitude: number;
   longitude: number;
   fetchedAt?: Date;
+  targetDate?: string | null;
 }): NormalizedWeather | null {
+  const fetchedAt = params.fetchedAt ?? new Date();
+  const base = {
+    fetched_at: fetchedAt.toISOString(),
+    latitude: params.latitude,
+    longitude: params.longitude,
+  };
+
+  // A provided target date drives a pure forecasting path. We only use the
+  // current-weather payload as a fallback when no target date is supplied.
+  if (params.targetDate != null) {
+    return deriveForecastForDate({
+      forecastPayload: params.forecastPayload,
+      targetDate: params.targetDate,
+      base,
+    });
+  }
+
   const current = params.currentPayload as CurrentWeatherPayload;
   const currentMain = current?.main;
   if (!currentMain || typeof currentMain !== "object") {
@@ -102,10 +126,10 @@ export function normalizeWeather(params: {
     return null;
   }
 
-  const fetchedAt = params.fetchedAt ?? new Date();
   const forecast = deriveTodayForecast(params.forecastPayload, fetchedAt);
 
   return {
+    available: true,
     temperature,
     feels_like: feelsLike,
     min_temperature: forecast.minTemperature ??
@@ -118,10 +142,141 @@ export function normalizeWeather(params: {
     uv_index: null,
     condition,
     has_rain_or_snow: isRainOrSnow(current) || forecast.hasRainOrSnow,
-    fetched_at: fetchedAt.toISOString(),
-    latitude: params.latitude,
-    longitude: params.longitude,
+    ...base,
   };
+}
+
+/**
+ * Builds a weather summary for an explicit local calendar date (YYYY-MM-DD)
+ * using only the OpenWeatherMap 5-day forecast. When the requested date has
+ * no forecast entries (outside the window), returns an `available: false`
+ * payload rather than inventing weather data.
+ */
+export function deriveForecastForDate(params: {
+  forecastPayload: unknown;
+  targetDate: string;
+  base: {
+    fetched_at: string;
+    latitude: number;
+    longitude: number;
+  };
+}): NormalizedWeather {
+  const unavailable = (): NormalizedWeather => ({
+    available: false,
+    temperature: null,
+    feels_like: null,
+    min_temperature: null,
+    max_temperature: null,
+    humidity: null,
+    rain_probability: null,
+    wind_speed: null,
+    uv_index: null,
+    condition: null,
+    has_rain_or_snow: false,
+    ...params.base,
+  });
+
+  const forecast = params.forecastPayload as ForecastPayload | undefined;
+  const entries = Array.isArray(forecast?.list) ? forecast.list : [];
+  const timezoneOffsetSeconds = nullableNumber(forecast?.city?.timezone) ?? 0;
+
+  const dayEntries = entries.filter((entry) => {
+    const dt = nullableNumber(entry.dt);
+    return dt != null &&
+      localDateKey(dt * 1000, timezoneOffsetSeconds) === params.targetDate;
+  });
+
+  if (dayEntries.length === 0) {
+    return unavailable();
+  }
+
+  let minTemperature: number | null = null;
+  let maxTemperature: number | null = null;
+  let rainProbability: number | null = null;
+  let hasRainOrSnow = false;
+
+  for (const entry of dayEntries) {
+    const entryMin = firstNumber(entry.main?.temp_min, entry.main?.temp);
+    const entryMax = firstNumber(entry.main?.temp_max, entry.main?.temp);
+    const pop = nullableNumber(entry.pop);
+
+    if (entryMin != null) {
+      minTemperature = minTemperature == null
+        ? entryMin
+        : Math.min(minTemperature, entryMin);
+    }
+    if (entryMax != null) {
+      maxTemperature = maxTemperature == null
+        ? entryMax
+        : Math.max(maxTemperature, entryMax);
+    }
+    if (pop != null) {
+      const percent = pop <= 1 ? pop * 100 : pop;
+      rainProbability = rainProbability == null
+        ? percent
+        : Math.max(rainProbability, percent);
+    }
+    hasRainOrSnow = hasRainOrSnow || isRainOrSnow(entry);
+  }
+
+  const representative = representativeEntry(dayEntries, timezoneOffsetSeconds);
+  const temperature = firstNumber(
+    representative?.main?.temp,
+    representative?.main?.temp_max,
+    representative?.main?.temp_min,
+    maxTemperature,
+    minTemperature,
+  );
+
+  return {
+    available: true,
+    temperature,
+    feels_like: temperature,
+    min_temperature: minTemperature,
+    max_temperature: maxTemperature,
+    humidity: nullableNumber(representative?.main?.humidity),
+    rain_probability: rainProbability,
+    wind_speed: nullableNumber(representative?.wind?.speed),
+    uv_index: null,
+    condition: firstCondition(representative?.weather),
+    has_rain_or_snow: hasRainOrSnow,
+    ...params.base,
+  };
+}
+
+/**
+ * Selects the forecast entry nearest local noon as the representative
+ * "midday" value for a day (used for a single temperature/condition point).
+ */
+function representativeEntry(
+  entries: ForecastEntry[],
+  timezoneOffsetSeconds: number,
+): ForecastEntry | undefined {
+  let best: ForecastEntry | undefined;
+  let bestDistance = Infinity;
+
+  for (const entry of entries) {
+    const dt = nullableNumber(entry.dt);
+    if (dt == null) {
+      continue;
+    }
+    const minutes = localTimeMinutes(dt * 1000, timezoneOffsetSeconds);
+    const distance = Math.abs(minutes - 12 * 60);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = entry;
+    }
+  }
+
+  return best;
+}
+
+function localTimeMinutes(
+  timestampMillis: number,
+  timezoneOffsetSeconds: number,
+): number {
+  const date = new Date(timestampMillis + timezoneOffsetSeconds * 1000);
+  return date.getUTCHours() * 60 + date.getUTCMinutes();
 }
 
 export function deriveTodayForecast(

@@ -10,6 +10,7 @@ class WeatherData {
     this.uvIndex,
     this.condition,
     this.hasRainOrSnow = false,
+    this.available = true,
     this.fetchedAt,
     this.latitude,
     this.longitude,
@@ -25,6 +26,12 @@ class WeatherData {
   final double? uvIndex;
   final String? condition;
   final bool hasRainOrSnow;
+
+  /// Whether a usable weather reading truly exists for the requested context.
+  /// `false` indicates the requested date is outside the available forecast
+  /// window (no weather was invented for it).
+  final bool available;
+
   final DateTime? fetchedAt;
   final double? latitude;
   final double? longitude;
@@ -61,6 +68,7 @@ class WeatherData {
           (json['has_rain_or_snow'] as bool?) ??
           (json['hasRainOrSnow'] as bool?) ??
           false,
+      available: (json['available'] as bool?) ?? true,
       fetchedAt: DateTime.tryParse(json['fetched_at'] as String? ?? ''),
       latitude: _toDouble(json['latitude']),
       longitude: _toDouble(json['longitude']),

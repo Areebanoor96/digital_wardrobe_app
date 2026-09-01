@@ -1,5 +1,6 @@
 import {
   CURRENT_WEATHER_ENDPOINT,
+  deriveForecastForDate,
   deriveTodayForecast,
   FORECAST_ENDPOINT,
   normalizeWeather,
@@ -138,6 +139,94 @@ Deno.test("free OpenWeather endpoints use current and forecast APIs", () => {
     FORECAST_ENDPOINT,
     "https://api.openweathermap.org/data/2.5/forecast",
   );
+});
+
+Deno.test("no target date preserves today's behavior and marks available", () => {
+  const normalized = normalizeWeather({
+    currentPayload: currentWeather(),
+    forecastPayload: forecastWeather(),
+    latitude: 33.6844,
+    longitude: 73.0479,
+    fetchedAt: new Date("2026-08-24T07:00:00.000Z"),
+  });
+
+  assertEquals(normalized?.available, true);
+  assertEquals(normalized?.temperature, 31);
+});
+
+Deno.test("target date extracts that day's forecast entry", () => {
+  const normalized = normalizeWeather({
+    currentPayload: currentWeather(),
+    forecastPayload: forecastWeather(),
+    latitude: 33.6844,
+    longitude: 73.0479,
+    fetchedAt: new Date("2026-08-24T07:00:00.000Z"),
+    targetDate: "2026-08-25",
+  });
+
+  assertEquals(normalized?.available, true);
+  assertEquals(normalized?.min_temperature, 24);
+  assertEquals(normalized?.max_temperature, 27);
+  assertEquals(normalized?.condition, "Clouds");
+  assertEquals(normalized?.rain_probability, 10);
+  assertEquals(normalized?.humidity, null);
+});
+
+Deno.test("target date with no forecast entries is unavailable", () => {
+  const normalized = normalizeWeather({
+    currentPayload: currentWeather(),
+    forecastPayload: forecastWeather(),
+    latitude: 33.6844,
+    longitude: 73.0479,
+    fetchedAt: new Date("2026-08-24T07:00:00.000Z"),
+    targetDate: "2026-09-01",
+  });
+
+  assertEquals(normalized?.available, false);
+  assertEquals(normalized?.temperature, null);
+  assertEquals(normalized?.min_temperature, null);
+  assertEquals(normalized?.has_rain_or_snow, false);
+});
+
+Deno.test("deriveForecastForDate returns unavailable for empty forecast", () => {
+  const result = deriveForecastForDate({
+    forecastPayload: { city: { timezone: 0 }, list: [] },
+    targetDate: "2026-08-24",
+    base: {
+      fetched_at: new Date("2026-08-24T07:00:00.000Z").toISOString(),
+      latitude: 33.6844,
+      longitude: 73.0479,
+    },
+  });
+
+  assertEquals(result.available, false);
+  assertEquals(result.temperature, null);
+});
+
+Deno.test("forecast entries with rain flag a rain/snow day", () => {
+  const normalized = normalizeWeather({
+    currentPayload: currentWeather(),
+    forecastPayload: {
+      city: { timezone: 0 },
+      list: [
+        {
+          dt: Date.parse("2026-08-25T06:00:00.000Z") / 1000,
+          main: { temp: 20, temp_min: 18, temp_max: 22, humidity: 80 },
+          weather: [{ main: "Rain" }],
+          pop: 0.9,
+        },
+      ],
+    },
+    latitude: 33.6844,
+    longitude: 73.0479,
+    fetchedAt: new Date("2026-08-24T07:00:00.000Z"),
+    targetDate: "2026-08-25",
+  });
+
+  assertEquals(normalized?.available, true);
+  assertEquals(normalized?.has_rain_or_snow, true);
+  assertEquals(normalized?.rain_probability, 90);
+  assertEquals(normalized?.humidity, 80);
 });
 
 function currentWeather(overrides: Record<string, unknown> = {}) {

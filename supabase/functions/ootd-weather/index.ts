@@ -8,6 +8,7 @@ import {
 type WeatherRequest = {
   latitude?: number;
   longitude?: number;
+  target_date?: string;
 };
 
 const corsHeaders = {
@@ -15,6 +16,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+const TARGET_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -94,11 +97,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
     forecastPayload = null;
   }
 
+  const targetDate = typeof body.target_date === "string" ? body.target_date : null;
+  if (
+    targetDate != null &&
+    !TARGET_DATE_PATTERN.test(targetDate)
+  ) {
+    return json({ error: "target_date must be an ISO date (YYYY-MM-DD)." }, 400);
+  }
+
   const normalized = normalizeWeather({
     currentPayload,
     forecastPayload,
     latitude,
     longitude,
+    targetDate,
   });
 
   if (normalized == null) {

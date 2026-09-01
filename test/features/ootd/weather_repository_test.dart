@@ -17,6 +17,7 @@ void main() {
     double temperature = 31,
     double latitude = 33.6844,
     double longitude = 73.0479,
+    String? fetchedAt,
   }) {
     return <String, dynamic>{
       'temperature': temperature,
@@ -29,7 +30,7 @@ void main() {
       'uv_index': 6,
       'condition': 'Clear',
       'has_rain_or_snow': false,
-      'fetched_at': '2026-08-24T10:00:00.000Z',
+      'fetched_at': fetchedAt ?? '2026-08-24T10:00:00.000Z',
       'latitude': latitude,
       'longitude': longitude,
     };
@@ -197,4 +198,115 @@ void main() {
       expect(source, isNot(contains('one' 'call')));
     });
   });
+
+  group('WeatherRepository date-specific weather', () {
+    test('no target date keeps today\'s request body unchanged', () async {
+      Map<String, dynamic>? captured;
+      final WeatherRepository repository = WeatherRepository.forTesting((
+        _,
+        Map<String, dynamic> body,
+      ) async {
+        captured = body;
+        return validPayload();
+      });
+
+      await repository.fetchForLocation(location: location);
+
+      expect(captured, isNotNull);
+      expect(captured!.containsKey('target_date'), isFalse);
+    });
+
+    test('forDate passes an ISO date to the function', () async {
+      Map<String, dynamic>? captured;
+      final WeatherRepository repository = WeatherRepository.forTesting((
+        _,
+        Map<String, dynamic> body,
+      ) async {
+        captured = body;
+        return validPayload();
+      });
+
+      await repository.fetchForLocation(
+        location: location,
+        forDate: DateTime(2026, 9, 5),
+      );
+
+      expect(captured, isNotNull);
+      expect(captured!['target_date'], '2026-09-05');
+    });
+
+    test('forDate normalizes time to date-only', () async {
+      Map<String, dynamic>? captured;
+      final WeatherRepository repository = WeatherRepository.forTesting((
+        _,
+        Map<String, dynamic> body,
+      ) async {
+        captured = body;
+        return validPayload();
+      });
+
+      await repository.fetchForLocation(
+        location: location,
+        forDate: DateTime(2026, 9, 5, 14, 30),
+      );
+
+      expect(captured!['target_date'], '2026-09-05');
+    });
+
+    test('date-specific weather is cached separately from today', () async {
+      int calls = 0;
+      final String fresh = DateTime.now().toUtc().toIso8601String();
+      final WeatherRepository repository = WeatherRepository.forTesting((
+        _,
+        Map<String, dynamic> body,
+      ) async {
+        calls++;
+        return validPayload(temperature: 31, fetchedAt: fresh);
+      });
+
+      await repository.fetchForLocation(location: location);
+      final WeatherData? today = await repository.fetchForLocation(
+        location: location,
+      );
+      final WeatherData? future = await repository.fetchForLocation(
+        location: location,
+        forDate: DateTime(2026, 9, 5),
+      );
+
+      // Today: second call served from cache, date uses a separate cache key.
+      expect(today!.temperature, 31);
+      expect(future!.temperature, 31);
+      expect(calls, 2);
+    });
+
+    test('available false payload is surfaced rather than dropped', () async {
+      final Map<String, dynamic> payload = validPayload();
+      for (final String key in payloadValueKeys) {
+        payload[key] = null;
+      }
+      payload['available'] = false;
+      final WeatherRepository repository = repositoryFor(<dynamic>[payload]);
+
+      final WeatherData? weather = await repository.fetchForLocation(
+        location: location,
+        forDate: DateTime(2026, 9, 5),
+      );
+
+      expect(weather, isNotNull);
+      expect(weather!.available, isFalse);
+      expect(weather.temperature, isNull);
+    });
+  });
 }
+
+const Set<String> payloadValueKeys = <String>{
+  'temperature',
+  'feels_like',
+  'min_temperature',
+  'max_temperature',
+  'humidity',
+  'rain_probability',
+  'wind_speed',
+  'uv_index',
+  'condition',
+};

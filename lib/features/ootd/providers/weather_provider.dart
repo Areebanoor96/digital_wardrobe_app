@@ -26,3 +26,26 @@ final FutureProvider<WeatherData?> ootdWeatherProvider =
           .watch(weatherRepositoryProvider)
           .fetchForLocation(location: location.location!);
     });
+
+/// Weather for a specific local calendar date (date-only). Returns `null`
+/// when location is unavailable; returns a `WeatherData` with
+/// `available == false` when the date is outside the forecast window.
+final ootdWeatherForDateProvider = FutureProvider.family<WeatherData?, DateTime>((
+  Ref ref,
+  DateTime date,
+) async {
+  final LocationResult location = await ref
+      .watch(locationServiceProvider)
+      .currentLocation();
+
+  if (!location.hasLocation) {
+    return null;
+  }
+
+  return ref
+      .watch(weatherRepositoryProvider)
+      .fetchForLocation(
+        location: location.location!,
+        forDate: date,
+      );
+});

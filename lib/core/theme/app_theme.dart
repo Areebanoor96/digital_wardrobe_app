@@ -5,23 +5,51 @@ class AppTheme {
   const AppTheme._();
 
   static const Color primary = Color(0xFF6C5CE7);
-  static const Color background = Color(0xFFFAFAFC);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF1A1A2E);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color border = Color(0xFFEEEFF3);
 
-  static ThemeData get light {
-    final ColorScheme colors =
-        ColorScheme.fromSeed(
-          seedColor: primary,
-          brightness: Brightness.light,
-        ).copyWith(
-          primary: primary,
-          surface: surface,
-          onSurface: textPrimary,
-          outline: border,
-        );
+  static const Color lightBackground = Color(0xFFFAFAFC);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightTextPrimary = Color(0xFF1A1A2E);
+  static const Color lightTextSecondary = Color(0xFF6B7280);
+  static const Color lightBorder = Color(0xFFEEEFF3);
+
+  static const Color darkBackground = Color(0xFF12121C);
+  static const Color darkSurface = Color(0xFF1C1C2B);
+  static const Color darkTextPrimary = Color(0xFFF5F5F9);
+  static const Color darkTextSecondary = Color(0xFFA6A8BC);
+  static const Color darkBorder = Color(0xFF2A2A3A);
+
+  static ThemeData get light => _theme(
+    brightness: Brightness.light,
+    background: lightBackground,
+    surface: lightSurface,
+    textPrimary: lightTextPrimary,
+    border: lightBorder,
+  );
+
+  static ThemeData get dark => _theme(
+    brightness: Brightness.dark,
+    background: darkBackground,
+    surface: darkSurface,
+    textPrimary: darkTextPrimary,
+    border: darkBorder,
+  );
+
+  static ThemeData _theme({
+    required Brightness brightness,
+    required Color background,
+    required Color surface,
+    required Color textPrimary,
+    required Color border,
+  }) {
+    final ColorScheme colors = ColorScheme.fromSeed(
+      seedColor: primary,
+      brightness: brightness,
+    ).copyWith(
+      primary: primary,
+      surface: surface,
+      onSurface: textPrimary,
+      outline: border,
+    );
 
     return ThemeData(
       useMaterial3: true,
@@ -31,7 +59,7 @@ class AppTheme {
         bodyColor: textPrimary,
         displayColor: textPrimary,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: background,
         foregroundColor: textPrimary,
         elevation: 0,
@@ -42,11 +70,11 @@ class AppTheme {
         fillColor: surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: border),
+          borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: border),
+          borderSide: BorderSide(color: border),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

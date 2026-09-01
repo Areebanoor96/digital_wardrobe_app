@@ -66,6 +66,56 @@ final ootdProvider = FutureProvider<OutfitRecommendation>((Ref ref) {
   );
 });
 
+/// Generates an OOTD recommendation for a specific local calendar date
+/// (date-only). The requested date becomes the recommendation context date and
+/// drives date-specific weather. Reuses the exact same
+/// [OutfitRecommendationService] pipeline as today's [ootdProvider].
+///
+/// Returns a recommendation whose reason/score reflect the requested date even
+/// when weather is unavailable for it (the engine's non-weather rules still
+/// apply the same graceful fallback as today).
+final FutureProviderFamily<OutfitRecommendation, DateTime> ootdForDateProvider =
+    FutureProvider.family<OutfitRecommendation, DateTime>((
+      Ref ref,
+      DateTime date,
+    ) async {
+      final DateTime day = DateTime(date.year, date.month, date.day);
+
+      final List<Garment> garments =
+          ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
+
+      final List<WearLog> wearLogs =
+          ref.watch(ootdWearHistoryProvider).valueOrNull ?? const <WearLog>[];
+
+      final WeatherData? weather = ref
+          .watch(ootdWeatherForDateProvider(day))
+          .valueOrNull;
+
+      final OutfitContext context = ref.watch(ootdContextProvider);
+
+      const OutfitRecommendationService service = OutfitRecommendationService();
+
+      final String? memberId = ref.watch(selectedFamilyMemberProvider)?.id;
+
+      if (!service.isEligibleForRecommendation(garments, memberId: memberId)) {
+        return const OutfitRecommendation(
+          garments: <Garment>[],
+          reason:
+              'Add clean garments that can make either top + bottom + shoes '
+              'or dress + shoes to get an outfit suggestion.',
+        );
+      }
+
+      return service.recommend(
+        allGarments: garments,
+        wearLogs: wearLogs,
+        context: context,
+        weather: weather == null || !weather.available ? null : weather,
+        memberId: memberId,
+        now: day,
+      );
+    });
+
 final ootdActionControllerProvider =
     AutoDisposeAsyncNotifierProvider<OotdActionController, void>(
       OotdActionController.new,
