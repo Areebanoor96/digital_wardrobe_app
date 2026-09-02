@@ -26,6 +26,10 @@ class ProfileRepository {
       .from('profiles')
       .update(<String, String?>{'location_city': city})
       .eq('id', _client.auth.currentUser!.id);
+  Future<void> updateCountryCode(String? countryCode) => _client
+      .from('profiles')
+      .update(<String, String?>{'country_code': countryCode})
+      .eq('id', _client.auth.currentUser!.id);
   Future<void> updateName(String name) => _client
       .from('profiles')
       .update(<String, String>{'full_name': name})

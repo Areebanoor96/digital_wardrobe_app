@@ -143,7 +143,18 @@ class ProfileScreen extends ConsumerWidget {
                 'Deactivate My Account',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-              onTap: () => _confirmDeactivateAccount(context),
+              onTap: () => _confirmDeactivateAccount(context, ref),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_forever_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Delete My Account Permanently',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              onTap: () => _confirmDeleteAccount(context, ref),
             ),
             ListTile(
               leading: const Icon(Icons.logout),
@@ -225,21 +236,22 @@ class ProfileScreen extends ConsumerWidget {
     ref.invalidate(profileProvider);
   }
 
-  Future<void> _confirmDeactivateAccount(BuildContext context) async {
+  Future<void> _confirmDeactivateAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: const Text('Deactivate my account?'),
         content: const Text(
-          'This is a high-impact action. Deactivating your account may affect '
-          'your profiles, wardrobe and access to the app.\n\n'
-          'No data is deleted from this screen.',
+          'Your account will be temporarily deactivated.\n\n'
+          'Your wardrobe, photos, outfits, wear history and profile will all '
+          'be preserved.\n\n'
+          'You will be signed out, and you can reactivate your account again '
+          'later.',
         ),
         actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -253,23 +265,65 @@ class ProfileScreen extends ConsumerWidget {
 
     if (confirmed != true || !context.mounted) return;
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('Account deactivation'),
-        content: const Text(
-          'Account deactivation currently requires backend account-management '
-          'support that is not available yet. Your account remains active.',
+    try {
+      await ref.read(accountRepositoryProvider).deactivateAccount();
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not deactivate your account. Please try again.'),
         ),
-        actions: <Widget>[
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    await ProfileSessionService.clearSelectedProfile();
+    ref.read(selectedFamilyMemberProvider.notifier).state = null;
+    ref.invalidate(profileProvider);
+
+    await SupabaseService.client.auth.signOut();
+
+    if (context.mounted) {
+      context.go('/auth');
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => _DeleteAccountConfirmationDialog(),
     );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(accountRepositoryProvider).deleteAccount();
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not delete your account. Please try again.'),
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    await ProfileSessionService.clearSelectedProfile();
+    ref.read(selectedFamilyMemberProvider.notifier).state = null;
+    ref.invalidate(profileProvider);
+
+    await SupabaseService.client.auth.signOut();
+
+    if (context.mounted) {
+      context.go('/auth');
+    }
   }
 }
 
@@ -288,6 +342,80 @@ class _SectionHeader extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
+    );
+  }
+}
+
+/// Permanent-deletion confirmation. There is deliberately no Cancel button —
+/// the dialog can still be left without acting via the standard dialog close
+/// behaviour (tapping outside / system back). The destructive action is only
+/// enabled after the user types `DELETE`, as required by product decisions.
+class _DeleteAccountConfirmationDialog extends StatefulWidget {
+  const _DeleteAccountConfirmationDialog();
+
+  static const String requiredText = 'DELETE';
+
+  @override
+  State<_DeleteAccountConfirmationDialog> createState() =>
+      _DeleteAccountConfirmationDialogState();
+}
+
+class _DeleteAccountConfirmationDialogState
+    extends State<_DeleteAccountConfirmationDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _matches = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onChanged(String value) {
+    setState(() {
+      _matches = value.trim().toUpperCase() ==
+          _DeleteAccountConfirmationDialog.requiredText;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      title: const Text('Delete my account permanently?'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text(
+              'This will permanently delete your account and all associated '
+              'data, including your wardrobe, photos, outfits, wear history '
+              'and profile. This cannot be undone.\n\n'
+              'To confirm, type DELETE below.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              onChanged: _onChanged,
+              decoration: const InputDecoration(
+                labelText: 'Type DELETE to confirm',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.error,
+          ),
+          onPressed: _matches ? () => Navigator.pop(context, true) : null,
+          child: const Text('Delete Permanently'),
+        ),
+      ],
     );
   }
 }

@@ -42,6 +42,10 @@ class AuthController {
     );
   }
 
+  Future<void> signOut() {
+    return SupabaseService.client.auth.signOut();
+  }
+
   Future<void> sendPasswordResetOtp(String email) {
     return SupabaseService.client.auth.resetPasswordForEmail(
       email,

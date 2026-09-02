@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:digital_wardrobe_app/core/services/app_info_service.dart';
+import 'package:digital_wardrobe_app/core/services/country_currency_service.dart';
+import 'package:digital_wardrobe_app/core/services/currency_formatter.dart';
 import 'package:digital_wardrobe_app/core/services/image_service.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
@@ -13,6 +15,7 @@ import 'package:digital_wardrobe_app/data/models/ootd_recommendation_snapshot.da
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
+import 'package:digital_wardrobe_app/data/repositories/account_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/alerts_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/analytics_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/family_repository.dart';
@@ -76,6 +79,9 @@ final Provider<ProfileRepository> profileRepositoryProvider =
     Provider<ProfileRepository>(
       (Ref ref) => ProfileRepository(SupabaseService.client),
     );
+
+final Provider<AccountRepository> accountRepositoryProvider =
+    Provider<AccountRepository>((Ref ref) => const AccountRepository());
 
 final Provider<FamilyRepository> familyRepositoryProvider =
     Provider<FamilyRepository>(
@@ -258,6 +264,25 @@ final outfitProvider = FutureProvider.family<Outfit, String>((
 final profileProvider = FutureProvider.autoDispose<Profile>(
       (Ref ref) => ref.watch(profileRepositoryProvider).fetchProfile(),
 );
+
+/// The centralized country → currency mapping used by Setup and Analytics.
+final Provider<CountryCurrencyService> countryCurrencyServiceProvider =
+    Provider<CountryCurrencyService>(
+      (Ref ref) => const CountryCurrencyService(),
+);
+
+/// The user's derived currency formatter based on the country saved during the
+/// Setup Wizard. Falls back to the default country (PKR) when a user has no
+/// stored country. This is a lightweight, cached derivation from
+/// [profileProvider] — Analytics never issues a network call for currency.
+final Provider<CurrencyFormatter> userCurrencyProvider =
+    Provider<CurrencyFormatter>((Ref ref) {
+      final AsyncValue<Profile> profile = ref.watch(profileProvider);
+      final String? countryCode =
+          profile.valueOrNull?.countryCode ??
+          CountryCurrencyService.defaultCountry.code;
+      return ref.watch(countryCurrencyServiceProvider).formatterFor(countryCode);
+    });
 
 final familyMembersProvider =
 FutureProvider.autoDispose<List<FamilyMember>>(

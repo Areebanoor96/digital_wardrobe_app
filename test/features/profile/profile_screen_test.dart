@@ -1,12 +1,14 @@
 import 'package:digital_wardrobe_app/core/config/supabase_config.dart';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
+import 'package:digital_wardrobe_app/data/repositories/account_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _InMemoryAuthStorage implements LocalStorage {
@@ -48,6 +50,9 @@ class _EditNameProfileRepository implements ProfileRepository {
   Future<void> updateLocationCity(String? city) async {}
 
   @override
+  Future<void> updateCountryCode(String? countryCode) async {}
+
+  @override
   Future<void> updateGrowthAlertsEnabled(bool enabled) async {}
 
   @override
@@ -57,6 +62,21 @@ class _EditNameProfileRepository implements ProfileRepository {
     required bool ootdAlertsEnabled,
     bool? growthAlertsEnabled,
   }) async {}
+}
+
+class _RecordingAccountRepository extends AccountRepository {
+  bool deactivated = false;
+  bool deleted = false;
+
+  @override
+  Future<void> deactivateAccount() async {
+    deactivated = true;
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    deleted = true;
+  }
 }
 
 void main() {
@@ -81,7 +101,9 @@ void main() {
               return true;
             }
             if (call.method == 'remove') {
-              store.remove(call.arguments as String);
+              final Map<String, dynamic> args =
+                  Map<String, dynamic>.from(call.arguments as Map);
+              store.remove(args['key'] as String);
               return true;
             }
             return null;
@@ -102,9 +124,21 @@ void main() {
   Future<void> pumpProfile(
     WidgetTester tester, {
     Profile? override,
+    AccountRepository? accountRepository,
   }) async {
     await tester.binding.setSurfaceSize(const Size(600, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final GoRouter router = GoRouter(
+      initialLocation: '/profile',
+      routes: <RouteBase>[
+        GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+        GoRoute(
+          path: '/auth',
+          builder: (_, _) => const Scaffold(body: Center(child: Text('auth'))),
+        ),
+      ],
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -112,8 +146,10 @@ void main() {
           profileProvider.overrideWith(
             (ref) async => override ?? profile,
           ),
+          if (accountRepository != null)
+            accountRepositoryProvider.overrideWithValue(accountRepository),
         ],
-        child: const MaterialApp(home: ProfileScreen()),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -133,6 +169,7 @@ void main() {
     expect(find.text('About Digital Wardrobe'), findsOneWidget);
     expect(find.text('Help / FAQ'), findsOneWidget);
     expect(find.text('Deactivate My Account'), findsOneWidget);
+    expect(find.text('Delete My Account Permanently'), findsOneWidget);
     expect(find.text('Log Out'), findsOneWidget);
   });
 
@@ -202,23 +239,68 @@ void main() {
     expect(tester.widget<SwitchListTile>(darkModeTile).value, isTrue);
   });
 
-  testWidgets('deactivate account requires confirmation before reporting', (
-    tester,
-  ) async {
-    await pumpProfile(tester);
+  testWidgets(
+    'deactivate account requires confirmation then deactivates and signs out',
+    (tester) async {
+      final _RecordingAccountRepository accountRepository =
+          _RecordingAccountRepository();
 
-    await tester.tap(find.text('Deactivate My Account'));
-    await tester.pumpAndSettle();
+      await pumpProfile(tester, accountRepository: accountRepository);
 
-    expect(find.text('Deactivate my account?'), findsOneWidget);
+      await tester.tap(find.text('Deactivate My Account'));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Deactivate'));
-    await tester.pumpAndSettle();
+      expect(find.text('Deactivate my account?'), findsOneWidget);
 
-    expect(find.text('Account deactivation'), findsOneWidget);
-    expect(
-      find.textContaining('requires backend account-management support'),
-      findsOneWidget,
-    );
-  });
+      // There is deliberately no Cancel button on the confirmation dialog.
+      expect(find.text('Cancel'), findsNothing);
+
+      await tester.tap(find.text('Deactivate'));
+      await tester.pumpAndSettle();
+
+      expect(accountRepository.deactivated, isTrue);
+      // The old placeholder "backend support not available" dialog is gone.
+      expect(
+        find.textContaining('backend account-management support'),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'delete account requires typing DELETE before confirming',
+    (tester) async {
+      final _RecordingAccountRepository accountRepository =
+          _RecordingAccountRepository();
+
+      await pumpProfile(tester, accountRepository: accountRepository);
+
+      await tester.tap(find.text('Delete My Account Permanently'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete my account permanently?'), findsOneWidget);
+      // There is deliberately no Cancel button on the confirmation dialog.
+      expect(find.text('Cancel'), findsNothing);
+
+      // The destructive action is disabled until DELETE is typed.
+      final Finder deleteButton = find.widgetWithText(
+        FilledButton,
+        'Delete Permanently',
+      );
+      expect(tester.widget<FilledButton>(deleteButton).onPressed, isNull);
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Type DELETE to confirm'),
+        'delete',
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<FilledButton>(deleteButton).onPressed, isNotNull);
+
+      await tester.tap(deleteButton);
+      await tester.pumpAndSettle();
+
+      expect(accountRepository.deleted, isTrue);
+    },
+  );
 }

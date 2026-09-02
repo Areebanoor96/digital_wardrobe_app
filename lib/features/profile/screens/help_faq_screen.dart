@@ -37,8 +37,7 @@ class HelpFaqScreen extends StatelessWidget {
             question: 'How do I change my notification preferences?',
             answer:
                 'Open Profile → Notifications and toggle the alerts you want, '
-                'such as unused garment, laundry, outfit of the day and growth '
-                'alerts.',
+                'such as unused garment, laundry and outfit of the day alerts.',
           ),
           const _FaqCard(
             question: 'How do I plan an outfit for a specific day?',

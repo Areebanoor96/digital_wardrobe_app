@@ -32,6 +32,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         return;
       }
 
+      // A deactivated account (with a still-persisted session) must not enter
+      // the app. Route to the deactivated screen so the user can reactivate.
+      bool deactivated = false;
+      try {
+        deactivated = (await ref
+                .read(profileRepositoryProvider)
+                .fetchProfile())
+            .isDeactivated;
+      } catch (_) {
+        // If the status cannot be read, be conservative and let the normal
+        // profile-selection flow decide below.
+        deactivated = false;
+      }
+
+      if (deactivated) {
+        ref.read(selectedFamilyMemberProvider.notifier).state = null;
+        if (mounted) {
+          context.go('/deactivated');
+        }
+        return;
+      }
+
       if (selectedId == null) {
         context.go('/profiles');
         return;

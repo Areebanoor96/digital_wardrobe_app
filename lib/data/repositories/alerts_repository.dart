@@ -268,31 +268,55 @@ class AlertsRepository {
     required bool unusedAlertsEnabled,
     required bool laundryAlertsEnabled,
   }) async {
+    // Partition garments into those whose laundry / unused alert conditions no
+    // longer hold. Using a single batched UPDATE per type (rather than one
+    // UPDATE per garment) avoids 2N sequential round trips for large wardrobes.
+    final List<String> laundryDismissIds = <String>[];
+    final List<String> unusedDismissIds = <String>[];
+
     for (final Garment garment in garments) {
-      // Resolve laundry alerts when the garment no longer needs laundry.
       if (!laundryAlertsEnabled || !ruleService.shouldHaveLaundryAlert(garment)) {
-        await _client
-            .from('alerts')
-            .update(<String, bool>{'is_dismissed': true})
-            .eq('user_id', userId)
-            .eq('member_id', memberId)
-            .eq('garment_id', garment.id)
-            .eq('type', 'laundry')
-            .eq('is_dismissed', false);
+        laundryDismissIds.add(garment.id);
       }
 
-      // Resolve unused alerts when the garment is no longer considered unused.
       if (!unusedAlertsEnabled || !ruleService.shouldHaveUnusedAlert(garment)) {
-        await _client
-            .from('alerts')
-            .update(<String, bool>{'is_dismissed': true})
-            .eq('user_id', userId)
-            .eq('member_id', memberId)
-            .eq('garment_id', garment.id)
-            .eq('type', 'unused')
-            .eq('is_dismissed', false);
+        unusedDismissIds.add(garment.id);
       }
     }
+
+    if (laundryDismissIds.isNotEmpty) {
+      await _dismissGarmentAlerts(
+        userId: userId,
+        memberId: memberId,
+        garmentIds: laundryDismissIds,
+        type: 'laundry',
+      );
+    }
+
+    if (unusedDismissIds.isNotEmpty) {
+      await _dismissGarmentAlerts(
+        userId: userId,
+        memberId: memberId,
+        garmentIds: unusedDismissIds,
+        type: 'unused',
+      );
+    }
+  }
+
+  Future<void> _dismissGarmentAlerts({
+    required String userId,
+    required String memberId,
+    required List<String> garmentIds,
+    required String type,
+  }) async {
+    await _client
+        .from('alerts')
+        .update(<String, bool>{'is_dismissed': true})
+        .eq('user_id', userId)
+        .eq('member_id', memberId)
+        .inFilter('garment_id', garmentIds)
+        .eq('type', type)
+        .eq('is_dismissed', false);
   }
 
   Future<void> _resolveOotdAlert({

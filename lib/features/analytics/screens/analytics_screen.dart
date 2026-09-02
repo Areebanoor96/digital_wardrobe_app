@@ -18,6 +18,7 @@ class AnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(analyticsSummaryProvider);
+    final formatter = ref.watch(userCurrencyProvider);
     return Scaffold(
       appBar: AppBar(
         leading: canNavigateBack
@@ -47,32 +48,46 @@ class AnalyticsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               children: <Widget>[
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.5,
-                  children: <Widget>[
-                    StatCard(
-                      label: 'Total garments',
-                      value: '${data.totalGarments}',
-                    ),
-                    StatCard(
-                      label: 'Active garments',
-                      value: '${data.activeGarments}',
-                    ),
-                    StatCard(
-                      label: 'In Closet Vault',
-                      value: '${data.archivedGarments}',
-                    ),
-                    StatCard(label: 'Total wears', value: '${data.totalWears}'),
-                    StatCard(
-                      label: 'Wardrobe value',
-                      value: data.totalValue?.toStringAsFixed(0) ?? '—',
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    const double spacing = 12;
+                    final double cardWidth =
+                        (constraints.maxWidth - spacing) / 2;
+                    final List<Widget> cards = <Widget>[
+                      StatCard(
+                        label: 'Total garments',
+                        value: '${data.totalGarments}',
+                      ),
+                      StatCard(
+                        label: 'Active garments',
+                        value: '${data.activeGarments}',
+                      ),
+                      StatCard(
+                        label: 'In Closet Vault',
+                        value: '${data.archivedGarments}',
+                      ),
+                      StatCard(
+                        label: 'Total wears',
+                        value: '${data.totalWears}',
+                      ),
+                      StatCard(
+                        label: 'Wardrobe value',
+                        value: formatter.format(data.totalValue),
+                      ),
+                    ];
+                    return Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: cards
+                          .map(
+                            (Widget card) => SizedBox(
+                              width: cardWidth,
+                              child: card,
+                            ),
+                          )
+                          .toList(),
+                    );
+                  },
                 ),
                 const SizedBox(height: 28),
                 AnalyticsSection(

@@ -6,6 +6,7 @@ import 'package:digital_wardrobe_app/features/auth/screens/auth_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/onboarding_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/setup_wizard_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/splash_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/deactivated_account_screen.dart';
 import 'package:digital_wardrobe_app/features/garment_form/screens/garment_form_screen.dart';
 import 'package:digital_wardrobe_app/features/ootd/screens/ootd_plan_screen.dart';
 import 'package:digital_wardrobe_app/features/ootd/screens/ootd_recommendation_screen.dart';
@@ -44,7 +45,7 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
               location == '/new-password';
 
       final bool isProfileRoute =
-          location == '/profiles' || location == '/setup';
+          location == '/profiles' || location == '/setup' || location == '/deactivated';
 
       if (!signedIn && !isPublicRoute) {
         return '/auth';
@@ -101,6 +102,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/profiles',
         builder: (_, _) => const ProfileSelectionScreen(),
+      ),
+      GoRoute(
+        path: '/deactivated',
+        builder: (_, _) => const DeactivatedAccountScreen(),
       ),
       GoRoute(path: '/app', builder: (_, _) => const AppShellScreen()),
       GoRoute(

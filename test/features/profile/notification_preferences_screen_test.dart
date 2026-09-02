@@ -19,6 +19,9 @@ class _FakeProfileRepository implements ProfileRepository {
   Future<void> updateLocationCity(String? city) async {}
 
   @override
+  Future<void> updateCountryCode(String? countryCode) async {}
+
+  @override
   Future<void> updateGrowthAlertsEnabled(bool enabled) async {}
 
   @override

@@ -81,9 +81,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           _passwordController.text,
         );
 
-        if (mounted) {
-          context.go('/splash');
-        }
+        if (!mounted) return;
+
+        final bool deactivated = await _isDeactivatedAccount();
+
+        if (!mounted) return;
+
+        context.go(deactivated ? '/deactivated' : '/splash');
       }
     } on AuthException catch (error) {
       _showError(error.message);
@@ -91,6 +95,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _showError('Unable to continue. Please try again.');
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<bool> _isDeactivatedAccount() async {
+    try {
+      final profile = await ref.read(profileRepositoryProvider).fetchProfile();
+      return profile.isDeactivated;
+    } catch (_) {
+      return false;
     }
   }
 

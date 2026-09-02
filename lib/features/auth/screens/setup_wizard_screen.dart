@@ -1,4 +1,5 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/services/country_currency_service.dart';
 import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
@@ -22,8 +23,10 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _memberNameController = TextEditingController();
+  final TextEditingController _countrySearchController = TextEditingController();
 
   RelationshipType _relationship = RelationshipType.self;
+  String? _countryCode;
   bool _unusedAlerts = true;
   bool _laundryAlerts = true;
   bool _ootdAlerts = true;
@@ -33,6 +36,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
     _controller.dispose();
     _cityController.dispose();
     _memberNameController.dispose();
+    _countrySearchController.dispose();
     super.dispose();
   }
 
@@ -43,6 +47,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
 
     _loadedProfile = true;
     _cityController.text = profile.locationCity ?? '';
+    _countryCode = profile.countryCode ?? CountryCurrencyService.defaultCountry.code;
     _unusedAlerts = profile.unusedAlertsEnabled;
     _laundryAlerts = profile.laundryAlertsEnabled;
     _ootdAlerts = profile.ootdAlertsEnabled;
@@ -73,6 +78,8 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
       await ref.read(profileRepositoryProvider).updateLocationCity(
         city.isEmpty ? null : city,
       );
+
+      await ref.read(profileRepositoryProvider).updateCountryCode(_countryCode);
 
       await ref.read(profileRepositoryProvider).updateAlertPreferences(
         unusedAlertsEnabled: _unusedAlerts,
@@ -136,6 +143,23 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
     }
 
     context.go('/app');
+  }
+
+  Future<void> _pickCountry() async {
+    _countrySearchController.clear();
+    final CountryInfo? selected = await showModalBottomSheet<CountryInfo>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (BuildContext sheetContext) =>
+          _CountryPickerSheet(searchController: _countrySearchController),
+    );
+
+    if (selected == null || !mounted) {
+      return;
+    }
+
+    setState(() => _countryCode = selected.code);
   }
 
   Future<void> _selectMemberAndEnterApp({FamilyMember? preferred}) async {
@@ -215,16 +239,30 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
                           icon: Icons.location_city_outlined,
                           title: 'Where are you based?',
                           description:
-                              'Add your city to prepare weather-aware outfit suggestions.',
-                          child: TextField(
-                            controller: _cityController,
-                            enabled: !_saving,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: const InputDecoration(
-                              labelText: 'City',
-                              hintText: 'For example: Islamabad',
-                              prefixIcon: Icon(Icons.location_city_outlined),
-                            ),
+                              'Select your country to set your currency and '
+                              'add your city for weather-aware outfit '
+                              'suggestions.',
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              _CountrySelector(
+                                countryCode: _countryCode,
+                                onTap: _saving ? null : _pickCountry,
+                              ),
+                              const SizedBox(height: 16),
+                              TextField(
+                                controller: _cityController,
+                                enabled: !_saving,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                  labelText: 'City',
+                                  hintText: 'For example: Islamabad',
+                                  prefixIcon: Icon(
+                                    Icons.location_city_outlined,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         _SetupStep(
@@ -390,6 +428,138 @@ class _SetupStep extends StatelessWidget {
         const SizedBox(height: 24),
         child,
       ],
+    );
+  }
+}
+
+/// A compact tappable field showing the currently selected country. Tapping it
+/// opens the searchable [CountryPickerSheet].
+class _CountrySelector extends StatelessWidget {
+  const _CountrySelector({
+    required this.countryCode,
+    required this.onTap,
+  });
+
+  final String? countryCode;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final CountryInfo country = const CountryCurrencyService().byCode(
+      countryCode,
+    );
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Country / Location',
+          prefixIcon: const Icon(Icons.public_outlined),
+          suffixIcon: const Icon(Icons.arrow_drop_down),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                country.name,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              country.currencyCode,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A searchable, alphabetically-ordered country list presented as a bottom
+/// sheet — the food-delivery style selector. Avoids layout overflow on narrow
+/// screens by scrolling and using safe-area insets.
+class _CountryPickerSheet extends StatefulWidget {
+  const _CountryPickerSheet({required this.searchController});
+
+  final TextEditingController searchController;
+
+  @override
+  State<_CountryPickerSheet> createState() => _CountryPickerSheetState();
+}
+
+class _CountryPickerSheetState extends State<_CountryPickerSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final List<CountryInfo> all = const CountryCurrencyService()
+        .sortedCountries;
+    final List<CountryInfo> visible = _query.isEmpty
+        ? all
+        : all
+              .where(
+                (CountryInfo country) => country.name
+                    .toLowerCase()
+                    .contains(_query.toLowerCase()),
+              )
+              .toList();
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (BuildContext context, ScrollController scrollController) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Column(
+            children: <Widget>[
+              Text(
+                'Select Country / Location',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: widget.searchController,
+                autofocus: false,
+                onChanged: (String value) => setState(() => _query = value),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  hintText: 'Search country',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: visible.isEmpty
+                    ? const Center(child: Text('No countries found'))
+                    : ListView.builder(
+                        controller: scrollController,
+                        itemCount: visible.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final CountryInfo country = visible[index];
+                          return ListTile(
+                            leading: const Icon(Icons.public_outlined),
+                            title: Text(country.name),
+                            subtitle: Text(country.currencyCode),
+                            onTap: () =>
+                                Navigator.of(context).pop<CountryInfo>(country),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
