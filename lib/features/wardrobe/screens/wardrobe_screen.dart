@@ -1,21 +1,25 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/theme/app_dimensions.dart';
+import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
+import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/garment_location.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/active_filter_chips.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_feedback.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_sheet.dart';
-import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/features/profile/utils/select_family_member.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/active_filter_chips.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_category_navigation.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_sheet.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_toolbar.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_header.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_search_bar.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_category_chips.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_toolbar.dart';
 import 'package:go_router/go_router.dart';
 
 class WardrobeScreen extends ConsumerStatefulWidget {
@@ -57,7 +61,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
       pieceCounts = const <String, int>{};
     }
 
-    if (!mounted) {
+    if (!context.mounted) {
       return;
     }
 
@@ -164,7 +168,6 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
         leading: widget.canNavigateBack
             ? BackArrowButton(onPressed: widget.onNavigateBack)
             : null,
-        title: const Text('My Wardrobe'),
         actions: <Widget>[
           if (selectedMember != null)
             IconButton(
@@ -198,11 +201,27 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
         orElse: () => null,
       ),
       body: garments.when(
-        loading: () => const GarmentGridShimmer(),
-        error: (_, _) => WardrobeEmptyState(
+        loading: () => const Padding(
+          padding: EdgeInsets.only(
+            left: AppSpacing.xl,
+            right: AppSpacing.xl,
+            top: AppSpacing.xxl,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              WardrobeHeader(title: 'My Wardrobe', pieceCount: 0),
+              SizedBox(height: AppSpacing.hero),
+              AppLoadingState(
+                showIcon: false,
+                label: 'Loading your closet',
+              ),
+            ],
+          ),
+        ),
+        error: (_, _) => AppErrorState(
           title: 'We could not load your wardrobe',
           message: 'Check your connection and try again.',
-          actionLabel: 'Retry',
           onAction: () => ref.invalidate(garmentsProvider),
         ),
         data: (List<Garment> allGarments) {
@@ -211,24 +230,47 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
             child: CustomScrollView(
               slivers: <Widget>[
                 SliverToBoxAdapter(
-                  child: WardrobeSearchBar(
-                    controller: _searchController,
-                    searchQuery: filters.searchQuery,
-                    onChanged: ref
-                        .read(wardrobeFilterProvider.notifier)
-                        .setSearchQuery,
-                    onClear: () {
-                      _searchController.clear();
+                  child: Column(
+                    children: <Widget>[
+                      WardrobeHeader(
+                        title: 'My Wardrobe',
+                        pieceCount: allGarments.length,
+                        trailing: selectedMember == null
+                            ? null
+                            : FamilyMemberAvatar(
+                                name: selectedMember.name,
+                                avatarUrl: selectedMember.avatarUrl,
+                                radius: AppDimensions.avatarSm / 2,
+                              ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          0,
+                          AppSpacing.xl,
+                          AppSpacing.md,
+                        ),
+                        child: WardrobeSearchBar(
+                          controller: _searchController,
+                          searchQuery: filters.searchQuery,
+                          onChanged: ref
+                              .read(wardrobeFilterProvider.notifier)
+                              .setSearchQuery,
+                          onClear: () {
+                            _searchController.clear();
 
-                      ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setSearchQuery('');
-                    },
+                            ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setSearchQuery('');
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
                 SliverToBoxAdapter(
-                  child: WardrobeCategoryChips(
+                  child: WardrobeCategoryNavigation(
                     selectedCategory: filters.category,
                     onSelected: ref
                         .read(wardrobeFilterProvider.notifier)
@@ -237,79 +279,97 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                 ),
 
                 SliverToBoxAdapter(
-                  child: WardrobeFilterToolbar(
-                    filters: filters,
-                    filteredCount: filtered.length,
-                    totalCount: allGarments.length,
-                    onOpenFilters: () {
-                      showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        useSafeArea: true,
-                        builder: (BuildContext context) {
-                          return WardrobeFilterSheet(garments: allGarments);
-                        },
-                      );
-                    },
-                    onSortSelected: ref
-                        .read(wardrobeFilterProvider.notifier)
-                        .setSortOption,
-                  ),
-                ),
-                if (filters.activeFilterCount > 0)
-                  SliverToBoxAdapter(
-                    child: ActiveFilterChips(
-                      filters: filters,
-                      locationNames: locationNames,
-                      onColorRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setColor(null),
-                      onBrandRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setBrand(null),
-                      onSizeRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setSize(null),
-                      onOccasionRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setOccasion(null),
-                      onSeasonRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setSeason(null),
-                      onMoodRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setMood(null),
-                      onLaundryStatusRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setLaundryStatus(null),
-                      onAvailabilityStatusRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setAvailabilityStatus(null),
-                      onLocationRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setLocation(),
-                      onStitchingStatusRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setStitchingStatus(null),
-                      onIroningStatusRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setIroningStatus(null),
-                      onOuterwearSubcategoryRemoved: () => ref
-                          .read(wardrobeFilterProvider.notifier)
-                          .setOuterwearSubcategory(null),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.lg,
+                      AppSpacing.xl,
+                      0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        WardrobeFilterToolbar(
+                          filters: filters,
+                          filteredCount: filtered.length,
+                          totalCount: allGarments.length,
+                          onOpenFilters: () {
+                            showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              builder: (BuildContext context) {
+                                return WardrobeFilterSheet(
+                                  garments: allGarments,
+                                );
+                              },
+                            );
+                          },
+                          onSortSelected: ref
+                              .read(wardrobeFilterProvider.notifier)
+                              .setSortOption,
+                        ),
+                        if (filters.activeFilterCount > 0) ...<Widget>[
+                          const SizedBox(height: AppSpacing.sm),
+                          ActiveFilterChips(
+                            filters: filters,
+                            locationNames: locationNames,
+                            onColorRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setColor(null),
+                            onBrandRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setBrand(null),
+                            onSizeRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setSize(null),
+                            onOccasionRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setOccasion(null),
+                            onSeasonRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setSeason(null),
+                            onMoodRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setMood(null),
+                            onLaundryStatusRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setLaundryStatus(null),
+                            onAvailabilityStatusRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setAvailabilityStatus(null),
+                            onLocationRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setLocation(),
+                            onStitchingStatusRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setStitchingStatus(null),
+                            onIroningStatusRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setIroningStatus(null),
+                            onOuterwearSubcategoryRemoved: () => ref
+                                .read(wardrobeFilterProvider.notifier)
+                                .setOuterwearSubcategory(null),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
+                ),
 
                 if (filtered.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
-                    child: WardrobeEmptyState(
+                    child: AppEmptyState(
+                      icon: Icons.checkroom_outlined,
                       title: allGarments.isEmpty
                           ? 'Your wardrobe is empty'
                           : 'No matching garments',
                       message: allGarments.isEmpty
-                          ? 'Add your first piece to start building your digital wardrobe.'
-                          : 'Try changing your search, filters, or sorting options.',
+                          ? 'Add your first piece to start building your '
+                                'digital wardrobe.'
+                          : 'Try changing your search, filters, or sorting '
+                                'options.',
                       actionLabel: allGarments.isEmpty
                           ? 'Add first garment'
                           : null,
@@ -320,7 +380,12 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                   )
                 else
                   SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.md,
+                      AppSpacing.xl,
+                      96,
+                    ),
                     sliver: SliverGrid(
                       delegate: SliverChildBuilderDelegate(
                         (BuildContext context, int index) => GarmentCard(
@@ -333,8 +398,8 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                            crossAxisSpacing: AppSpacing.md,
+                            mainAxisSpacing: AppSpacing.lg,
                             childAspectRatio: .58,
                           ),
                     ),

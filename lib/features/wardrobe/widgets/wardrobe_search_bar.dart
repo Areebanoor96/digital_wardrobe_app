@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+/// Quiet, editorial search for the wardrobe catalog.
+///
+/// The field sits quietly under the header rather than demanding attention —
+/// a subtle outlined surface with a leading search glyph and a trailing clear
+/// action. Search behaviour (controller/onChanged/onClear) is unchanged.
 class WardrobeSearchBar extends StatelessWidget {
   const WardrobeSearchBar({
     super.key,
@@ -16,22 +21,20 @@ class WardrobeSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          prefixIcon: const Icon(Icons.search),
-          hintText: 'Search your closet',
-          suffixIcon: searchQuery.trim().isEmpty
-              ? null
-              : IconButton(
-                  onPressed: onClear,
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Clear search',
-                ),
-        ),
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: 'Search your closet',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: searchQuery.trim().isEmpty
+            ? null
+            : IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.close),
+                tooltip: 'Clear search',
+                visualDensity: VisualDensity.compact,
+              ),
       ),
     );
   }

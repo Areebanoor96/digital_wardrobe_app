@@ -70,7 +70,6 @@ class WardrobeFilters {
   int get activeFilterCount {
     int count = 0;
 
-    if (category != null) count++;
     if (color != null) count++;
     if (brand != null) count++;
     if (size != null) count++;

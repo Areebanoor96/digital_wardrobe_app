@@ -7,9 +7,7 @@ class OotdScoringWeights {
     this.color = 0.15,
     this.style = 0.12,
     this.preference = 0.10,
-    this.rotation = 0.06,
-    this.season = 0.04,
-    this.novelty = 0.03,
+    this.wearDiversity = 0.13,
   });
 
   final double weather;
@@ -17,19 +15,10 @@ class OotdScoringWeights {
   final double color;
   final double style;
   final double preference;
-  final double rotation;
-  final double season;
-  final double novelty;
+  final double wearDiversity;
 
   double get total =>
-      weather +
-      occasion +
-      color +
-      style +
-      preference +
-      rotation +
-      season +
-      novelty;
+      weather + occasion + color + style + preference + wearDiversity;
 }
 
 class OotdScoringConfig {

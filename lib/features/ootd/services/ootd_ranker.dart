@@ -8,15 +8,18 @@ class OotdRanker {
   OotdScore combine({required OotdScore raw, required List<String> reasons}) {
     final OotdScoringWeights weights = config.weights;
 
+    final double wearDiversity =
+        raw.rotation * 0.46 +
+        raw.season * 0.31 +
+        raw.novelty * 0.23;
+
     double total =
         raw.weather * weights.weather +
         raw.occasion * weights.occasion +
         raw.color * weights.color +
         raw.style * weights.style +
         raw.preference * weights.preference +
-        raw.rotation * weights.rotation +
-        raw.season * weights.season +
-        raw.novelty * weights.novelty;
+        wearDiversity * weights.wearDiversity;
 
     final List<String> adjustedReasons = <String>[...reasons];
 

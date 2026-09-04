@@ -59,10 +59,19 @@ class DailyContextInterpreter {
         ? 4.5
         : 1.5;
 
+    final double windNeed = windSpeed >= 30
+        ? 8.0
+        : windSpeed >= 20
+        ? 6.0
+        : windSpeed >= 12
+        ? 4.0
+        : 1.5;
+
     return DailyRequirements(
       targetWarmth: targetWarmth.clamp(1, 10).toDouble(),
       targetBreathability: targetBreathability.clamp(1, 10).toDouble(),
       rainProtectionNeed: rainNeed,
+      windProtectionNeed: windNeed,
       targetFormality: _targetFormality(context),
       preferLightLayers:
           (feelsLike ?? 24) >= 28 || humidity >= 75 || context.indoor == true,
@@ -77,7 +86,67 @@ class DailyContextInterpreter {
       avoidRestrictiveFits:
           (context.expectedActivityLevel ?? 0) >= 6 ||
           _matches(context.mood, 'relaxed', 'sporty'),
+      preferredFabrics: _preferredFabrics(feelsLike, humidity, rainProbability),
+      avoidedFabrics: _avoidedFabrics(feelsLike, rainProbability, windSpeed),
     );
+  }
+
+  List<String> _preferredFabrics(
+    double? feelsLike,
+    double humidity,
+    double rainProbability,
+  ) {
+    final List<String> result = <String>[];
+    final double temp = feelsLike ?? 24;
+
+    if (temp >= 30) {
+      result.addAll(<String>['linen', 'cotton', 'chiffon']);
+    } else if (temp >= 24) {
+      result.addAll(<String>['cotton', 'linen']);
+    } else if (temp <= 10) {
+      result.addAll(<String>['wool', 'fleece', 'knit']);
+    } else if (temp <= 18) {
+      result.addAll(<String>['cotton', 'wool', 'knit']);
+    }
+
+    if (humidity >= 75 && temp >= 24) {
+      result.add('moisture-wicking');
+    }
+
+    if (rainProbability >= 60) {
+      result.addAll(<String>['nylon', 'polyester']);
+    }
+
+    return result;
+  }
+
+  List<String> _avoidedFabrics(
+    double? feelsLike,
+    double rainProbability,
+    double windSpeed,
+  ) {
+    final List<String> result = <String>[];
+    final double temp = feelsLike ?? 24;
+
+    if (temp >= 30) {
+      result.addAll(<String>['wool', 'fleece', 'velvet', 'suede']);
+    } else if (temp >= 28) {
+      result.addAll(<String>['wool', 'fleece', 'suede']);
+    }
+
+    if (rainProbability >= 60) {
+      result.add('suede');
+    }
+
+    if (rainProbability >= 70) {
+      result.addAll(<String>['silk', 'velvet']);
+    }
+
+    if (windSpeed >= 25) {
+      result.add('thin jersey');
+    }
+
+    return result;
   }
 
   double _targetFormality(DailyContext context) {
