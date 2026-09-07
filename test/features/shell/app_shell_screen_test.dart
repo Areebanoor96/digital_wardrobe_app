@@ -14,10 +14,8 @@ Future<void> pumpShell(WidgetTester tester) async {
   await tester.pump();
 }
 
-Finder _navLabel(String label) => find.descendant(
-  of: find.byType(NavigationBar),
-  matching: find.text(label),
-);
+Finder _navLabel(String label) =>
+    find.descendant(of: find.byType(NavigationBar), matching: find.text(label));
 
 void _setPlatform(TargetPlatform platform) {
   debugDefaultTargetPlatformOverride = platform;
@@ -27,9 +25,8 @@ void _resetPlatform() {
   debugDefaultTargetPlatformOverride = null;
 }
 
-int _selectedTabIndex(WidgetTester tester) => tester
-    .widget<NavigationBar>(find.byType(NavigationBar))
-    .selectedIndex;
+int _selectedTabIndex(WidgetTester tester) =>
+    tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex;
 
 class _InMemoryAuthStorage implements LocalStorage {
   final Map<String, String> _values = <String, String>{};
@@ -198,7 +195,7 @@ void main() {
 
     await tester.tap(_navLabel('Profile'));
     await tester.pumpAndSettle();
-    expect(_selectedTabIndex(tester), 5);
+    expect(_selectedTabIndex(tester), 4);
     await tester.tap(_navLabel('Calendar'));
     await tester.pumpAndSettle();
     expect(_selectedTabIndex(tester), 2);
@@ -207,8 +204,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(_selectedTabIndex(tester), 5);
+    expect(_selectedTabIndex(tester), 4);
     expect(find.text('Press back again to exit.'), findsNothing);
     _resetPlatform();
+  });
+
+  testWidgets('Analytics is no longer a bottom navigation destination', (
+    WidgetTester tester,
+  ) async {
+    await pumpShell(tester);
+
+    expect(_navLabel('Analytics'), findsNothing);
+
+    final NavigationBar bar = tester.widget<NavigationBar>(
+      find.byType(NavigationBar),
+    );
+    expect(bar.destinations.length, 5);
   });
 }

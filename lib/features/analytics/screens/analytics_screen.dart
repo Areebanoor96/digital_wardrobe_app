@@ -7,6 +7,8 @@ import 'package:digital_wardrobe_app/core/widgets/app_section_header.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
 import 'package:digital_wardrobe_app/features/analytics/widgets/analytics_metric_card.dart';
+import 'package:digital_wardrobe_app/features/analytics/widgets/outfit_insights_section.dart';
+import 'package:digital_wardrobe_app/features/analytics/widgets/wear_activity_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,6 +55,8 @@ class AnalyticsScreen extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(analyticsSummaryProvider);
+              ref.invalidate(recentWearActivityProvider);
+              ref.invalidate(outfitsProvider);
             },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
@@ -67,6 +71,10 @@ class AnalyticsScreen extends ConsumerWidget {
                 _CategoryBreakdown(data: data),
                 const SizedBox(height: AppSpacing.xxl),
                 _WearRanking(data: data),
+                const SizedBox(height: AppSpacing.xxl),
+                const WearActivitySection(),
+                const SizedBox(height: AppSpacing.xxl),
+                const OutfitInsightsSection(),
                 const SizedBox(height: AppSpacing.xxl),
                 _GarmentUsageInsights(data: data, formatter: formatter),
               ],

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/services/image_service.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
@@ -98,63 +99,73 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       _category == GarmentCategory.shoe ? _shoeSizeOptions : _sizeOptions;
 
   List<String> get _sizeItems => _optionsWithSavedValue(
-      _categorySizeOptions,
-      _selectedSizes.isEmpty ? null : _selectedSizes.first,
-    );
+    _categorySizeOptions,
+    _selectedSizes.isEmpty ? null : _selectedSizes.first,
+  );
+
+  static const List<String> _topSubcategoryOptions = <String>[
+    'Shirt',
+    'T-shirt',
+    'Blouse',
+  ];
+
+  static const List<String> _bottomSubcategoryOptions = <String>[
+    'Trousers',
+    'Pants',
+    'Jeans',
+  ];
+
+  static const List<String> _dressSubcategoryOptions = <String>[
+    'Maxi',
+    'Jumpsuit',
+    'Co-ord Set',
+  ];
 
   static const List<String> _outerwearSubcategoryOptions = <String>[
-    'Blazer',
-    'Cardigan',
-    'Coat',
-    'Hoodie',
     'Jacket',
-    'Shawl',
-    'Sweater',
-    'Vest',
-    'Other',
+    'Coat',
+    'Shrug',
   ];
 
   static const List<String> _shoeSubcategoryOptions = <String>[
-    'Athletic',
-    'Boots',
-    'Clogs',
-    'Flats',
-    'Heels',
-    'Loafers',
+    'Shoes',
     'Sandals',
     'Sneakers',
-    'Other',
   ];
 
   static const List<String> _bagSubcategoryOptions = <String>[
-    'Backpack',
-    'Clutch',
-    'Crossbody',
     'Handbag',
     'Tote',
-    'Wallet',
-    'Other',
+    'Backpack',
   ];
 
   static const List<String> _accessorySubcategoryOptions = <String>[
-    'Belt',
-    'Eyewear',
-    'Hair Accessory',
-    'Hat',
-    'Scarf',
-    'Sunglasses',
-    'Watch',
-    'Other',
+    'Tie',
+    'Scarf/Stole',
+    'Hat/Cap',
   ];
 
   static const List<String> _jewelrySubcategoryOptions = <String>[
-    'Anklet',
-    'Bracelet',
-    'Earrings',
     'Necklace',
-    'Pendant',
-    'Ring',
-    'Other',
+    'Earrings',
+    'Cufflinks',
+  ];
+
+  static const List<String> _activewearSubcategoryOptions = <String>[
+    'Tracksuit',
+    'Sports Top',
+  ];
+
+  static const List<String> _sleepwearSubcategoryOptions = <String>[
+    'Pajamas',
+    'Nightdress',
+    'Robe',
+  ];
+
+  static const List<String> _watchesSubcategoryOptions = <String>[
+    'Analog',
+    'Digital',
+    'Smart',
   ];
 
   static const List<String> _fabricOptions = <String>[
@@ -285,6 +296,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     widget.garment?.subcategory,
   );
 
+  final TextEditingController _subcategoryCustom = TextEditingController();
+
   late GarmentAvailabilityStatus _availabilityStatus =
       widget.garment?.availabilityStatus ?? GarmentAvailabilityStatus.available;
 
@@ -325,6 +338,13 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   String? _selectedNewCoverPath;
 
   bool _saving = false;
+  bool _advancedOptionsExpanded = false;
+
+  late String? _existingReceiptPath = widget.garment?.receiptPath;
+  late String? _existingReceiptUrl = widget.garment?.receiptUrl;
+  XFile? _newReceiptFile;
+  String? _removedReceiptPath;
+
   static const String _addNewLocationValue = '__add_new_location__';
 
   FamilyMember? _mismatchedGarmentMember;
@@ -373,6 +393,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   @override
   void initState() {
     super.initState();
+
+    _subcategoryCustom.text = _cleanOptional(widget.garment?.subcategory) ?? '';
 
     if (widget.garment?.availabilityStatus == GarmentAvailabilityStatus.lent ||
         widget.garment?.availabilityStatus ==
@@ -424,6 +446,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     _details.dispose();
     _price.dispose();
     _purchaseDateController.dispose();
+    _subcategoryCustom.dispose();
     _lendingPerson.dispose();
     _lendingDateController.dispose();
     _expectedReturnDateController.dispose();
@@ -728,6 +751,87 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     });
   }
 
+  Future<void> _pickReceipt() async {
+    final _GarmentImageSource? source =
+        await showModalBottomSheet<_GarmentImageSource>(
+          context: context,
+          builder: (BuildContext sheetContext) {
+            return SafeArea(
+              child: Wrap(
+                children: <Widget>[
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt_outlined),
+                    title: const Text('Take photo'),
+                    subtitle: const Text('Capture the receipt'),
+                    onTap: () {
+                      Navigator.pop(sheetContext, _GarmentImageSource.camera);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library_outlined),
+                    title: const Text('Choose from gallery'),
+                    subtitle: const Text('Pick a saved receipt image'),
+                    onTap: () {
+                      Navigator.pop(sheetContext, _GarmentImageSource.gallery);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.attach_file),
+                    title: const Text('Attach from Files'),
+                    subtitle: const Text('JPG, JPEG, PNG or WEBP'),
+                    onTap: () {
+                      Navigator.pop(sheetContext, _GarmentImageSource.file);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.close),
+                    title: const Text('Cancel'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+
+    if (source == null) {
+      return;
+    }
+
+    final ImageService imageService = ref.read(imageServiceProvider);
+    final XFile? file = switch (source) {
+      _GarmentImageSource.camera => await imageService.takePhoto(),
+      _GarmentImageSource.gallery => await imageService.pickFromGallery(),
+      _GarmentImageSource.file => await imageService.pickImageFile(),
+    };
+
+    if (file == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      if (_existingReceiptPath != null) {
+        _removedReceiptPath = _existingReceiptPath;
+        _existingReceiptPath = null;
+        _existingReceiptUrl = null;
+      }
+      _newReceiptFile = file;
+    });
+  }
+
+  void _removeReceipt() {
+    setState(() {
+      if (_existingReceiptPath != null) {
+        _removedReceiptPath = _existingReceiptPath;
+        _existingReceiptPath = null;
+        _existingReceiptUrl = null;
+      }
+      _newReceiptFile = null;
+    });
+  }
+
   Future<void> _pickPurchaseDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -858,6 +962,16 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         }
       }
 
+      String? uploadedReceiptPath;
+      if (_newReceiptFile != null) {
+        final Uint8List bytes = await ref
+            .read(imageServiceProvider)
+            .readAndCompressBytes(_newReceiptFile!);
+        uploadedReceiptPath = await ref
+            .read(garmentRepositoryProvider)
+            .uploadReceipt(garmentId: id, bytes: bytes);
+      }
+
       final String? selectedCoverPath =
           uploadedNewCoverPath ?? _selectedExistingCoverPath;
 
@@ -871,6 +985,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         memberId: selectedMember.id,
         photoPaths: photoPaths,
         photoUrls: widget.garment?.photoUrls ?? const <String>[],
+        receiptPath: uploadedReceiptPath ?? _existingReceiptPath,
         subcategory: _showSubcategory ? _selectedSubcategory : null,
         brand: _optional(_brand.text),
         purchaseStore: _optional(_purchaseStore.text),
@@ -920,9 +1035,11 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
           );
       if (_removedPhotoPaths.isNotEmpty) {
         try {
-          await ref
-              .read(garmentRepositoryProvider)
-              .deleteImages(_removedPhotoPaths);
+          final List<String> pathsToDelete = <String>[
+            ..._removedPhotoPaths,
+            ?_removedReceiptPath,
+          ];
+          await ref.read(garmentRepositoryProvider).deleteImages(pathsToDelete);
         } catch (error) {
           debugPrint('Could not remove old garment photos: $error');
         }
@@ -1082,12 +1199,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       _category == GarmentCategory.outerwear ||
       _category == GarmentCategory.shoe;
 
-  bool get _showSubcategory =>
-      _category == GarmentCategory.outerwear ||
-      _category == GarmentCategory.shoe ||
-      _category == GarmentCategory.bag ||
-      _category == GarmentCategory.accessory ||
-      _category == GarmentCategory.jewelry;
+  bool get _showSubcategory => true;
 
   bool get _isClothing =>
       _category == GarmentCategory.top ||
@@ -1096,25 +1208,37 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       _category == GarmentCategory.outerwear;
 
   String get _subcategoryLabel => switch (_category) {
+    GarmentCategory.top => 'Tops Subcategory',
+    GarmentCategory.bottom => 'Bottoms Subcategory',
+    GarmentCategory.dress => 'Dresses Subcategory',
     GarmentCategory.outerwear => 'Outerwear Subcategory',
     GarmentCategory.shoe => 'Shoe Type',
     GarmentCategory.bag => 'Bag Type',
     GarmentCategory.accessory => 'Accessory Type',
     GarmentCategory.jewelry => 'Jewelry Type',
-    _ => 'Subcategory',
+    GarmentCategory.activewear => 'Activewear Type',
+    GarmentCategory.sleepwear => 'Sleep/Loungewear Type',
+    GarmentCategory.watches => 'Watch Type',
+    GarmentCategory.other => 'Custom Label',
   };
 
-  String get _sizeLabel => _category == GarmentCategory.shoe
-      ? 'Shoe Sizes'
-      : 'Sizes';
+  String get _sizeLabel =>
+      _category == GarmentCategory.shoe ? 'Shoe Sizes' : 'Sizes';
 
   List<String> get _subcategoryOptions {
     final List<String> options = switch (_category) {
+      GarmentCategory.top => _topSubcategoryOptions,
+      GarmentCategory.bottom => _bottomSubcategoryOptions,
+      GarmentCategory.dress => _dressSubcategoryOptions,
+      GarmentCategory.outerwear => _outerwearSubcategoryOptions,
       GarmentCategory.shoe => _shoeSubcategoryOptions,
       GarmentCategory.bag => _bagSubcategoryOptions,
       GarmentCategory.accessory => _accessorySubcategoryOptions,
       GarmentCategory.jewelry => _jewelrySubcategoryOptions,
-      _ => _outerwearSubcategoryOptions,
+      GarmentCategory.activewear => _activewearSubcategoryOptions,
+      GarmentCategory.sleepwear => _sleepwearSubcategoryOptions,
+      GarmentCategory.watches => _watchesSubcategoryOptions,
+      GarmentCategory.other => const <String>[],
     };
 
     return _optionsWithSavedValue(options, _selectedSubcategory);
@@ -1145,8 +1269,9 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         widget.garment!.memberId != selectedMember.id;
 
     if (memberMismatch) {
-      _mismatchedGarmentMember =
-          ref.watch(familyMemberProvider(widget.garment!.memberId!)).valueOrNull;
+      _mismatchedGarmentMember = ref
+          .watch(familyMemberProvider(widget.garment!.memberId!))
+          .valueOrNull;
     } else {
       _mismatchedGarmentMember = null;
     }
@@ -1244,6 +1369,11 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               ),
             ),
 
+            const SizedBox(height: 20),
+            Text(
+              'Main Information',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _name,
@@ -1282,52 +1412,62 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                     if (!_showSleeveLength) {
                       _selectedSleeveLength = null;
                     }
+                    if (_category == GarmentCategory.other) {
+                      _subcategoryCustom.text = _selectedSubcategory ?? '';
+                    }
                   });
                 }
               },
             ),
             if (_showSubcategory) ...<Widget>[
               const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                initialValue: _subcategoryOptions.contains(_selectedSubcategory)
-                    ? _selectedSubcategory
-                    : null,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  labelText: _subcategoryLabel,
-                  hintText: 'Optional',
-                ),
-                items: <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Not specified'),
+              if (_category == GarmentCategory.other)
+                TextFormField(
+                  controller: _subcategoryCustom,
+                  decoration: InputDecoration(
+                    labelText: _subcategoryLabel,
+                    hintText: 'Optional',
                   ),
-                  ..._subcategoryOptions.map(
-                    (String value) => DropdownMenuItem<String?>(
-                      value: value,
-                      child: Text(value),
+                  onChanged: (String value) {
+                    setState(() {
+                      _selectedSubcategory = _cleanOptional(value);
+                    });
+                  },
+                )
+              else
+                DropdownButtonFormField<String?>(
+                  initialValue:
+                      _subcategoryOptions.contains(_selectedSubcategory)
+                      ? _selectedSubcategory
+                      : null,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: _subcategoryLabel,
+                    hintText: 'Optional',
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Not specified'),
                     ),
-                  ),
-                ],
-                onChanged: (String? value) {
-                  setState(() {
-                    _selectedSubcategory = value;
-                  });
-                },
-              ),
+                    ..._subcategoryOptions.map(
+                      (String value) => DropdownMenuItem<String?>(
+                        value: value,
+                        child: Text(value),
+                      ),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedSubcategory = value;
+                    });
+                  },
+                ),
             ],
             const SizedBox(height: 12),
             TextFormField(
               controller: _brand,
               decoration: const InputDecoration(labelText: 'Brand'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _purchaseStore,
-              decoration: const InputDecoration(
-                labelText: 'Store And Location',
-                hintText: 'For example: Outfitters - Centaurus Mall, Islamabad',
-              ),
             ),
             const SizedBox(height: 12),
             _GarmentColorSelection(
@@ -1526,10 +1666,11 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
             ),
             const SizedBox(height: 12),
             if (_showSizes) ...<Widget>[
-              _SizeMultiSelect(
-                label: _sizeLabel,
-                sizes: _sizeItems,
-                selectedSizes: _selectedSizes,
+              _ChipMultiSelect(
+                title: _sizeLabel,
+                options: _sizeItems,
+                labelFor: (String value) => value,
+                selected: _selectedSizes,
                 enabled: !_saving,
                 onChanged: (Set<String> values) {
                   setState(() {
@@ -1541,299 +1682,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               ),
               const SizedBox(height: 12),
             ],
-            if (_isClothing) ...<Widget>[
-              DropdownButtonFormField<StitchingStatus?>(
-                initialValue: _stitchingStatus,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Stitching Status',
-                  hintText: 'Optional',
-                ),
-                items: <DropdownMenuItem<StitchingStatus?>>[
-                  const DropdownMenuItem<StitchingStatus?>(
-                    value: null,
-                    child: Text('Not specified'),
-                  ),
-                  ...StitchingStatus.values.map(
-                    (StitchingStatus status) =>
-                        DropdownMenuItem<StitchingStatus?>(
-                          value: status,
-                          child: Text(status.label),
-                        ),
-                  ),
-                ],
-                onChanged: (StitchingStatus? value) {
-                  setState(() {
-                    _stitchingStatus = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<IroningStatus?>(
-                initialValue: _ironingStatus,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Ironing Status',
-                  hintText: 'Optional',
-                ),
-                items: <DropdownMenuItem<IroningStatus?>>[
-                  const DropdownMenuItem<IroningStatus?>(
-                    value: null,
-                    child: Text('Not specified'),
-                  ),
-                  ...IroningStatus.values.map(
-                    (IroningStatus status) => DropdownMenuItem<IroningStatus?>(
-                      value: status,
-                      child: Text(status.label),
-                    ),
-                  ),
-                ],
-                onChanged: (IroningStatus? value) {
-                  setState(() {
-                    _ironingStatus = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                initialValue: _selectedFabric,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Fabric',
-                  hintText: 'Select a fabric (optional)',
-                ),
-                items: <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Not specified'),
-                  ),
-                  ..._fabricDropdownItems.map(
-                    (String fabric) => DropdownMenuItem<String?>(
-                      value: fabric,
-                      child: Text(fabric),
-                    ),
-                  ),
-                ],
-                onChanged: (String? value) {
-                  setState(() {
-                    _selectedFabric = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                initialValue: _selectedFit,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Fit',
-                  hintText: 'Select a fit (optional)',
-                ),
-                items: <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Not specified'),
-                  ),
-                  ..._optionsWithSavedValue(_fitOptions, _selectedFit).map(
-                    (String fit) =>
-                        DropdownMenuItem<String?>(value: fit, child: Text(fit)),
-                  ),
-                ],
-                onChanged: (String? value) {
-                  setState(() {
-                    _selectedFit = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                initialValue: _selectedPattern,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Pattern',
-                  hintText: 'Select a pattern (optional)',
-                ),
-                items: <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Not specified'),
-                  ),
-                  ..._optionsWithSavedValue(
-                    _patternOptions,
-                    _selectedPattern,
-                  ).map(
-                    (String pattern) => DropdownMenuItem<String?>(
-                      value: pattern,
-                      child: Text(pattern),
-                    ),
-                  ),
-                ],
-                onChanged: (String? value) {
-                  setState(() {
-                    _selectedPattern = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                initialValue: _selectedFabricWeight,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Fabric Weight',
-                  hintText: 'Select a fabric weight (optional)',
-                ),
-                items: <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Not specified'),
-                  ),
-                  ..._optionsWithSavedValue(
-                    _fabricWeightOptions,
-                    _selectedFabricWeight,
-                  ).map(
-                    (String weight) => DropdownMenuItem<String?>(
-                      value: weight,
-                      child: Text(weight),
-                    ),
-                  ),
-                ],
-                onChanged: (String? value) {
-                  setState(() {
-                    _selectedFabricWeight = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (_showSleeveLength) ...<Widget>[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                initialValue: _selectedSleeveLength,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Sleeve Length',
-                  hintText: 'Select a sleeve length (optional)',
-                ),
-                items: <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Not specified'),
-                  ),
-                  ..._optionsWithSavedValue(
-                    _sleeveLengthOptions,
-                    _selectedSleeveLength,
-                  ).map(
-                    (String sleeveLength) => DropdownMenuItem<String?>(
-                      value: sleeveLength,
-                      child: Text(sleeveLength),
-                    ),
-                  ),
-                ],
-                onChanged: (String? value) {
-                  setState(() {
-                    _selectedSleeveLength = value;
-                  });
-                },
-              ),
-            ],
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _details,
-              maxLength: _maximumDetailsLength,
-              maxLengthEnforcement: MaxLengthEnforcement.enforced,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Details',
-                hintText: 'Optional extra information about this garment',
-                alignLabelWithHint: true,
-              ),
-              validator: (String? value) {
-                if ((value ?? '').characters.length > _maximumDetailsLength) {
-                  return 'Details must be $_maximumDetailsLength characters '
-                      'or fewer';
-                }
-
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _price,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(labelText: 'Price (PKR)'),
-              validator: (String? value) {
-                final String enteredPrice = value?.trim() ?? '';
-
-                if (enteredPrice.isEmpty) {
-                  return null;
-                }
-
-                final double? parsedPrice = double.tryParse(enteredPrice);
-
-                if (parsedPrice == null) {
-                  return 'Enter a valid price';
-                }
-
-                if (parsedPrice < 0) {
-                  return 'Price cannot be negative';
-                }
-
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _purchaseDateController,
-              readOnly: true,
-              onTap: _saving ? null : _pickPurchaseDate,
-              decoration: InputDecoration(
-                labelText: 'Purchase Date',
-                hintText: 'Optional',
-                prefixIcon: const Icon(Icons.calendar_today_outlined),
-                suffixIcon: _purchaseDate == null
-                    ? null
-                    : IconButton(
-                        onPressed: _saving ? null : _clearPurchaseDate,
-                        icon: const Icon(Icons.close),
-                        tooltip: 'Clear purchase date',
-                      ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('Occasions', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Choose where this garment can be worn. Optional.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _occasionOptions.map((String occasion) {
-                final bool selected = _selectedOccasions.contains(occasion);
-
-                return FilterChip(
-                  label: Text(
-                    occasion[0].toUpperCase() + occasion.substring(1),
-                  ),
-                  selected: selected,
-                  onSelected: _saving
-                      ? null
-                      : (bool value) {
-                          setState(() {
-                            if (value) {
-                              _selectedOccasions.add(occasion);
-                            } else {
-                              _selectedOccasions.remove(occasion);
-                            }
-                          });
-                        },
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
             Text('Seasons', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
@@ -1864,39 +1713,351 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 12),
+            if (_isClothing)
+              DropdownButtonFormField<String?>(
+                initialValue: _selectedFabric,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Fabric',
+                  hintText: 'Select a fabric (optional)',
+                ),
+                items: <DropdownMenuItem<String?>>[
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Not specified'),
+                  ),
+                  ..._fabricDropdownItems.map(
+                    (String fabric) => DropdownMenuItem<String?>(
+                      value: fabric,
+                      child: Text(fabric),
+                    ),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  setState(() {
+                    _selectedFabric = value;
+                  });
+                },
+              ),
+            const SizedBox(height: 20),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _advancedOptionsExpanded = !_advancedOptionsExpanded;
+                });
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        'Advanced Options',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    Icon(
+                      _advancedOptionsExpanded
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_advancedOptionsExpanded) ...<Widget>[
+              const SizedBox(height: 12),
+              _ChipMultiSelect(
+                title: 'Mood and style',
+                options: _moodOptions,
+                labelFor: (String value) =>
+                    value[0].toUpperCase() + value.substring(1),
+                selected: _selectedMoods,
+                enabled: !_saving,
+                onChanged: (Set<String> values) {
+                  setState(() {
+                    _selectedMoods
+                      ..clear()
+                      ..addAll(values);
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              _ChipMultiSelect(
+                title: 'Occasions',
+                options: _occasionOptions,
+                labelFor: (String value) =>
+                    value[0].toUpperCase() + value.substring(1),
+                selected: _selectedOccasions,
+                enabled: !_saving,
+                onChanged: (Set<String> values) {
+                  setState(() {
+                    _selectedOccasions
+                      ..clear()
+                      ..addAll(values);
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              if (_isClothing) ...<Widget>[
+                DropdownButtonFormField<StitchingStatus?>(
+                  initialValue: _stitchingStatus,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Stitching Status',
+                    hintText: 'Optional',
+                  ),
+                  items: <DropdownMenuItem<StitchingStatus?>>[
+                    const DropdownMenuItem<StitchingStatus?>(
+                      value: null,
+                      child: Text('Not specified'),
+                    ),
+                    ...StitchingStatus.values.map(
+                      (StitchingStatus status) =>
+                          DropdownMenuItem<StitchingStatus?>(
+                            value: status,
+                            child: Text(status.label),
+                          ),
+                    ),
+                  ],
+                  onChanged: (StitchingStatus? value) {
+                    setState(() {
+                      _stitchingStatus = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<IroningStatus?>(
+                  initialValue: _ironingStatus,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Ironing Status',
+                    hintText: 'Optional',
+                  ),
+                  items: <DropdownMenuItem<IroningStatus?>>[
+                    const DropdownMenuItem<IroningStatus?>(
+                      value: null,
+                      child: Text('Not specified'),
+                    ),
+                    ...IroningStatus.values.map(
+                      (IroningStatus status) =>
+                          DropdownMenuItem<IroningStatus?>(
+                            value: status,
+                            child: Text(status.label),
+                          ),
+                    ),
+                  ],
+                  onChanged: (IroningStatus? value) {
+                    setState(() {
+                      _ironingStatus = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: _selectedFit,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Fit',
+                    hintText: 'Select a fit (optional)',
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Not specified'),
+                    ),
+                    ..._optionsWithSavedValue(_fitOptions, _selectedFit).map(
+                      (String fit) => DropdownMenuItem<String?>(
+                        value: fit,
+                        child: Text(fit),
+                      ),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedFit = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: _selectedPattern,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Pattern',
+                    hintText: 'Select a pattern (optional)',
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Not specified'),
+                    ),
+                    ..._optionsWithSavedValue(
+                      _patternOptions,
+                      _selectedPattern,
+                    ).map(
+                      (String pattern) => DropdownMenuItem<String?>(
+                        value: pattern,
+                        child: Text(pattern),
+                      ),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedPattern = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: _selectedFabricWeight,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Fabric Weight',
+                    hintText: 'Select a fabric weight (optional)',
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Not specified'),
+                    ),
+                    ..._optionsWithSavedValue(
+                      _fabricWeightOptions,
+                      _selectedFabricWeight,
+                    ).map(
+                      (String weight) => DropdownMenuItem<String?>(
+                        value: weight,
+                        child: Text(weight),
+                      ),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedFabricWeight = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (_showSleeveLength) ...<Widget>[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: _selectedSleeveLength,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Sleeve Length',
+                    hintText: 'Select a sleeve length (optional)',
+                  ),
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Not specified'),
+                    ),
+                    ..._optionsWithSavedValue(
+                      _sleeveLengthOptions,
+                      _selectedSleeveLength,
+                    ).map(
+                      (String sleeveLength) => DropdownMenuItem<String?>(
+                        value: sleeveLength,
+                        child: Text(sleeveLength),
+                      ),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedSleeveLength = value;
+                    });
+                  },
+                ),
+              ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _details,
+                maxLength: _maximumDetailsLength,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Details',
+                  hintText: 'Optional extra information about this garment',
+                  alignLabelWithHint: true,
+                ),
+                validator: (String? value) {
+                  if ((value ?? '').characters.length > _maximumDetailsLength) {
+                    return 'Details must be $_maximumDetailsLength characters '
+                        'or fewer';
+                  }
+
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: 20),
             Text(
-              'Mood and style',
+              'Purchase Info',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Choose the moods this garment represents. Optional.',
-              style: Theme.of(context).textTheme.bodySmall,
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _purchaseStore,
+              decoration: const InputDecoration(
+                labelText: 'Store And Location',
+                hintText: 'For example: Outfitters - Centaurus Mall, Islamabad',
+              ),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _moodOptions.map((String mood) {
-                final bool selected = _selectedMoods.contains(mood);
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _purchaseDateController,
+              readOnly: true,
+              onTap: _saving ? null : _pickPurchaseDate,
+              decoration: InputDecoration(
+                labelText: 'Purchase Date',
+                hintText: 'Optional',
+                prefixIcon: const Icon(Icons.calendar_today_outlined),
+                suffixIcon: _purchaseDate == null
+                    ? null
+                    : IconButton(
+                        onPressed: _saving ? null : _clearPurchaseDate,
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Clear purchase date',
+                      ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _price,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(labelText: 'Price (PKR)'),
+              validator: (String? value) {
+                final String enteredPrice = value?.trim() ?? '';
 
-                return FilterChip(
-                  label: Text(mood[0].toUpperCase() + mood.substring(1)),
-                  selected: selected,
-                  onSelected: _saving
-                      ? null
-                      : (bool value) {
-                          setState(() {
-                            if (value) {
-                              _selectedMoods.add(mood);
-                            } else {
-                              _selectedMoods.remove(mood);
-                            }
-                          });
-                        },
-                );
-              }).toList(),
+                if (enteredPrice.isEmpty) {
+                  return null;
+                }
+
+                final double? parsedPrice = double.tryParse(enteredPrice);
+
+                if (parsedPrice == null) {
+                  return 'Enter a valid price';
+                }
+
+                if (parsedPrice < 0) {
+                  return 'Price cannot be negative';
+                }
+
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _ReceiptAttachment(
+              receiptUrl: _existingReceiptUrl,
+              receiptFile: _newReceiptFile,
+              enabled: !_saving,
+              onAdd: _pickReceipt,
+              onRemove: _removeReceipt,
             ),
 
             const SizedBox(height: 28),
@@ -1918,51 +2079,234 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   }
 }
 
-class _SizeMultiSelect extends StatelessWidget {
-  const _SizeMultiSelect({
-    required this.label,
-    required this.sizes,
-    required this.selectedSizes,
+class _ChipMultiSelect extends StatelessWidget {
+  const _ChipMultiSelect({
+    required this.title,
+    required this.options,
+    required this.labelFor,
+    required this.selected,
     required this.enabled,
     required this.onChanged,
   });
 
-  final String label;
-  final List<String> sizes;
-  final Set<String> selectedSizes;
+  final String title;
+  final List<String> options;
+  final String Function(String value) labelFor;
+  final Set<String> selected;
   final bool enabled;
   final ValueChanged<Set<String>> onChanged;
+
+  Future<void> _openPicker(BuildContext context) async {
+    final Set<String>? result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext sheetContext) {
+        return _StringPickerSheet(
+          title: title,
+          options: options,
+          labelFor: labelFor,
+          selected: selected,
+        );
+      },
+    );
+
+    if (result == null || !context.mounted) {
+      return;
+    }
+
+    onChanged(result);
+  }
 
   @override
   Widget build(BuildContext context) {
     return InputDecorator(
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: 'Optional',
-      ),
+      decoration: InputDecoration(labelText: title, hintText: 'Optional'),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: sizes.map((String size) {
-          final bool selected = selectedSizes.contains(size);
-
-          return FilterChip(
-            label: Text(size),
-            selected: selected,
-            onSelected: enabled
-                ? (bool value) {
-                    final Set<String> updated = <String>{...selectedSizes};
-                    if (value) {
-                      updated.add(size);
-                    } else {
-                      updated.remove(size);
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: <Widget>[
+          for (final String value in selected)
+            InputChip(
+              label: Text(labelFor(value)),
+              onDeleted: enabled
+                  ? () {
+                      final Set<String> updated = <String>{...selected}
+                        ..remove(value);
+                      onChanged(updated);
                     }
-                    onChanged(updated);
-                  }
-                : null,
-          );
-        }).toList(),
+                  : null,
+            ),
+          ActionChip(
+            avatar: const Icon(Icons.add),
+            label: const Text('Add'),
+            onPressed: enabled ? () => _openPicker(context) : null,
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _StringPickerSheet extends StatefulWidget {
+  const _StringPickerSheet({
+    required this.title,
+    required this.options,
+    required this.labelFor,
+    required this.selected,
+  });
+
+  final String title;
+  final List<String> options;
+  final String Function(String value) labelFor;
+  final Set<String> selected;
+
+  @override
+  State<_StringPickerSheet> createState() => _StringPickerSheetState();
+}
+
+class _StringPickerSheetState extends State<_StringPickerSheet> {
+  late final Set<String> _pending = <String>{...widget.selected};
+
+  void _toggle(String value) {
+    setState(() {
+      if (_pending.contains(value)) {
+        _pending.remove(value);
+      } else {
+        _pending.add(value);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (BuildContext context, ScrollController scrollController) {
+        return Column(
+          children: <Widget>[
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, _pending),
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                children: widget.options.map((String value) {
+                  final bool isSelected = _pending.contains(value);
+
+                  return FilterChip(
+                    label: Text(widget.labelFor(value)),
+                    selected: isSelected,
+                    onSelected: (_) => _toggle(value),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ReceiptAttachment extends StatelessWidget {
+  const _ReceiptAttachment({
+    required this.receiptUrl,
+    required this.receiptFile,
+    required this.enabled,
+    required this.onAdd,
+    required this.onRemove,
+  });
+
+  final String? receiptUrl;
+  final XFile? receiptFile;
+  final bool enabled;
+  final VoidCallback onAdd;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasReceipt = receiptUrl != null || receiptFile != null;
+
+    return InputDecorator(
+      decoration: const InputDecoration(labelText: 'Receipt Attachment'),
+      child: hasReceipt
+          ? Row(
+              children: <Widget>[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox.square(
+                    dimension: 44,
+                    child: receiptFile != null
+                        ? Image.file(File(receiptFile!.path), fit: BoxFit.cover)
+                        : Image.network(
+                            receiptUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) {
+                              return const ColoredBox(
+                                color: Colors.black12,
+                                child: Icon(Icons.receipt_long_outlined),
+                              );
+                            },
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    receiptFile != null
+                        ? receiptFile!.name
+                        : 'Receipt attached',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (enabled)
+                  IconButton(
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Remove receipt',
+                  ),
+              ],
+            )
+          : Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: enabled ? onAdd : null,
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Add receipt'),
+              ),
+            ),
     );
   }
 }
@@ -2142,7 +2486,7 @@ class _GarmentColorSelection extends StatelessWidget {
             ),
           ActionChip(
             avatar: const Icon(Icons.add),
-            label: Text(shades.isEmpty ? 'Add shade' : 'Add another shade'),
+            label: const Text('Add'),
             onPressed: onAdd,
           ),
         ],

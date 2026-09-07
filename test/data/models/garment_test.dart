@@ -76,6 +76,47 @@ void main() {
       expect(garment.effectiveSizes, <String>['S', 'M']);
     });
 
+    test(
+      'fromJson maps the three new availability statuses and receipt path',
+      () {
+        for (final (String dbValue, GarmentAvailabilityStatus status)
+            in <(String, GarmentAvailabilityStatus)>[
+              ('sent_for_laundry', GarmentAvailabilityStatus.sentForLaundry),
+              ('damaged', GarmentAvailabilityStatus.damaged),
+              ('sent_to_tailor', GarmentAvailabilityStatus.sentToTailor),
+            ]) {
+          final Garment garment = garmentFromJson(<String, dynamic>{
+            'id': 'g-1',
+            'name': 'Test Shirt',
+            'member_id': 'member-1',
+            'category': 'top',
+            'photo_urls': <String>[],
+            'receipt_path': 'member-1/g-1/receipt_123.jpg',
+            'availability_status': dbValue,
+          });
+
+          expect(garment.availabilityStatus, status);
+          expect(garment.receiptPath, 'member-1/g-1/receipt_123.jpg');
+        }
+
+        expect(
+          GarmentAvailabilityStatus.sentForLaundry.dbValue,
+          'sent_for_laundry',
+        );
+        expect(
+          GarmentAvailabilityStatus.sentForLaundry.label,
+          'Sent For Laundry',
+        );
+        expect(GarmentAvailabilityStatus.damaged.dbValue, 'damaged');
+        expect(GarmentAvailabilityStatus.damaged.label, 'Damaged');
+        expect(
+          GarmentAvailabilityStatus.sentToTailor.dbValue,
+          'sent_to_tailor',
+        );
+        expect(GarmentAvailabilityStatus.sentToTailor.label, 'Sent To Tailor');
+      },
+    );
+
     test('fromJson treats a null location embed as unspecified', () {
       final Garment garment = garmentFromJson(<String, dynamic>{
         'category': 'top',
@@ -171,28 +212,37 @@ void main() {
     });
 
     test('normalizes selected shades to exactly one primary', () {
-      final List<GarmentColorShade> normalized = normalizeColorShades(
-        const <GarmentColorShade>[
-          GarmentColorShade(name: 'Navy', hex: '#000080'),
-          GarmentColorShade(name: 'Cream', hex: '#FFFDD0'),
-        ],
-      );
+      final List<GarmentColorShade> normalized =
+          normalizeColorShades(const <GarmentColorShade>[
+            GarmentColorShade(name: 'Navy', hex: '#000080'),
+            GarmentColorShade(name: 'Cream', hex: '#FFFDD0'),
+          ]);
 
       expect(normalized.length, 2);
-      expect(normalized.where((GarmentColorShade shade) => shade.isPrimary), hasLength(1));
+      expect(
+        normalized.where((GarmentColorShade shade) => shade.isPrimary),
+        hasLength(1),
+      );
       expect(normalized.first.isPrimary, isTrue);
     });
 
     test('primary shade can change and remains single', () {
-      final List<GarmentColorShade> normalized = normalizeColorShades(
-        const <GarmentColorShade>[
-          GarmentColorShade(name: 'Navy', hex: '#000080'),
-          GarmentColorShade(name: 'Cream', hex: '#FFFDD0', isPrimary: true),
-        ],
-      );
+      final List<GarmentColorShade> normalized =
+          normalizeColorShades(const <GarmentColorShade>[
+            GarmentColorShade(name: 'Navy', hex: '#000080'),
+            GarmentColorShade(name: 'Cream', hex: '#FFFDD0', isPrimary: true),
+          ]);
 
-      expect(normalized.where((GarmentColorShade shade) => shade.isPrimary), hasLength(1));
-      expect(normalized.singleWhere((GarmentColorShade shade) => shade.isPrimary).name, 'Cream');
+      expect(
+        normalized.where((GarmentColorShade shade) => shade.isPrimary),
+        hasLength(1),
+      );
+      expect(
+        normalized
+            .singleWhere((GarmentColorShade shade) => shade.isPrimary)
+            .name,
+        'Cream',
+      );
     });
 
     test('removing primary makes another selected shade primary', () {
@@ -301,16 +351,28 @@ void main() {
       expect(copy.details, 'Embroidered collar');
     });
 
-    test('availability status marks only available and borrowed as wearable', () {
-      expect(GarmentAvailabilityStatus.available.isPhysicallyAvailable, isTrue);
-      expect(GarmentAvailabilityStatus.borrowed.isPhysicallyAvailable, isTrue);
-      expect(GarmentAvailabilityStatus.lent.isPhysicallyAvailable, isFalse);
-      expect(
-        GarmentAvailabilityStatus.inStorage.isPhysicallyAvailable,
-        isFalse,
-      );
-      expect(GarmentAvailabilityStatus.donated.isPhysicallyAvailable, isFalse);
-      expect(GarmentAvailabilityStatus.lost.isPhysicallyAvailable, isFalse);
-    });
+    test(
+      'availability status marks only available and borrowed as wearable',
+      () {
+        expect(
+          GarmentAvailabilityStatus.available.isPhysicallyAvailable,
+          isTrue,
+        );
+        expect(
+          GarmentAvailabilityStatus.borrowed.isPhysicallyAvailable,
+          isTrue,
+        );
+        expect(GarmentAvailabilityStatus.lent.isPhysicallyAvailable, isFalse);
+        expect(
+          GarmentAvailabilityStatus.inStorage.isPhysicallyAvailable,
+          isFalse,
+        );
+        expect(
+          GarmentAvailabilityStatus.donated.isPhysicallyAvailable,
+          isFalse,
+        );
+        expect(GarmentAvailabilityStatus.lost.isPhysicallyAvailable, isFalse);
+      },
+    );
   });
 }

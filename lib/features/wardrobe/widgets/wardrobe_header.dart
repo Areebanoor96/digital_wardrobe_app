@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 ///
 /// Strong typographic hierarchy: the wardrobe name leads, with an
 /// understated piece count treated as supporting information rather than a
-/// dashboard metric. Optionally accepts a trailing action (e.g. an avatar).
+/// dashboard metric. The title is kept on a single line at any width by
+/// scaling it down only when the available space would force a wrap.
 class WardrobeHeader extends StatelessWidget {
   const WardrobeHeader({
     super.key,
     required this.title,
     required this.pieceCount,
     this.subtitle,
-    this.trailing,
   });
 
   final String title;
@@ -22,9 +22,6 @@ class WardrobeHeader extends StatelessWidget {
 
   /// Optional supporting line under [title].
   final String? subtitle;
-
-  /// Optional right-aligned widget (profile avatar, etc.).
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -40,21 +37,16 @@ class WardrobeHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  title,
-                  style: textTheme.headlineMedium?.copyWith(height: 1.1),
-                ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title,
+                style: textTheme.headlineMedium?.copyWith(height: 1.1),
               ),
-              if (trailing != null) ...<Widget>[
-                const SizedBox(width: AppSpacing.md),
-                trailing!,
-              ],
-            ],
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           countLine,

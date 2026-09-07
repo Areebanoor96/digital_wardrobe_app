@@ -3,20 +3,28 @@ enum GarmentCategory {
   bottom,
   dress,
   outerwear,
+  activewear,
+  sleepwear,
   shoe,
-  accessory,
+  watches,
   jewelry,
-  bag;
+  bag,
+  accessory,
+  other;
 
   String get label => switch (this) {
     GarmentCategory.top => 'Tops',
     GarmentCategory.bottom => 'Bottoms',
     GarmentCategory.dress => 'Dresses',
     GarmentCategory.outerwear => 'Outerwear',
+    GarmentCategory.activewear => 'Activewear',
+    GarmentCategory.sleepwear => 'Sleep/Loungewear',
     GarmentCategory.shoe => 'Shoes',
-    GarmentCategory.accessory => 'Accessories',
+    GarmentCategory.watches => 'Watches',
     GarmentCategory.jewelry => 'Jewelry',
     GarmentCategory.bag => 'Bags',
+    GarmentCategory.accessory => 'Accessories',
+    GarmentCategory.other => 'Other',
   };
 }
 
@@ -40,7 +48,10 @@ enum GarmentAvailabilityStatus {
   borrowed,
   inStorage,
   donated,
-  lost;
+  lost,
+  sentForLaundry,
+  damaged,
+  sentToTailor;
 
   String get dbValue => switch (this) {
     GarmentAvailabilityStatus.available => 'available',
@@ -49,6 +60,9 @@ enum GarmentAvailabilityStatus {
     GarmentAvailabilityStatus.inStorage => 'in_storage',
     GarmentAvailabilityStatus.donated => 'donated',
     GarmentAvailabilityStatus.lost => 'lost',
+    GarmentAvailabilityStatus.sentForLaundry => 'sent_for_laundry',
+    GarmentAvailabilityStatus.damaged => 'damaged',
+    GarmentAvailabilityStatus.sentToTailor => 'sent_to_tailor',
   };
 
   String get label => switch (this) {
@@ -58,6 +72,9 @@ enum GarmentAvailabilityStatus {
     GarmentAvailabilityStatus.inStorage => 'In Storage',
     GarmentAvailabilityStatus.donated => 'Donated',
     GarmentAvailabilityStatus.lost => 'Lost',
+    GarmentAvailabilityStatus.sentForLaundry => 'Sent For Laundry',
+    GarmentAvailabilityStatus.damaged => 'Damaged',
+    GarmentAvailabilityStatus.sentToTailor => 'Sent To Tailor',
   };
 
   bool get isPhysicallyAvailable =>
@@ -71,6 +88,9 @@ enum GarmentAvailabilityStatus {
       'in_storage' => GarmentAvailabilityStatus.inStorage,
       'donated' => GarmentAvailabilityStatus.donated,
       'lost' => GarmentAvailabilityStatus.lost,
+      'sent_for_laundry' => GarmentAvailabilityStatus.sentForLaundry,
+      'damaged' => GarmentAvailabilityStatus.damaged,
+      'sent_to_tailor' => GarmentAvailabilityStatus.sentToTailor,
       _ => GarmentAvailabilityStatus.available,
     };
   }
@@ -116,6 +136,8 @@ class Garment {
     required this.category,
     required this.photoPaths,
     required this.photoUrls,
+    this.receiptPath,
+    this.receiptUrl,
     this.memberId,
     this.subcategory,
     this.colorName,
@@ -158,6 +180,12 @@ class Garment {
   final GarmentCategory category;
   final List<String> photoPaths;
   final List<String> photoUrls;
+
+  /// Storage path of the purchase receipt image in the 'garments' bucket.
+  final String? receiptPath;
+
+  /// Transient signed URL for displaying the receipt in the app.
+  final String? receiptUrl;
   final String? subcategory;
   final String? colorName;
   final String? colorHex;
@@ -248,6 +276,7 @@ class Garment {
   factory Garment.fromJson(
     Map<String, dynamic> json, {
     List<String>? photoUrls,
+    String? receiptUrl,
   }) {
     final List<GarmentColorShade> shades = _parseColorShades(json);
     final GarmentColorShade? primaryShade = _primaryShade(shades);
@@ -264,6 +293,8 @@ class Garment {
         json['photo_urls'] as List<dynamic>? ?? const <String>[],
       ),
       photoUrls: photoUrls ?? const <String>[],
+      receiptPath: json['receipt_path'] as String?,
+      receiptUrl: receiptUrl,
       subcategory: json['subcategory'] as String?,
       colorName: primaryShade?.name ?? json['color_name'] as String?,
       colorHex: primaryShade?.hex ?? json['color_hex'] as String?,
@@ -342,6 +373,7 @@ class Garment {
     'details': details,
     'wash_instructions': washInstructions,
     'photo_urls': photoPaths,
+    'receipt_path': receiptPath,
     'purchase_date': purchaseDate?.toIso8601String().split('T').first,
     'laundry_status': laundryStatus.name,
     'ironing_status': ironingStatus?.dbValue,
@@ -354,6 +386,8 @@ class Garment {
   Garment copyWith({
     List<String>? photoPaths,
     List<String>? photoUrls,
+    String? receiptPath,
+    String? receiptUrl,
     bool? isArchived,
     String? memberId,
     String? purchaseStore,
@@ -382,6 +416,8 @@ class Garment {
       category: category,
       photoPaths: photoPaths ?? this.photoPaths,
       photoUrls: photoUrls ?? this.photoUrls,
+      receiptPath: receiptPath ?? this.receiptPath,
+      receiptUrl: receiptUrl ?? this.receiptUrl,
       subcategory: subcategory,
       colorName: resolvedPrimary?.name ?? colorName,
       colorHex: resolvedPrimary?.hex ?? colorHex,
@@ -440,8 +476,10 @@ class Garment {
       }
     }
 
-    rows.sort((MapEntry<int, Map<String, dynamic>> a,
-        MapEntry<int, Map<String, dynamic>> b) {
+    rows.sort((
+      MapEntry<int, Map<String, dynamic>> a,
+      MapEntry<int, Map<String, dynamic>> b,
+    ) {
       final int aOrder = (a.value['sort_order'] as num?)?.toInt() ?? a.key;
       final int bOrder = (b.value['sort_order'] as num?)?.toInt() ?? b.key;
       return aOrder.compareTo(bOrder);
@@ -473,10 +511,7 @@ class Garment {
     return json['location_name'] as String?;
   }
 
-  static T? _enumByNameOrNull<T extends Enum>(
-    List<T> values,
-    String? name,
-  ) {
+  static T? _enumByNameOrNull<T extends Enum>(List<T> values, String? name) {
     if (name == null) {
       return null;
     }
@@ -491,8 +526,7 @@ class Garment {
   }
 
   static List<GarmentColorShade> _parseColorShades(Map<String, dynamic> json) {
-    final Object? raw =
-        json['garment_color_shades'] ?? json['color_shades'];
+    final Object? raw = json['garment_color_shades'] ?? json['color_shades'];
 
     if (raw is! List) {
       return const <GarmentColorShade>[];
@@ -505,15 +539,19 @@ class Garment {
       final Object? row = raw[index];
 
       if (row is Map) {
-        rows.add(MapEntry<int, Map<String, dynamic>>(
-          index,
-          Map<String, dynamic>.from(row),
-        ));
+        rows.add(
+          MapEntry<int, Map<String, dynamic>>(
+            index,
+            Map<String, dynamic>.from(row),
+          ),
+        );
       }
     }
 
-    rows.sort((MapEntry<int, Map<String, dynamic>> a,
-        MapEntry<int, Map<String, dynamic>> b) {
+    rows.sort((
+      MapEntry<int, Map<String, dynamic>> a,
+      MapEntry<int, Map<String, dynamic>> b,
+    ) {
       final int aOrder = (a.value['sort_order'] as num?)?.toInt() ?? a.key;
       final int bOrder = (b.value['sort_order'] as num?)?.toInt() ?? b.key;
 
@@ -595,11 +633,9 @@ List<GarmentColorShade> normalizeColorShades(List<GarmentColorShade> shades) {
 
     final String key = name.toLowerCase();
     if (seen.add(key)) {
-      cleaned.add(GarmentColorShade(
-        name: name,
-        hex: hex,
-        isPrimary: shade.isPrimary,
-      ));
+      cleaned.add(
+        GarmentColorShade(name: name, hex: hex, isPrimary: shade.isPrimary),
+      );
     }
   }
 

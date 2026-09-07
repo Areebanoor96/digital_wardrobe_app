@@ -86,6 +86,32 @@ class GarmentMetadataFormatter {
       GarmentCategory.accessory => 'Accessory',
       GarmentCategory.jewelry => 'Jewelry',
       GarmentCategory.bag => 'Bag',
+      GarmentCategory.activewear => 'Activewear',
+      GarmentCategory.sleepwear => 'Sleep/Loungewear',
+      GarmentCategory.watches => 'Watches',
+      GarmentCategory.other => 'Other',
+    };
+  }
+
+  /// Display label for the wardrobe category row (All, Tops, Bottoms ...).
+  ///
+  /// Kept separate from [categoryLabel] because the catalog row uses the full
+  /// approved taxonomy wording (e.g. "Footwear", "Other / Custom") while
+  /// cards and the detail screen keep the concise singular form.
+  static String categoryNavLabel(GarmentCategory category) {
+    return switch (category) {
+      GarmentCategory.top => 'Tops',
+      GarmentCategory.bottom => 'Bottoms',
+      GarmentCategory.dress => 'Dresses',
+      GarmentCategory.outerwear => 'Outerwear',
+      GarmentCategory.activewear => 'Activewear',
+      GarmentCategory.sleepwear => 'Sleep/Loungewear',
+      GarmentCategory.shoe => 'Footwear',
+      GarmentCategory.watches => 'Watches',
+      GarmentCategory.jewelry => 'Jewelry',
+      GarmentCategory.bag => 'Bags',
+      GarmentCategory.accessory => 'Accessories',
+      GarmentCategory.other => 'Other / Custom',
     };
   }
 

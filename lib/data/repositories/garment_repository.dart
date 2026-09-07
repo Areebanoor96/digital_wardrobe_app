@@ -176,22 +176,17 @@ class GarmentRepository {
       return;
     }
 
-    await _client.from('garment_color_shades').insert(
-      <Map<String, dynamic>>[
-        for (int index = 0; index < shades.length; index++)
-          shades[index].toJson(
-            userId: userId,
-            garmentId: garment.id,
-            sortOrder: index,
-          ),
-      ],
-    );
+    await _client.from('garment_color_shades').insert(<Map<String, dynamic>>[
+      for (int index = 0; index < shades.length; index++)
+        shades[index].toJson(
+          userId: userId,
+          garmentId: garment.id,
+          sortOrder: index,
+        ),
+    ]);
   }
 
-  Future<void> _syncSizes(
-    Garment garment, {
-    required String userId,
-  }) async {
+  Future<void> _syncSizes(Garment garment, {required String userId}) async {
     final List<String> sizes = _normalizeSizes(garment.effectiveSizes);
 
     await _client
@@ -204,17 +199,15 @@ class GarmentRepository {
       return;
     }
 
-    await _client.from('garment_sizes').insert(
-      <Map<String, dynamic>>[
-        for (int index = 0; index < sizes.length; index++)
-          <String, dynamic>{
-            'user_id': userId,
-            'garment_id': garment.id,
-            'size': sizes[index],
-            'sort_order': index,
-          },
-      ],
-    );
+    await _client.from('garment_sizes').insert(<Map<String, dynamic>>[
+      for (int index = 0; index < sizes.length; index++)
+        <String, dynamic>{
+          'user_id': userId,
+          'garment_id': garment.id,
+          'size': sizes[index],
+          'sort_order': index,
+        },
+    ]);
   }
 
   List<String> _normalizeSizes(List<String> values) {
@@ -298,6 +291,29 @@ class GarmentRepository {
     return path;
   }
 
+  Future<String> uploadReceipt({
+    required String garmentId,
+    required Uint8List bytes,
+  }) async {
+    final String userId = _client.auth.currentUser!.id;
+    final int timestamp = DateTime.now().microsecondsSinceEpoch;
+
+    final String path = '$userId/$garmentId/receipt_$timestamp.jpg';
+
+    await _client.storage
+        .from(_bucket)
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: false,
+          ),
+        );
+
+    return path;
+  }
+
   Future<void> deleteImages(List<String> paths) async {
     if (paths.isEmpty) {
       return;
@@ -317,6 +333,30 @@ class GarmentRepository {
     );
   }
 
+  Future<void> updateAvailabilityStatus({
+    required String garmentId,
+    required String memberId,
+    required GarmentAvailabilityStatus status,
+  }) async {
+    await _client
+        .from('garments')
+        .update(<String, dynamic>{'availability_status': status.dbValue})
+        .eq('id', garmentId)
+        .eq('member_id', memberId);
+  }
+
+  Future<void> updateIroningStatus({
+    required String garmentId,
+    required String memberId,
+    required IroningStatus? status,
+  }) async {
+    await _client
+        .from('garments')
+        .update(<String, dynamic>{'ironing_status': status?.dbValue})
+        .eq('id', garmentId)
+        .eq('member_id', memberId);
+  }
+
   Future<void> restoreGarment({
     required String garmentId,
     required String memberId,
@@ -331,8 +371,22 @@ class GarmentRepository {
   Future<Garment> _withSignedUrls(Map<String, dynamic> row) async {
     final Garment garment = Garment.fromJson(row);
 
+    String? signedReceiptUrl;
+    if (garment.receiptPath != null && garment.receiptPath!.isNotEmpty) {
+      try {
+        signedReceiptUrl = await _client.storage
+            .from(_bucket)
+            .createSignedUrl(garment.receiptPath!, 3600);
+      } catch (_) {
+        signedReceiptUrl = null;
+      }
+    }
+
     if (garment.photoPaths.isEmpty) {
-      return garment;
+      return garment.copyWith(
+        photoUrls: const <String>[],
+        receiptUrl: signedReceiptUrl,
+      );
     }
 
     final List<String> urls = await Future.wait(
@@ -350,6 +404,6 @@ class GarmentRepository {
       }),
     );
 
-    return garment.copyWith(photoUrls: urls);
+    return garment.copyWith(photoUrls: urls, receiptUrl: signedReceiptUrl);
   }
 }

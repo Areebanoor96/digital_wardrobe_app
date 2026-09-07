@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/image_service.dart';
@@ -39,6 +40,35 @@ Future<Finder> pumpForm(
   await tester.pump();
 
   return find.byType(GarmentFormScreen);
+}
+
+Future<void> _expandAdvancedOptions(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('Advanced Options'));
+  await tester.tap(find.text('Advanced Options'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openMultiSelectSheet(
+  WidgetTester tester,
+  String labelText,
+) async {
+  final Finder block = find.ancestor(
+    of: find.text(labelText),
+    matching: find.byType(InputDecorator),
+  );
+  final Finder addChip = find.descendant(
+    of: block,
+    matching: find.widgetWithText(ActionChip, 'Add'),
+  );
+
+  await tester.ensureVisible(addChip);
+  await tester.tap(addChip);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _closeMultiSelectSheet(WidgetTester tester) async {
+  await tester.tap(find.text('Done'));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -82,9 +112,10 @@ void main() {
       await pumpForm(tester);
 
       expect(find.text('Shades *'), findsOneWidget);
-      expect(find.text('Add shade'), findsOneWidget);
+      expect(find.text('Add'), findsWidgets);
 
       expect(find.text('Sizes'), findsOneWidget);
+      await _openMultiSelectSheet(tester, 'Sizes');
       for (final String size in <String>[
         childSizes.first,
         childSizes.last,
@@ -93,10 +124,15 @@ void main() {
       ]) {
         expect(find.text(size), findsOneWidget);
       }
-      expect(find.text('Item Status'), findsWidgets);
+      await _closeMultiSelectSheet(tester);
+
+      expect(find.text('Item Status'), findsOneWidget);
       expect(find.text('Location'), findsWidgets);
-      expect(find.text('Stitching Status'), findsOneWidget);
-      expect(find.text('Ironing Status'), findsOneWidget);
+      expect(find.text('Stitching Status'), findsNothing);
+      expect(find.text('Ironing Status'), findsNothing);
+      expect(find.text('Sleeve Length'), findsNothing);
+
+      await _expandAdvancedOptions(tester);
 
       final List<String?> fabricValues = tester
           .widgetList<DropdownButton<String?>>(
@@ -123,6 +159,8 @@ void main() {
     WidgetTester tester,
   ) async {
     await pumpForm(tester);
+
+    await _expandAdvancedOptions(tester);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Details'),
@@ -160,29 +198,35 @@ void main() {
     expect(find.text('Navy (Primary)'), findsOneWidget);
     expect(find.text('Cream'), findsOneWidget);
     expect(find.text('Lawn'), findsOneWidget);
+    expect(find.text('3-4Y'), findsOneWidget);
+
+    await _expandAdvancedOptions(tester);
+
     expect(find.text('Tailored'), findsOneWidget);
     expect(find.text('Embroidered'), findsOneWidget);
     expect(find.text('Light'), findsOneWidget);
     expect(find.text('Long Sleeve'), findsOneWidget);
     expect(find.text('Embroidered collar'), findsOneWidget);
-    expect(find.text('3-4Y'), findsOneWidget);
   });
 
-  testWidgets('purchase date appears directly below price', (
+  testWidgets('purchase date appears directly above price', (
     WidgetTester tester,
   ) async {
     await pumpForm(tester);
 
-    final double priceTop = tester
-        .getTopLeft(find.widgetWithText(TextFormField, 'Price (PKR)'))
+    final double storeTop = tester
+        .getTopLeft(find.widgetWithText(TextFormField, 'Store And Location'))
         .dy;
     final double purchaseDateTop = tester
         .getTopLeft(find.widgetWithText(TextFormField, 'Purchase Date'))
         .dy;
-    final double occasionsTop = tester.getTopLeft(find.text('Occasions')).dy;
+    final double priceTop = tester
+        .getTopLeft(find.widgetWithText(TextFormField, 'Price (PKR)'))
+        .dy;
 
-    expect(purchaseDateTop, greaterThan(priceTop));
-    expect(purchaseDateTop, lessThan(occasionsTop));
+    expect(purchaseDateTop, greaterThan(storeTop));
+    expect(purchaseDateTop, lessThan(priceTop));
+    expect(find.text('Occasions'), findsNothing);
   });
 
   testWidgets('edit form keeps legacy palette colors and fabrics', (
@@ -263,6 +307,8 @@ void main() {
   ) async {
     await pumpForm(tester);
 
+    await _expandAdvancedOptions(tester);
+
     final Finder sleeveDropdown = find.byWidgetPredicate(
       (Widget widget) =>
           widget is DropdownButtonFormField<String?> &&
@@ -277,38 +323,43 @@ void main() {
     expect(find.text('Not specified'), findsWidgets);
   });
 
-  testWidgets('shoe items use numeric sizes and shoe types, hide clothing fields', (
-    WidgetTester tester,
-  ) async {
-    const Garment garment = Garment(
-      id: 'g-10',
-      name: 'Tennis Sneakers',
-      category: GarmentCategory.shoe,
-      photoPaths: <String>[],
-      photoUrls: <String>[],
-      subcategory: 'Sneakers',
-      sizes: <String>['40'],
-    );
+  testWidgets(
+    'shoe items use numeric sizes and shoe types, hide clothing fields',
+    (WidgetTester tester) async {
+      const Garment garment = Garment(
+        id: 'g-10',
+        name: 'Tennis Sneakers',
+        category: GarmentCategory.shoe,
+        photoPaths: <String>[],
+        photoUrls: <String>[],
+        subcategory: 'Sneakers',
+        sizes: <String>['40'],
+      );
 
-    await pumpForm(tester, garment: garment);
+      await pumpForm(tester, garment: garment);
 
-    expect(find.text('Shoe Sizes'), findsOneWidget);
-    for (final String size in <String>['36', '38', '40', '42']) {
-      expect(find.text(size), findsOneWidget);
-    }
-    expect(find.text('S'), findsNothing);
-    expect(find.text('Shoe Type'), findsOneWidget);
-    expect(find.text('Sneakers'), findsOneWidget);
+      expect(find.text('Shoe Sizes'), findsOneWidget);
+      await _openMultiSelectSheet(tester, 'Shoe Sizes');
+      for (final String size in <String>['36', '38', '42']) {
+        expect(find.text(size), findsOneWidget);
+      }
+      expect(find.text('40'), findsWidgets);
+      expect(find.text('S'), findsNothing);
+      await _closeMultiSelectSheet(tester);
 
-    expect(find.text('Sizes'), findsNothing);
-    expect(find.text('Stitching Status'), findsNothing);
-    expect(find.text('Ironing Status'), findsNothing);
-    expect(find.text('Fabric'), findsNothing);
-    expect(find.text('Fit'), findsNothing);
-    expect(find.text('Pattern'), findsNothing);
-    expect(find.text('Fabric Weight'), findsNothing);
-    expect(find.text('Sleeve Length'), findsNothing);
-  });
+      expect(find.text('Shoe Type'), findsOneWidget);
+      expect(find.text('Sneakers'), findsOneWidget);
+
+      expect(find.text('Sizes'), findsNothing);
+      expect(find.text('Stitching Status'), findsNothing);
+      expect(find.text('Ironing Status'), findsNothing);
+      expect(find.text('Fabric'), findsNothing);
+      expect(find.text('Fit'), findsNothing);
+      expect(find.text('Pattern'), findsNothing);
+      expect(find.text('Fabric Weight'), findsNothing);
+      expect(find.text('Sleeve Length'), findsNothing);
+    },
+  );
 
   testWidgets('bag items show bag types and hide sizes and clothing fields', (
     WidgetTester tester,
@@ -386,33 +437,159 @@ void main() {
     expect(find.text('Fabric Weight'), findsNothing);
   });
 
-  testWidgets('switching category to Shoes swaps sizes and hides clothing fields', (
+  testWidgets('activewear items use activewear types and not outerwear types', (
     WidgetTester tester,
   ) async {
-    await pumpForm(tester);
+    const Garment activewear = Garment(
+      id: 'g-14',
+      name: 'Training Tee',
+      category: GarmentCategory.activewear,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+    );
 
-    expect(find.text('Sizes'), findsOneWidget);
-    expect(find.text('Stitching Status'), findsOneWidget);
+    await pumpForm(tester, garment: activewear);
 
-    final Finder categoryDropdown = find.byType(DropdownButtonFormField<GarmentCategory>);
-    await tester.tap(categoryDropdown);
+    expect(find.text('Activewear Type'), findsOneWidget);
+
+    final Finder subcategoryDropdown = find.ancestor(
+      of: find.text('Activewear Type'),
+      matching: find.byType(DropdownButtonFormField<String?>),
+    );
+    expect(subcategoryDropdown, findsOneWidget);
+    await tester.tap(subcategoryDropdown);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Shoes').last);
-    await tester.pumpAndSettle();
 
-    expect(find.text('Shoe Sizes'), findsOneWidget);
-    for (final String size in <String>['36', '42']) {
-      expect(find.text(size), findsOneWidget);
-    }
-    expect(find.text('Sizes'), findsNothing);
-    expect(find.text('Stitching Status'), findsNothing);
-    expect(find.text('Ironing Status'), findsNothing);
-    expect(find.text('Fabric'), findsNothing);
-    expect(find.text('Fit'), findsNothing);
-    expect(find.text('Pattern'), findsNothing);
-    expect(find.text('Fabric Weight'), findsNothing);
-    expect(find.text('Sleeve Length'), findsNothing);
+    expect(find.text('Tracksuit'), findsOneWidget);
+    expect(find.text('Sports Top'), findsOneWidget);
+    expect(find.text('Blazer'), findsNothing);
+    expect(find.text('Coat'), findsNothing);
   });
+
+  testWidgets(
+    'sleepwear items use sleep/loungewear types and not outerwear types',
+    (WidgetTester tester) async {
+      const Garment sleepwear = Garment(
+        id: 'g-15',
+        name: 'Night Tee',
+        category: GarmentCategory.sleepwear,
+        photoPaths: <String>[],
+        photoUrls: <String>[],
+      );
+
+      await pumpForm(tester, garment: sleepwear);
+
+      expect(find.text('Sleep/Loungewear Type'), findsOneWidget);
+
+      final Finder subcategoryDropdown = find.ancestor(
+        of: find.text('Sleep/Loungewear Type'),
+        matching: find.byType(DropdownButtonFormField<String?>),
+      );
+      expect(subcategoryDropdown, findsOneWidget);
+      await tester.tap(subcategoryDropdown);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pajamas'), findsOneWidget);
+      expect(find.text('Nightdress'), findsOneWidget);
+      expect(find.text('Robe'), findsOneWidget);
+      expect(find.text('Blazer'), findsNothing);
+      expect(find.text('Coat'), findsNothing);
+    },
+  );
+
+  testWidgets('watches items use watch types and not outerwear types', (
+    WidgetTester tester,
+  ) async {
+    const Garment watch = Garment(
+      id: 'g-16',
+      name: 'Chronograph',
+      category: GarmentCategory.watches,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+    );
+
+    await pumpForm(tester, garment: watch);
+
+    expect(find.text('Watch Type'), findsOneWidget);
+
+    final Finder subcategoryDropdown = find.ancestor(
+      of: find.text('Watch Type'),
+      matching: find.byType(DropdownButtonFormField<String?>),
+    );
+    expect(subcategoryDropdown, findsOneWidget);
+    await tester.tap(subcategoryDropdown);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Analog'), findsOneWidget);
+    expect(find.text('Digital'), findsOneWidget);
+    expect(find.text('Smart'), findsOneWidget);
+    expect(find.text('Blazer'), findsNothing);
+    expect(find.text('Coat'), findsNothing);
+  });
+
+  testWidgets(
+    'Other items use a free-form custom label and not a subcategory list',
+    (WidgetTester tester) async {
+      const Garment other = Garment(
+        id: 'g-17',
+        name: 'Misc Piece',
+        category: GarmentCategory.other,
+        photoPaths: <String>[],
+        photoUrls: <String>[],
+        subcategory: 'Pins',
+      );
+
+      await pumpForm(tester, garment: other);
+
+      expect(find.text('Custom Label'), findsOneWidget);
+      expect(find.text('Not specified'), findsNothing);
+      expect(find.text('Blazer'), findsNothing);
+
+      final Finder customField = find.widgetWithText(
+        TextFormField,
+        'Custom Label',
+      );
+      expect(customField, findsOneWidget);
+      expect(find.text('Pins'), findsOneWidget);
+
+      await tester.enterText(customField, 'Collector Pin');
+      expect(find.text('Collector Pin'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'switching category to Shoes swaps sizes and hides clothing fields',
+    (WidgetTester tester) async {
+      await pumpForm(tester);
+
+      expect(find.text('Sizes'), findsOneWidget);
+      expect(find.text('Stitching Status'), findsNothing);
+
+      final Finder categoryDropdown = find.byType(
+        DropdownButtonFormField<GarmentCategory>,
+      );
+      await tester.tap(categoryDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Shoes').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Shoe Sizes'), findsOneWidget);
+      await _openMultiSelectSheet(tester, 'Shoe Sizes');
+      for (final String size in <String>['36', '42']) {
+        expect(find.text(size), findsOneWidget);
+      }
+      await _closeMultiSelectSheet(tester);
+
+      expect(find.text('Sizes'), findsNothing);
+      expect(find.text('Stitching Status'), findsNothing);
+      expect(find.text('Ironing Status'), findsNothing);
+      expect(find.text('Fabric'), findsNothing);
+      expect(find.text('Fit'), findsNothing);
+      expect(find.text('Pattern'), findsNothing);
+      expect(find.text('Fabric Weight'), findsNothing);
+      expect(find.text('Sleeve Length'), findsNothing);
+    },
+  );
 
   testWidgets('location selector is saved-only and can add and auto-select', (
     WidgetTester tester,
@@ -566,7 +743,361 @@ void main() {
       expect(saveButton.onPressed, isNull);
     },
   );
+
+  testWidgets('item status dropdown lists all existing and new statuses', (
+    WidgetTester tester,
+  ) async {
+    await pumpForm(tester);
+
+    await tester.ensureVisible(find.text('Item Status'));
+    await tester.tap(find.text('Item Status'));
+    await tester.pumpAndSettle();
+
+    for (final String label in <String>[
+      'Lent',
+      'Borrowed',
+      'In Storage',
+      'Donated',
+      'Lost',
+      'Sent For Laundry',
+      'Damaged',
+      'Sent To Tailor',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Available'), findsWidgets);
+  });
+
+  testWidgets('sizes sheet selection persists the chosen size chip', (
+    WidgetTester tester,
+  ) async {
+    await pumpForm(tester);
+
+    expect(find.text('M'), findsNothing);
+
+    await _openMultiSelectSheet(tester, 'Sizes');
+    await tester.tap(find.text('M'));
+    await tester.pump();
+    await _closeMultiSelectSheet(tester);
+
+    expect(find.text('M'), findsOneWidget);
+  });
+
+  testWidgets('receipt attachment offers source options and cancel', (
+    WidgetTester tester,
+  ) async {
+    await pumpForm(tester);
+
+    await tester.dragUntilVisible(
+      find.text('Add receipt'),
+      find.byType(ListView),
+      const Offset(0, -300),
+    );
+    await tester.tap(find.text('Add receipt'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Take photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Attach from Files'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add receipt'), findsOneWidget);
+  });
+
+  testWidgets('receipt attachment attaches a file and can be removed', (
+    WidgetTester tester,
+  ) async {
+    final File tempFile = File('${Directory.systemTemp.path}/receipt_test.jpg');
+    tempFile.writeAsBytesSync(_tinyJpeg);
+    final _ReceiptImageService imageService = _ReceiptImageService(
+      XFile(tempFile.path),
+    );
+
+    await pumpForm(
+      tester,
+      overrides: <Override>[
+        imageServiceProvider.overrideWith((Ref ref) => imageService),
+      ],
+    );
+
+    await tester.dragUntilVisible(
+      find.text('Add receipt'),
+      find.byType(ListView),
+      const Offset(0, -300),
+    );
+    await tester.tap(find.text('Add receipt'));
+    await tester.pumpAndSettle();
+    expect(imageService.fileCalls, 0);
+
+    await tester.tap(find.text('Attach from Files'));
+    await tester.pumpAndSettle();
+
+    expect(imageService.fileCalls, 1);
+
+    await tester.dragUntilVisible(
+      find.textContaining('receipt_test.jpg'),
+      find.byType(ListView).first,
+      const Offset(0, -300),
+    );
+    expect(find.textContaining('receipt_test.jpg'), findsOneWidget);
+    expect(find.text('Add receipt'), findsNothing);
+
+    await tester.tap(find.byTooltip('Remove receipt'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add receipt'), findsOneWidget);
+  });
 }
+
+class _ReceiptImageService extends ImageService {
+  _ReceiptImageService(this.file) : super(ImagePicker());
+
+  final XFile file;
+  int cameraCalls = 0;
+  int galleryCalls = 0;
+  int fileCalls = 0;
+
+  @override
+  Future<XFile?> takePhoto() async {
+    cameraCalls++;
+    return null;
+  }
+
+  @override
+  Future<XFile?> pickImageFile() async {
+    fileCalls++;
+    return file;
+  }
+
+  @override
+  Future<List<XFile>> pickMultipleFromGallery({required int limit}) async {
+    galleryCalls++;
+    return const <XFile>[];
+  }
+}
+
+const List<int> _tinyJpeg = <int>[
+  0xFF,
+  0xD8,
+  0xFF,
+  0xE0,
+  0x00,
+  0x10,
+  0x4A,
+  0x46,
+  0x49,
+  0x46,
+  0x00,
+  0x01,
+  0x01,
+  0x00,
+  0x00,
+  0x01,
+  0x00,
+  0x01,
+  0x00,
+  0x00,
+  0xFF,
+  0xDB,
+  0x00,
+  0x43,
+  0x00,
+  0x08,
+  0x06,
+  0x06,
+  0x07,
+  0x06,
+  0x05,
+  0x08,
+  0x07,
+  0x07,
+  0x07,
+  0x09,
+  0x09,
+  0x08,
+  0x0A,
+  0x0C,
+  0x14,
+  0x0D,
+  0x0C,
+  0x0B,
+  0x0B,
+  0x0C,
+  0x19,
+  0x12,
+  0x13,
+  0x0F,
+  0x14,
+  0x1D,
+  0x1A,
+  0x1F,
+  0x1E,
+  0x1D,
+  0x1A,
+  0x1C,
+  0x1C,
+  0x20,
+  0x24,
+  0x2E,
+  0x27,
+  0x20,
+  0x22,
+  0x2C,
+  0x23,
+  0x1C,
+  0x1C,
+  0x28,
+  0x37,
+  0x29,
+  0x2C,
+  0x30,
+  0x31,
+  0x34,
+  0x34,
+  0x34,
+  0x1F,
+  0x27,
+  0x39,
+  0x3D,
+  0x38,
+  0x32,
+  0x3C,
+  0x2E,
+  0x33,
+  0x34,
+  0x32,
+  0xFF,
+  0xC0,
+  0x00,
+  0x0B,
+  0x08,
+  0x00,
+  0x01,
+  0x00,
+  0x01,
+  0x01,
+  0x01,
+  0x11,
+  0x00,
+  0xFF,
+  0xC4,
+  0x00,
+  0x1F,
+  0x00,
+  0x00,
+  0x01,
+  0x05,
+  0x01,
+  0x01,
+  0x01,
+  0x01,
+  0x01,
+  0x01,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x01,
+  0x02,
+  0x03,
+  0x04,
+  0x05,
+  0x06,
+  0x07,
+  0x08,
+  0x09,
+  0x0A,
+  0xFF,
+  0xC4,
+  0x00,
+  0xB5,
+  0x11,
+  0x00,
+  0x02,
+  0x01,
+  0x02,
+  0x03,
+  0x04,
+  0x05,
+  0x06,
+  0x07,
+  0x08,
+  0x09,
+  0x0A,
+  0x0B,
+  0x01,
+  0x02,
+  0x03,
+  0x04,
+  0x05,
+  0x06,
+  0x07,
+  0x08,
+  0x09,
+  0x0A,
+  0xBB,
+  0xFF,
+  0xC4,
+  0x00,
+  0xB7,
+  0x11,
+  0x00,
+  0x02,
+  0x01,
+  0x02,
+  0x03,
+  0x04,
+  0x05,
+  0x06,
+  0x07,
+  0x08,
+  0x09,
+  0x0A,
+  0x0B,
+  0x01,
+  0x02,
+  0x03,
+  0x04,
+  0x05,
+  0x06,
+  0x07,
+  0x08,
+  0x09,
+  0x0A,
+  0xBB,
+  0xFF,
+  0xDA,
+  0x00,
+  0x0C,
+  0x03,
+  0x01,
+  0x00,
+  0x02,
+  0x11,
+  0x03,
+  0x11,
+  0x00,
+  0x3F,
+  0x00,
+  0x37,
+  0x92,
+  0x26,
+  0xBC,
+  0x43,
+  0xFE,
+  0x80,
+  0x00,
+  0x7F,
+  0xFF,
+  0xD9,
+];
 
 class _FakeImageService extends ImageService {
   _FakeImageService() : super(ImagePicker());

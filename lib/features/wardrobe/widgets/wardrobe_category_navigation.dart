@@ -35,7 +35,7 @@ class WardrobeCategoryNavigation extends StatelessWidget {
             (GarmentCategory category) => Padding(
               padding: const EdgeInsets.only(left: AppSpacing.sm),
               child: _CategoryNavItem(
-                label: GarmentMetadataFormatter.categoryLabel(category),
+                label: GarmentMetadataFormatter.categoryNavLabel(category),
                 selected: selectedCategory == category,
                 onSelected: () => onSelected(category),
               ),

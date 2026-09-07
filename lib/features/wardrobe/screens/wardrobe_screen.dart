@@ -1,5 +1,4 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
-import 'package:digital_wardrobe_app/core/theme/app_dimensions.dart';
 import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
@@ -7,7 +6,6 @@ import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/garment_location.dart';
-import 'package:digital_wardrobe_app/features/profile/utils/select_family_member.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
@@ -47,98 +45,6 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
     _searchController = TextEditingController(text: existingQuery);
   }
 
-  Future<void> _showProfileSwitcher(
-    BuildContext context,
-    FamilyMember selectedMember,
-  ) async {
-    final List<FamilyMember> members = await ref.read(
-      familyMembersProvider.future,
-    );
-    Map<String, int> pieceCounts = const <String, int>{};
-    try {
-      pieceCounts = await ref.read(familyMemberPieceCountsProvider.future);
-    } catch (_) {
-      pieceCounts = const <String, int>{};
-    }
-
-    if (!context.mounted) {
-      return;
-    }
-
-    await showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Text(
-                  'Switch wardrobe',
-                  style: Theme.of(
-                    sheetContext,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-
-                for (final FamilyMember member in members)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: FamilyMemberAvatar(
-                      name: member.name,
-                      avatarUrl: member.avatarUrl,
-                      radius: 22,
-                    ),
-                    title: Text(member.name),
-                    subtitle: Text(
-                      '${member.relationship.label} · '
-                      '${pieceCounts[member.id] ?? 0} Pieces',
-                    ),
-                    trailing: member.id == selectedMember.id
-                        ? const Icon(Icons.check_circle)
-                        : null,
-                    onTap: member.id == selectedMember.id
-                        ? null
-                        : () async {
-                            Navigator.of(sheetContext).pop();
-
-                            final bool selected = await selectFamilyMember(
-                              context: context,
-                              ref: ref,
-                              member: member,
-                            );
-
-                            if (!mounted || !selected) {
-                              return;
-                            }
-
-                            ref.invalidate(familyMembersProvider);
-                          },
-                  ),
-
-                const Divider(),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.people_outline),
-                  title: const Text('View all profiles'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    context.push('/profiles');
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -171,8 +77,8 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
         actions: <Widget>[
           if (selectedMember != null)
             IconButton(
-              onPressed: () => _showProfileSwitcher(context, selectedMember),
-              tooltip: 'Switch profile',
+              onPressed: () => context.push('/profiles'),
+              tooltip: 'Choose your wardrobe',
               icon: FamilyMemberAvatar(
                 name: selectedMember.name,
                 avatarUrl: selectedMember.avatarUrl,
@@ -212,10 +118,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
             children: <Widget>[
               WardrobeHeader(title: 'My Wardrobe', pieceCount: 0),
               SizedBox(height: AppSpacing.hero),
-              AppLoadingState(
-                showIcon: false,
-                label: 'Loading your closet',
-              ),
+              AppLoadingState(showIcon: false, label: 'Loading your closet'),
             ],
           ),
         ),
@@ -232,16 +135,17 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                 SliverToBoxAdapter(
                   child: Column(
                     children: <Widget>[
-                      WardrobeHeader(
-                        title: 'My Wardrobe',
-                        pieceCount: allGarments.length,
-                        trailing: selectedMember == null
-                            ? null
-                            : FamilyMemberAvatar(
-                                name: selectedMember.name,
-                                avatarUrl: selectedMember.avatarUrl,
-                                radius: AppDimensions.avatarSm / 2,
-                              ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          0,
+                          AppSpacing.xl,
+                          AppSpacing.md,
+                        ),
+                        child: WardrobeHeader(
+                          title: 'My Wardrobe',
+                          pieceCount: allGarments.length,
+                        ),
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
@@ -291,8 +195,6 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                       children: <Widget>[
                         WardrobeFilterToolbar(
                           filters: filters,
-                          filteredCount: filtered.length,
-                          totalCount: allGarments.length,
                           onOpenFilters: () {
                             showModalBottomSheet<void>(
                               context: context,

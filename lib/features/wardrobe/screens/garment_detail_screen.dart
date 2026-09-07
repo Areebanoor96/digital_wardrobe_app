@@ -59,10 +59,8 @@ class GarmentDetailScreen extends ConsumerWidget {
               leading: const BackArrowButton(),
               actions: <Widget>[
                 IconButton(
-                  onPressed: () => context.push(
-                    '/garments/$garmentId/edit',
-                    extra: garment,
-                  ),
+                  onPressed: () =>
+                      context.push('/garments/$garmentId/edit', extra: garment),
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Edit Item',
                 ),
@@ -112,16 +110,18 @@ class GarmentDetailScreen extends ConsumerWidget {
                         garment.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.headlineLarge
-                            ?.copyWith(height: 1.1),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineLarge?.copyWith(height: 1.1),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       _GarmentSubtitle(garment: garment),
                       const SizedBox(height: AppSpacing.sm),
                       _GarmentDetailTags(garment: garment),
                       const SizedBox(height: AppSpacing.xl),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
                         children: <Widget>[
                           if (garment.isArchived)
                             FilledButton.icon(
@@ -163,6 +163,108 @@ class GarmentDetailScreen extends ConsumerWidget {
                                     : 'Mark As Worn',
                               ),
                             ),
+                          if (!garment.isArchived)
+                            PopupMenuButton<GarmentAvailabilityStatus>(
+                              tooltip: 'Change Status',
+                              onSelected: (status) =>
+                                  _changeStatus(context, ref, garment, status),
+                              itemBuilder: (BuildContext menuContext) =>
+                                  GarmentAvailabilityStatus.values
+                                      .map(
+                                        (status) =>
+                                            PopupMenuItem<
+                                              GarmentAvailabilityStatus
+                                            >(
+                                              value: status,
+                                              child: Text(status.label),
+                                            ),
+                                      )
+                                      .toList(),
+                              offset: const Offset(0, 8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                height: 40,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.swap_horiz,
+                                      size: 18,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSecondaryContainer,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Change Status',
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSecondaryContainer,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (!garment.isArchived &&
+                              _isClothing(garment.category))
+                            Tooltip(
+                              message: 'Update Ironing Status',
+                              child: InkWell(
+                                key: const ValueKey(
+                                  'garment-detail-ironing-status-action',
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () =>
+                                    _editIroningStatus(context, ref, garment),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  height: 40,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      Icon(
+                                        Icons.iron_outlined,
+                                        size: 18,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSecondaryContainer,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Ironing Status',
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSecondaryContainer,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -180,16 +282,6 @@ class GarmentDetailScreen extends ConsumerWidget {
                     children: <Widget>[
                       GarmentWearInsight(garment: garment),
                       const SizedBox(height: AppSpacing.xxl),
-                      GarmentMetadataSection(
-                        title: 'Item Status',
-                        children: <Widget>[
-                          GarmentInfoRow(
-                            label: 'Availability',
-                            value: garment.availabilityStatus.label,
-                            icon: Icons.inventory_2_outlined,
-                          ),
-                        ],
-                      ),
                       if (garment.availabilityStatus ==
                               GarmentAvailabilityStatus.lent ||
                           garment.availabilityStatus ==
@@ -219,31 +311,42 @@ class GarmentDetailScreen extends ConsumerWidget {
                           ],
                         ),
                       ],
-                      if (_hasWardrobeInformation(garment)) ...<Widget>[
+                      if (_hasStandaloneGarmentInformation(
+                        garment,
+                      )) ...<Widget>[
                         const SizedBox(height: AppSpacing.xxl),
-                        GarmentMetadataSection(
-                          title: 'Wardrobe Information',
-                          children: <Widget>[
-                            if ((garment.locationName?.trim().isNotEmpty ??
-                                false))
-                              GarmentInfoRow(
-                                label: 'Location',
-                                value: garment.locationName!,
-                                icon: Icons.place_outlined,
+                        if ((garment.locationName?.trim().isNotEmpty ?? false))
+                          GarmentInfoRow(
+                            label: 'Location',
+                            value: garment.locationName!,
+                            icon: Icons.place_outlined,
+                          ),
+                        if (garment.occasions.any(
+                          (String o) => o.trim().isNotEmpty,
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.lg),
+                            child: GarmentInfoRow(
+                              label: 'Occasions',
+                              value: GarmentMetadataFormatter.detailListSummary(
+                                garment.occasions.map(_titleCase).toList(),
                               ),
-                            if (garment.occasions.any(
-                              (String o) => o.trim().isNotEmpty,
-                            ))
-                              GarmentInfoRow(
-                                label: 'Occasions',
-                                value:
-                                    GarmentMetadataFormatter.detailListSummary(
-                                      garment.occasions.map(_titleCase).toList(),
-                                    ),
-                                icon: Icons.celebration_outlined,
+                              icon: Icons.celebration_outlined,
+                            ),
+                          ),
+                        if (garment.moods.any(
+                          (String m) => m.trim().isNotEmpty,
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(top: AppSpacing.lg),
+                            child: GarmentInfoRow(
+                              label: 'Moods',
+                              value: GarmentMetadataFormatter.detailListSummary(
+                                garment.moods.map(_titleCase).toList(),
                               ),
-                          ],
-                        ),
+                              icon: Icons.style_outlined,
+                            ),
+                          ),
                       ],
                       if (_hasGarmentDetails(garment)) ...<Widget>[
                         const SizedBox(height: AppSpacing.xxl),
@@ -257,9 +360,15 @@ class GarmentDetailScreen extends ConsumerWidget {
                                 label: _subcategoryLabel(garment.category),
                                 value: garment.subcategory!,
                               ),
+                            if (_supportsSizes(garment.category) &&
+                                garment.effectiveSizes.isNotEmpty)
+                              GarmentInfoRow(
+                                label: 'Size',
+                                value: garment.effectiveSizes.join(', '),
+                                icon: Icons.straighten_outlined,
+                              ),
                             if (_isClothing(garment.category)) ...<Widget>[
-                              if ((garment.fabric?.trim().isNotEmpty ??
-                                  false))
+                              if ((garment.fabric?.trim().isNotEmpty ?? false))
                                 GarmentInfoRow(
                                   label: 'Fabric',
                                   value: garment.fabric!,
@@ -269,8 +378,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                                   label: 'Fit',
                                   value: garment.fit!,
                                 ),
-                              if ((garment.pattern?.trim().isNotEmpty ??
-                                  false))
+                              if ((garment.pattern?.trim().isNotEmpty ?? false))
                                 GarmentInfoRow(
                                   label: 'Pattern',
                                   value: garment.pattern!,
@@ -295,6 +403,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                                 label: 'Stitching',
                                 value: garment.stitchingStatus!.label,
                               ),
+
                             if (garment.details?.trim().isNotEmpty ?? false)
                               GarmentInfoRow(
                                 label: 'Details',
@@ -323,13 +432,29 @@ class GarmentDetailScreen extends ConsumerWidget {
                             if (garment.price != null)
                               GarmentInfoRow(
                                 label: 'Price',
-                                value: '${garment.currency} '
+                                value:
+                                    '${garment.currency} '
                                     '${garment.price!.toStringAsFixed(0)}',
                               ),
                             if (garment.purchaseDate != null)
                               GarmentInfoRow(
                                 label: 'Purchase Date',
                                 value: _formatDate(garment.purchaseDate!),
+                              ),
+                            if (_hasReceipt(garment))
+                              GarmentInfoRow(
+                                label: 'Receipt',
+                                value: 'Receipt attached',
+                                icon: Icons.receipt_long_outlined,
+                                trailing: IconButton(
+                                  onPressed: () =>
+                                      _previewReceipt(context, garment),
+                                  icon: const Icon(
+                                    Icons.visibility_outlined,
+                                    size: 18,
+                                  ),
+                                  tooltip: 'View Receipt',
+                                ),
                               ),
                           ],
                         ),
@@ -339,17 +464,14 @@ class GarmentDetailScreen extends ConsumerWidget {
                         title: 'Wear History',
                         children: <Widget>[
                           history.when(
-                            loading: () => const AppLoadingState(
-                              showIcon: false,
-                            ),
+                            loading: () =>
+                                const AppLoadingState(showIcon: false),
                             error: (_, _) => TextButton.icon(
                               onPressed: () => ref.invalidate(
                                 garmentWearHistoryProvider(garmentId),
                               ),
                               icon: const Icon(Icons.refresh),
-                              label: const Text(
-                                'Retry Loading Wear History',
-                              ),
+                              label: const Text('Retry Loading Wear History'),
                             ),
                             data: (List<WearLog> history) => WearHistoryList(
                               history: history,
@@ -591,9 +713,223 @@ class GarmentDetailScreen extends ConsumerWidget {
     );
   }
 
-  bool _hasWardrobeInformation(Garment garment) {
+  Future<void> _changeStatus(
+    BuildContext context,
+    WidgetRef ref,
+    Garment garment,
+    GarmentAvailabilityStatus status,
+  ) async {
+    if (status == garment.availabilityStatus) {
+      return;
+    }
+
+    final bool isLending =
+        status == GarmentAvailabilityStatus.lent ||
+        status == GarmentAvailabilityStatus.borrowed;
+
+    _LendingEntryData? lending;
+    if (isLending) {
+      lending = await showDialog<_LendingEntryData>(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return _LendingEntryDialog(lendDirection: status);
+        },
+      );
+
+      if (lending == null || !context.mounted) {
+        return;
+      }
+    }
+
+    final FamilyMember? member = ref.read(selectedFamilyMemberProvider);
+    if (member == null || !context.mounted) {
+      return;
+    }
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await ref
+          .read(garmentRepositoryProvider)
+          .updateAvailabilityStatus(
+            garmentId: garment.id,
+            memberId: member.id,
+            status: status,
+          );
+
+      await ref
+          .read(lendingRepositoryProvider)
+          .syncForAvailability(
+            memberId: member.id,
+            garmentId: garment.id,
+            status: status,
+            personName: lending?.personName,
+            dateOut: lending?.dateOut,
+            expectedReturnDate: lending?.expectedReturnDate,
+            notes: lending?.notes,
+          );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could Not Update This Garment Status.')),
+      );
+      return;
+    }
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ref.invalidate(garmentProvider(garmentId));
+    ref.invalidate(garmentsProvider);
+    ref.invalidate(activeLendingRecordProvider(garmentId));
+
+    messenger.showSnackBar(
+      SnackBar(content: Text('Status Updated To ${status.label}.')),
+    );
+  }
+
+  Future<void> _editIroningStatus(
+    BuildContext context,
+    WidgetRef ref,
+    Garment garment,
+  ) async {
+    final IroningStatus? selected = await showDialog<IroningStatus?>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return SimpleDialog(
+          title: const Text('Ironing Status'),
+          children: <Widget>[
+            for (final IroningStatus option in IroningStatus.values)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(dialogContext, option),
+                child: Text(option.label),
+              ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, null),
+              child: const Text('Not specified'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (selected == garment.ironingStatus || !context.mounted) {
+      return;
+    }
+
+    final FamilyMember? member = ref.read(selectedFamilyMemberProvider);
+    if (member == null || !context.mounted) {
+      return;
+    }
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await ref
+          .read(garmentRepositoryProvider)
+          .updateIroningStatus(
+            garmentId: garment.id,
+            memberId: member.id,
+            status: selected,
+          );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could Not Update Ironing Status.')),
+      );
+      return;
+    }
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ref.invalidate(garmentProvider(garmentId));
+    ref.invalidate(garmentsProvider);
+
+    messenger.showSnackBar(SnackBar(content: Text('Ironing Status Updated.')));
+  }
+
+  void _previewReceipt(BuildContext context, Garment garment) {
+    final String? url = garment.receiptUrl;
+    if (url == null || url.isEmpty) {
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 560),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+                  child: Row(
+                    children: <Widget>[
+                      const Expanded(
+                        child: Text(
+                          'Purchase Receipt',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Close',
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    child: InteractiveViewer(
+                      maxScale: 4,
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) {
+                          return const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Icon(Icons.broken_image_outlined, size: 40),
+                                SizedBox(height: 12),
+                                Text('Could not load receipt image.'),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  bool _hasStandaloneGarmentInformation(Garment garment) {
     return (garment.locationName?.trim().isNotEmpty ?? false) ||
-        garment.occasions.any((String occasion) => occasion.trim().isNotEmpty);
+        garment.occasions.any(
+          (String occasion) => occasion.trim().isNotEmpty,
+        ) ||
+        garment.moods.any((String mood) => mood.trim().isNotEmpty);
   }
 
   bool _hasCareInformation(Garment garment) {
@@ -610,9 +946,13 @@ class GarmentDetailScreen extends ConsumerWidget {
     final bool subcategoryDetails =
         _supportsSubcategory(garment.category) &&
         (garment.subcategory?.trim().isNotEmpty ?? false);
+    final bool sizesPresent =
+        _supportsSizes(garment.category) && garment.effectiveSizes.isNotEmpty;
 
     return subcategoryDetails ||
         clothingDetails ||
+        _isClothing(garment.category) ||
+        sizesPresent ||
         (_supportsSleeveLength(garment.category) &&
             (garment.sleeveLength?.trim().isNotEmpty ?? false)) ||
         (_supportsStitching(garment.category) &&
@@ -624,7 +964,20 @@ class GarmentDetailScreen extends ConsumerWidget {
     return (garment.brand?.trim().isNotEmpty ?? false) ||
         (garment.purchaseStore?.trim().isNotEmpty ?? false) ||
         garment.price != null ||
-        garment.purchaseDate != null;
+        garment.purchaseDate != null ||
+        _hasReceipt(garment);
+  }
+
+  bool _hasReceipt(Garment garment) {
+    return garment.receiptPath?.trim().isNotEmpty ?? false;
+  }
+
+  bool _supportsSizes(GarmentCategory category) {
+    return category == GarmentCategory.top ||
+        category == GarmentCategory.bottom ||
+        category == GarmentCategory.dress ||
+        category == GarmentCategory.outerwear ||
+        category == GarmentCategory.shoe;
   }
 
   bool _supportsSleeveLength(GarmentCategory category) {
@@ -641,21 +994,23 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   bool _supportsSubcategory(GarmentCategory category) {
-    return category == GarmentCategory.outerwear ||
-        category == GarmentCategory.shoe ||
-        category == GarmentCategory.bag ||
-        category == GarmentCategory.accessory ||
-        category == GarmentCategory.jewelry;
+    return true;
   }
 
   String _subcategoryLabel(GarmentCategory category) {
     return switch (category) {
+      GarmentCategory.top => 'Tops Subcategory',
+      GarmentCategory.bottom => 'Bottoms Subcategory',
+      GarmentCategory.dress => 'Dresses Subcategory',
       GarmentCategory.outerwear => 'Outerwear Subcategory',
+      GarmentCategory.activewear => 'Activewear Type',
+      GarmentCategory.sleepwear => 'Sleepwear Type',
       GarmentCategory.shoe => 'Shoe Type',
+      GarmentCategory.watches => 'Watch Type',
+      GarmentCategory.jewelry => 'Jewelry Type',
       GarmentCategory.bag => 'Bag Type',
       GarmentCategory.accessory => 'Accessory Type',
-      GarmentCategory.jewelry => 'Jewelry Type',
-      _ => 'Subcategory',
+      _ => 'Category Label',
     };
   }
 
@@ -757,8 +1112,8 @@ class _LendingSection extends StatelessWidget {
               children: <Widget>[
                 GarmentInfoRow(
                   label: (record.direction == LendingDirection.borrowed
-                          ? 'Borrowed From'
-                          : 'Lent To'),
+                      ? 'Borrowed From'
+                      : 'Lent To'),
                   value: record.personName,
                 ),
                 GarmentInfoRow(
@@ -873,10 +1228,7 @@ class _GarmentDetailTags extends StatelessWidget {
 }
 
 class _DetailTag extends StatelessWidget {
-  const _DetailTag({
-    super.key,
-    required this.label,
-  });
+  const _DetailTag({super.key, required this.label});
 
   final String label;
 
@@ -886,9 +1238,7 @@ class _DetailTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: AppRadius.stadium,
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -912,9 +1262,7 @@ class _ColorDetailTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: AppRadius.stadium,
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -933,18 +1281,14 @@ class _ColorDetailTag extends StatelessWidget {
                   child: Text(
                     '\u00b7',
                     style: _tagTextStyle(context)?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
               DecoratedBox(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Theme.of(context).dividerColor,
-                  ),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: SizedBox.square(
                   dimension: AppSpacing.sm,
@@ -988,6 +1332,208 @@ bool _supportsSizePersistence(GarmentCategory category) {
       category == GarmentCategory.dress ||
       category == GarmentCategory.outerwear ||
       category == GarmentCategory.shoe;
+}
+
+class _LendingEntryData {
+  const _LendingEntryData({
+    required this.personName,
+    required this.dateOut,
+    this.expectedReturnDate,
+    this.notes,
+  });
+
+  final String personName;
+  final DateTime dateOut;
+  final DateTime? expectedReturnDate;
+  final String? notes;
+}
+
+class _LendingEntryDialog extends StatefulWidget {
+  const _LendingEntryDialog({required this.lendDirection});
+
+  final GarmentAvailabilityStatus lendDirection;
+
+  @override
+  State<_LendingEntryDialog> createState() => _LendingEntryDialogState();
+}
+
+class _LendingEntryDialogState extends State<_LendingEntryDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _personController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+
+  DateTime _selectedDateOut = DateTime.now();
+  DateTime? _expectedReturnDate;
+  bool _submitting = false;
+
+  bool get _isLent => widget.lendDirection == GarmentAvailabilityStatus.lent;
+
+  @override
+  void dispose() {
+    _personController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDateOut() async {
+    final DateTime today = DateTime.now();
+    final DateTime nowDate = DateTime(today.year, today.month, today.day);
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateOut.isAfter(nowDate)
+          ? nowDate
+          : _selectedDateOut,
+      firstDate: DateTime(today.year - 5),
+      lastDate: nowDate,
+      helpText: _isLent ? 'When Was It Lent?' : 'When Was It Borrowed?',
+    );
+
+    if (picked == null) {
+      return;
+    }
+
+    setState(() {
+      _selectedDateOut = DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
+  Future<void> _pickExpectedReturn() async {
+    final DateTime today = DateTime.now();
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _expectedReturnDate ?? _selectedDateOut,
+      firstDate: _selectedDateOut,
+      lastDate: DateTime(today.year + 5),
+      helpText: 'When Is It Expected Back?',
+    );
+
+    if (picked == null) {
+      return;
+    }
+
+    setState(() {
+      _expectedReturnDate = DateTime(picked.year, picked.month, picked.day);
+    });
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) {
+      return;
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    final _LendingEntryData data = _LendingEntryData(
+      personName: _personController.text.trim(),
+      dateOut: _selectedDateOut,
+      expectedReturnDate: _expectedReturnDate,
+      notes: _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
+    );
+
+    Navigator.of(context).pop(data);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String label = _isLent ? 'Lent' : 'Borrowed';
+
+    return AlertDialog(
+      title: Text('$label To/From'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextFormField(
+                controller: _personController,
+                enabled: !_submitting,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  labelText: _isLent ? 'Lent To' : 'Borrowed From',
+                  hintText: _isLent
+                      ? 'Who did you lend it to?'
+                      : 'Who did you borrow it from?',
+                  border: const OutlineInputBorder(),
+                ),
+                validator: (String? value) {
+                  final String clean = value?.trim() ?? '';
+                  if (clean.isEmpty) {
+                    return 'Enter the person name.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _submitting ? null : _pickDateOut,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: _isLent ? 'Lent Date' : 'Borrowed Date',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: const Icon(Icons.calendar_today_outlined),
+                  ),
+                  child: Text(_formatDate(_selectedDateOut)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _submitting ? null : _pickExpectedReturn,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Expected Return (optional)',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.event_outlined),
+                  ),
+                  child: Text(
+                    _expectedReturnDate == null
+                        ? 'Not set'
+                        : _formatDate(_expectedReturnDate!),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _notesController,
+                enabled: !_submitting,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
 }
 
 class _WearEntryData {

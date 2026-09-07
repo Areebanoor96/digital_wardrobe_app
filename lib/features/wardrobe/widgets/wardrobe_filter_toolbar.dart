@@ -7,21 +7,17 @@ import 'package:flutter/material.dart';
 /// Compact filter + sort controls for the wardrobe catalog.
 ///
 /// Filters and sort occupy a slim row instead of full-width buttons: a
-/// "Filter" control with an active count badge, a "Sort" popup, and a small
-/// trailing piece count. All filtering/sorting behaviour is unchanged.
+/// "Filter" control with an active count badge and a "Sort" popup. All
+/// filtering/sorting behaviour is unchanged.
 class WardrobeFilterToolbar extends StatelessWidget {
   const WardrobeFilterToolbar({
     super.key,
     required this.filters,
-    required this.filteredCount,
-    required this.totalCount,
     required this.onOpenFilters,
     required this.onSortSelected,
   });
 
   final WardrobeFilters filters;
-  final int filteredCount;
-  final int totalCount;
   final VoidCallback onOpenFilters;
   final ValueChanged<WardrobeSortOption> onSortSelected;
 
@@ -59,10 +55,7 @@ class WardrobeFilterToolbar extends StatelessWidget {
                     .toList();
               },
               child: _ToolbarControl(
-                leading: const Icon(
-                  Icons.sort,
-                  size: AppDimensions.iconMd,
-                ),
+                leading: const Icon(Icons.sort, size: AppDimensions.iconMd),
                 label: 'Sort',
               ),
             ),
@@ -87,18 +80,6 @@ class WardrobeFilterToolbar extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.lg),
-        Expanded(
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '$filteredCount',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: colors.onSurfaceVariant,
               ),
             ),
           ),
@@ -169,9 +150,9 @@ class _CountBadge extends StatelessWidget {
         ),
         child: Text(
           '$count',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: colors.primary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.primary),
         ),
       ),
     );

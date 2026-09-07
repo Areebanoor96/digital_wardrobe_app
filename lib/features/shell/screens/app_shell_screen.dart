@@ -1,5 +1,4 @@
 import 'package:digital_wardrobe_app/features/alerts/screens/alerts_screen.dart';
-import 'package:digital_wardrobe_app/features/analytics/screens/analytics_screen.dart';
 import 'package:digital_wardrobe_app/features/calendar/screens/calendar_screen.dart';
 import 'package:digital_wardrobe_app/features/outfits/screens/outfits_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/profile_screen.dart';
@@ -89,10 +88,8 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   Widget build(BuildContext context) {
     final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
 
-    final int unreadCount = alerts.valueOrNull
-        ?.where((Alert alert) => !alert.isRead)
-        .length ??
-        0;
+    final int unreadCount =
+        alerts.valueOrNull?.where((Alert alert) => !alert.isRead).length ?? 0;
     final bool canNavigateBack = _tabHistory.length > 1;
     final List<Widget> screens = <Widget>[
       WardrobeScreen(
@@ -111,10 +108,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         canNavigateBack: canNavigateBack,
         onNavigateBack: _navigateToPreviousTab,
       ),
-      AnalyticsScreen(
-        canNavigateBack: canNavigateBack,
-        onNavigateBack: _navigateToPreviousTab,
-      ),
       ProfileScreen(
         canNavigateBack: canNavigateBack,
         onNavigateBack: _navigateToPreviousTab,
@@ -129,50 +122,41 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: _selectTab,
-        destinations: <NavigationDestination>[
-          const NavigationDestination(
-            icon: Icon(Icons.checkroom_outlined),
-            selectedIcon: Icon(Icons.checkroom),
-            label: 'Wardrobe',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: 'Outfits',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month),
-            label: 'Calendar',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: unreadCount > 0,
-              label: Text(
-                unreadCount > 99 ? '99+' : unreadCount.toString(),
-              ),
-              child: const Icon(Icons.notifications_outlined),
+          destinations: <NavigationDestination>[
+            const NavigationDestination(
+              icon: Icon(Icons.checkroom_outlined),
+              selectedIcon: Icon(Icons.checkroom),
+              label: 'Wardrobe',
             ),
-            selectedIcon: Badge(
-              isLabelVisible: unreadCount > 0,
-              label: Text(
-                unreadCount > 99 ? '99+' : unreadCount.toString(),
-              ),
-              child: const Icon(Icons.notifications),
+            const NavigationDestination(
+              icon: Icon(Icons.auto_awesome_outlined),
+              selectedIcon: Icon(Icons.auto_awesome),
+              label: 'Outfits',
             ),
-            label: 'Alerts',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: 'Analytics',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+            const NavigationDestination(
+              icon: Icon(Icons.calendar_month_outlined),
+              selectedIcon: Icon(Icons.calendar_month),
+              label: 'Calendar',
+            ),
+            NavigationDestination(
+              icon: Badge(
+                isLabelVisible: unreadCount > 0,
+                label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
+                child: const Icon(Icons.notifications_outlined),
+              ),
+              selectedIcon: Badge(
+                isLabelVisible: unreadCount > 0,
+                label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
+                child: const Icon(Icons.notifications),
+              ),
+              label: 'Alerts',
+            ),
+            const NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
         ),
       ),
     );

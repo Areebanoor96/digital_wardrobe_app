@@ -6,6 +6,7 @@ import 'package:digital_wardrobe_app/core/services/theme_preference_service.dart
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 
 import 'package:digital_wardrobe_app/data/models/profile.dart';
+import 'package:digital_wardrobe_app/features/analytics/screens/analytics_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/change_password_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/screens/family_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/about_screen.dart';
@@ -44,10 +45,7 @@ class ProfileScreen extends ConsumerWidget {
         data: (Profile user) => ListView(
           padding: const EdgeInsets.all(20),
           children: <Widget>[
-            FamilyMemberAvatar(
-              name: user.fullName ?? email,
-              radius: 40,
-            ),
+            FamilyMemberAvatar(name: user.fullName ?? email, radius: 40),
             const SizedBox(height: 16),
             Text(
               user.fullName ?? email,
@@ -59,6 +57,17 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 28),
 
             const _SectionHeader('Profile'),
+            ListTile(
+              leading: const Icon(Icons.insights_outlined),
+              title: const Text('Insights & Analytics'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (BuildContext context) =>
+                      const AnalyticsScreen(canNavigateBack: true),
+                ),
+              ),
+            ),
             ListTile(
               leading: const Icon(Icons.people_outline),
               title: const Text('Manage Family Members'),
@@ -195,7 +204,10 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _setDarkMode(
-      BuildContext context, WidgetRef ref, bool enabled) async {
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
     ref.read(themeModeProvider.notifier).state = enabled
         ? ThemeMode.dark
         : ThemeMode.light;
@@ -338,9 +350,9 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -373,7 +385,8 @@ class _DeleteAccountConfirmationDialogState
 
   void _onChanged(String value) {
     setState(() {
-      _matches = value.trim().toUpperCase() ==
+      _matches =
+          value.trim().toUpperCase() ==
           _DeleteAccountConfirmationDialog.requiredText;
     });
   }
@@ -409,9 +422,7 @@ class _DeleteAccountConfirmationDialogState
       ),
       actions: <Widget>[
         FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: colors.error,
-          ),
+          style: FilledButton.styleFrom(backgroundColor: colors.error),
           onPressed: _matches ? () => Navigator.pop(context, true) : null,
           child: const Text('Delete Permanently'),
         ),

@@ -4,10 +4,13 @@ import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
+import 'package:digital_wardrobe_app/data/repositories/garment_repository.dart';
+import 'package:digital_wardrobe_app/data/repositories/lending_repository.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const FamilyMember _member = FamilyMember(
   id: 'member-1',
@@ -112,15 +115,13 @@ void main() {
       find.byKey(const ValueKey<String>('garment-detail-ironing-tag')),
       findsOneWidget,
     );
-    expect(find.text('Item Status'), findsOneWidget);
-    expect(find.text('Availability'), findsOneWidget);
     expect(find.text('Care & Readiness'), findsOneWidget);
     expect(find.text('Wash Instructions'), findsOneWidget);
     expect(find.text('Hand wash'), findsOneWidget);
     expect(find.text('Laundry Status'), findsNothing);
     expect(find.text('Ironing'), findsNothing);
     expect(find.text('Clean'), findsOneWidget);
-    expect(find.text('Ironed'), findsOneWidget);
+    expect(find.text('Ironed'), findsWidgets);
     expect(find.text('Item Details'), findsOneWidget);
     expect(find.text('Stitching'), findsOneWidget);
     expect(find.text('Stitched'), findsOneWidget);
@@ -294,6 +295,200 @@ void main() {
     archiveCompleter.complete();
     await tester.pumpAndSettle();
   });
+
+  testWidgets('status shows as badge only and Change Status menu is offered', (
+    WidgetTester tester,
+  ) async {
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Laundry Kurta',
+      memberId: 'member-1',
+      category: GarmentCategory.top,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      availabilityStatus: GarmentAvailabilityStatus.sentForLaundry,
+    );
+
+    await _pumpDetail(tester, garment);
+
+    expect(
+      find.byKey(const ValueKey<String>('garment-detail-availability-tag')),
+      findsOneWidget,
+    );
+    expect(find.text('Sent For Laundry'), findsOneWidget);
+    expect(find.text('Item Status'), findsNothing);
+    expect(find.text('Availability'), findsNothing);
+    expect(find.text('Change Status'), findsOneWidget);
+  });
+
+  testWidgets('Change Status updates the garment availability through the repo', (
+    WidgetTester tester,
+  ) async {
+    final _FakeGarmentRepository repo = _FakeGarmentRepository();
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Everyday Shirt',
+      memberId: 'member-1',
+      category: GarmentCategory.top,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+    );
+
+    await _pumpDetail(
+      tester,
+      garment,
+      overrides: <Override>[
+        garmentRepositoryProvider.overrideWith((Ref ref) => repo),
+        lendingRepositoryProvider.overrideWith(
+          (Ref ref) => _FakeLendingRepository(),
+        ),
+      ],
+    );
+
+    await tester.tap(find.text('Change Status'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sent For Laundry'), findsOneWidget);
+    expect(find.text('Sent To Tailor'), findsOneWidget);
+    expect(find.text('Damaged'), findsOneWidget);
+
+    await tester.tap(find.text('Damaged'));
+    await tester.pumpAndSettle();
+
+    expect(repo.updatedStatus, GarmentAvailabilityStatus.damaged);
+    expect(find.text('Status Updated To Damaged.'), findsOneWidget);
+  });
+
+  testWidgets('Change Status to Borrowed captures the lending person', (
+    WidgetTester tester,
+  ) async {
+    final _FakeGarmentRepository repo = _FakeGarmentRepository();
+    final _FakeLendingRepository lendingRepo = _FakeLendingRepository();
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Everyday Shirt',
+      memberId: 'member-1',
+      category: GarmentCategory.top,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+    );
+
+    await _pumpDetail(
+      tester,
+      garment,
+      overrides: <Override>[
+        garmentRepositoryProvider.overrideWith((Ref ref) => repo),
+        lendingRepositoryProvider.overrideWith((Ref ref) => lendingRepo),
+      ],
+    );
+
+    await tester.tap(find.text('Change Status'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Borrowed').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Borrowed To/From'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Borrowed From'),
+      'Sara',
+    );
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(lendingRepo.syncCalls, 1);
+    expect(lendingRepo.syncedStatus, GarmentAvailabilityStatus.borrowed);
+    expect(lendingRepo.lastPersonName, 'Sara');
+  });
+
+  testWidgets('ironing status row edits the garment through the repo', (
+    WidgetTester tester,
+  ) async {
+    final _FakeGarmentRepository repo = _FakeGarmentRepository();
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Everyday Shirt',
+      memberId: 'member-1',
+      category: GarmentCategory.top,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      ironingStatus: IroningStatus.ironed,
+    );
+
+    await _pumpDetail(
+      tester,
+      garment,
+      overrides: <Override>[
+        garmentRepositoryProvider.overrideWith((Ref ref) => repo),
+      ],
+    );
+
+    expect(find.text('Ironing Status'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Update Ironing Status'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Needs Ironing'));
+    await tester.pumpAndSettle();
+
+    expect(repo.updatedIroningStatus, IroningStatus.needsIroning);
+    expect(find.text('Ironing Status Updated.'), findsOneWidget);
+  });
+
+  testWidgets('location occasions and sizes show as standalone rows', (
+    WidgetTester tester,
+  ) async {
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Forest Coat',
+      memberId: 'member-1',
+      category: GarmentCategory.top,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      sizes: <String>['42'],
+      seasons: <String>['all'],
+      occasions: <String>['work', 'wedding'],
+      moods: <String>['formal'],
+      locationName: 'Bedroom Almirah',
+    );
+
+    await _pumpDetail(tester, garment);
+
+    expect(find.text('Wardrobe Information'), findsNothing);
+    expect(find.text('Location'), findsOneWidget);
+    expect(find.text('Bedroom Almirah'), findsOneWidget);
+    expect(find.text('Occasions'), findsOneWidget);
+    expect(find.text('Work, Wedding'), findsOneWidget);
+    expect(find.text('Moods'), findsOneWidget);
+    expect(find.text('Formal'), findsOneWidget);
+    expect(find.text('Size'), findsOneWidget);
+    expect(find.text('42'), findsWidgets);
+  });
+
+  testWidgets('purchase info shows a receipt row with preview dialog', (
+    WidgetTester tester,
+  ) async {
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Everyday Shirt',
+      memberId: 'member-1',
+      category: GarmentCategory.top,
+      photoPaths: <String>[],
+      photoUrls: <String>[],
+      brand: 'Outfitters',
+      receiptPath: 'receipts/g-1.jpg',
+      receiptUrl: 'https://example.com/receipts/g-1.jpg',
+    );
+
+    await _pumpDetail(tester, garment);
+
+    expect(find.text('Receipt'), findsOneWidget);
+    expect(find.text('Receipt attached'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('View Receipt'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Purchase Receipt'), findsOneWidget);
+  });
 }
 
 class _SuccessfulArchiveController extends GarmentArchiveController {
@@ -325,5 +520,67 @@ class _SlowArchiveController extends GarmentArchiveController {
   @override
   Future<void> restore({required String garmentId}) async {
     state = const AsyncData<void>(null);
+  }
+}
+
+class _FakeGarmentRepository extends GarmentRepository {
+  _FakeGarmentRepository()
+    : super(
+        SupabaseClient(
+          'https://example.supabase.co',
+          'anon-key',
+          authOptions: const AuthClientOptions(autoRefreshToken: false),
+        ),
+      );
+
+  GarmentAvailabilityStatus? updatedStatus;
+  IroningStatus? updatedIroningStatus;
+
+  @override
+  Future<void> updateAvailabilityStatus({
+    required String garmentId,
+    required String memberId,
+    required GarmentAvailabilityStatus status,
+  }) async {
+    updatedStatus = status;
+  }
+
+  @override
+  Future<void> updateIroningStatus({
+    required String garmentId,
+    required String memberId,
+    required IroningStatus? status,
+  }) async {
+    updatedIroningStatus = status;
+  }
+}
+
+class _FakeLendingRepository extends LendingRepository {
+  _FakeLendingRepository()
+    : super(
+        SupabaseClient(
+          'https://example.supabase.co',
+          'anon-key',
+          authOptions: const AuthClientOptions(autoRefreshToken: false),
+        ),
+      );
+
+  int syncCalls = 0;
+  GarmentAvailabilityStatus? syncedStatus;
+  String? lastPersonName;
+
+  @override
+  Future<void> syncForAvailability({
+    required String memberId,
+    required String garmentId,
+    required GarmentAvailabilityStatus status,
+    String? personName,
+    DateTime? dateOut,
+    DateTime? expectedReturnDate,
+    String? notes,
+  }) async {
+    syncCalls++;
+    syncedStatus = status;
+    lastPersonName = personName;
   }
 }
