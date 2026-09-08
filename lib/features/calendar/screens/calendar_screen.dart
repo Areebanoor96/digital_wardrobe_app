@@ -1,4 +1,11 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/theme/app_dimensions.dart';
+import 'package:digital_wardrobe_app/core/theme/app_radius.dart';
+import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_card.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_section_header.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
@@ -33,108 +40,356 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final garments =
         ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
     final outfits = ref.watch(outfitsProvider).valueOrNull ?? const <Outfit>[];
+
     return Scaffold(
       appBar: AppBar(
         leading: widget.canNavigateBack
             ? BackArrowButton(onPressed: widget.onNavigateBack)
             : null,
-        title: const Text('Calendar'),
       ),
       body: activity.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => _CalendarFeedback(
+        loading: () => const AppLoadingState(
+          showIcon: false,
+          label: 'Loading your calendar',
+        ),
+        error: (_, _) => AppErrorState(
           title: 'We could not load your calendar',
           message: 'Check your connection and try again.',
-          action: () => ref.invalidate(calendarMonthProvider(_month)),
+          onAction: () => ref.invalidate(calendarMonthProvider(_month)),
         ),
-        data: (List<WearLog> logs) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(calendarMonthProvider(_month));
-            ref.invalidate(selectedDayWearHistoryProvider);
-          },
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            children: <Widget>[
-              _MonthHeader(
-                month: _month,
-                onPrevious: () => setState(() {
-                  _month = DateTime(_month.year, _month.month - 1);
-                  ref
-                      .read(selectedCalendarDayProvider.notifier)
-                      .state = null;
-                }),
-                onNext: () => setState(() {
-                  _month = DateTime(_month.year, _month.month + 1);
-                  ref
-                      .read(selectedCalendarDayProvider.notifier)
-                      .state = null;
-                }),
+        data: (List<WearLog> logs) {
+          final Set<int> activeDays = logs
+              .map((WearLog log) => log.wornDate.day)
+              .toSet();
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(calendarMonthProvider(_month));
+              ref.invalidate(selectedDayWearHistoryProvider);
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.md,
+                AppSpacing.xl,
+                AppSpacing.xxxl,
               ),
-              const SizedBox(height: 16),
-              _MonthGrid(
-                month: _month,
-                logs: logs,
-                selectedDay: selectedDay,
-                onSelect: (DateTime day) =>
-                    ref.read(selectedCalendarDayProvider.notifier).state = day,
-              ),
-              const SizedBox(height: 28),
-              Text(
-                selectedDay == null
-                    ? 'Select a day'
-                    : _formatLongDate(selectedDay),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              if (selectedDay == null)
-                const Text(
-                  'Tap a highlighted day to see garments and outfits worn.',
-                )
-              else
-                dayHistory.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                  error: (_, _) => TextButton.icon(
-                    onPressed: () =>
-                        ref.invalidate(selectedDayWearHistoryProvider),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry day history'),
-                  ),
-                  data: (List<WearLog> dayLogs) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      if (dayLogs.isEmpty)
-                        const Text('No garments were worn on this day.')
-                      else
-                        ..._buildWearTiles(
-                          dayLogs,
-                          garments,
-                          outfits,
-                        ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: () => context.push(
-                          '/ootd/plan/${_dateKey(selectedDay)}',
-                        ),
-                        icon: const Icon(Icons.auto_awesome),
-                        label: const Text('Plan outfit for this date'),
-                      ),
-                    ],
-                  ),
+              children: <Widget>[
+                _CalendarHeader(activeDayCount: activeDays.length),
+                const SizedBox(height: AppSpacing.lg),
+                _MonthHeader(
+                  month: _month,
+                  onPrevious: () => setState(() {
+                    _month = DateTime(_month.year, _month.month - 1);
+                    ref
+                        .read(selectedCalendarDayProvider.notifier)
+                        .state = null;
+                  }),
+                  onNext: () => setState(() {
+                    _month = DateTime(_month.year, _month.month + 1);
+                    ref
+                        .read(selectedCalendarDayProvider.notifier)
+                        .state = null;
+                  }),
                 ),
-            ],
-          ),
-        ),
+                const SizedBox(height: AppSpacing.md),
+                _MonthGrid(
+                  month: _month,
+                  activeDays: activeDays,
+                  selectedDay: selectedDay,
+                  onSelect: (DateTime day) =>
+                      ref.read(selectedCalendarDayProvider.notifier).state = day,
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+                _DayDetails(
+                  selectedDay: selectedDay,
+                  dayHistory: dayHistory,
+                  garments: garments,
+                  outfits: outfits,
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
+}
 
-  /// Renders the day's wear records, grouping all garments that belong to the
-  /// same outfit under one outfit tile instead of repeating it per garment.
+class _CalendarHeader extends StatelessWidget {
+  const _CalendarHeader({required this.activeDayCount});
+
+  final int activeDayCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    final String count = activeDayCount == 0
+        ? 'No wear recorded this month'
+        : activeDayCount == 1
+        ? '1 day with wear activity'
+        : '$activeDayCount days with wear activity';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text('Calendar', style: textTheme.headlineMedium),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          count,
+          style: textTheme.labelMedium?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthHeader extends StatelessWidget {
+  const _MonthHeader({
+    required this.month,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final DateTime month;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return Row(
+      children: <Widget>[
+        IconButton(
+          onPressed: onPrevious,
+          tooltip: 'Previous month',
+          style: IconButton.styleFrom(
+            backgroundColor: colors.surfaceContainerHighest,
+            foregroundColor: colors.onSurface,
+            shape: const CircleBorder(),
+          ),
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${_monthName(month.month)} ${month.year}',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: onNext,
+          tooltip: 'Next month',
+          style: IconButton.styleFrom(
+            backgroundColor: colors.surfaceContainerHighest,
+            foregroundColor: colors.onSurface,
+            shape: const CircleBorder(),
+          ),
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthGrid extends StatelessWidget {
+  const _MonthGrid({
+    required this.month,
+    required this.activeDays,
+    required this.selectedDay,
+    required this.onSelect,
+  });
+
+  final DateTime month;
+  final Set<int> activeDays;
+  final DateTime? selectedDay;
+  final ValueChanged<DateTime> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final int leading = DateTime(month.year, month.month).weekday % 7;
+    final int days = DateTime(month.year, month.month + 1, 0).day;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double cellSide = (constraints.maxWidth / 7)
+            .clamp(AppDimensions.controlSm, 56.0)
+            .toDouble();
+        final double radius = cellSide / 2;
+
+        return Column(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                for (final String day in const <String>[
+                  'S',
+                  'M',
+                  'T',
+                  'W',
+                  'T',
+                  'F',
+                  'S',
+                ])
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: leading + days,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                mainAxisExtent: cellSide,
+              ),
+              itemBuilder: (BuildContext context, int index) {
+                if (index < leading) return const SizedBox();
+                final int day = index - leading + 1;
+                final DateTime date = DateTime(month.year, month.month, day);
+                final bool active = activeDays.contains(day);
+                final bool selected =
+                    selectedDay != null && _sameDay(selectedDay!, date);
+                final ColorScheme colors = Theme.of(context).colorScheme;
+                return Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  child: InkWell(
+                    onTap: () => onSelect(date),
+                    borderRadius: BorderRadius.circular(radius),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? colors.primary
+                            : active
+                            ? colors.primaryContainer
+                            : Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: <Widget>[
+                          Text(
+                            '$day',
+                            style: TextStyle(
+                              color: selected ? colors.onPrimary : null,
+                            ),
+                          ),
+                          if (active)
+                            Positioned(
+                              bottom: AppSpacing.xs,
+                              child: Container(
+                                width: 4,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? colors.onPrimary
+                                      : colors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DayDetails extends ConsumerWidget {
+  const _DayDetails({
+    required this.selectedDay,
+    required this.dayHistory,
+    required this.garments,
+    required this.outfits,
+  });
+
+  final DateTime? selectedDay;
+  final AsyncValue<List<WearLog>> dayHistory;
+  final List<Garment> garments;
+  final List<Outfit> outfits;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final DateTime? day = selectedDay;
+    if (day == null) {
+      return const AppEmptyState(
+        icon: Icons.calendar_month_outlined,
+        title: 'Select a day',
+        message: 'Tap a highlighted day to see garments and outfits worn.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        AppSectionHeader(_formatLongDate(day)),
+        const SizedBox(height: AppSpacing.xs),
+        dayHistory.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+            child: AppLoadingState(
+              showIcon: false,
+              label: 'Loading day history',
+            ),
+          ),
+          error: (_, _) => AppErrorState(
+            title: 'Day history unavailable',
+            message: 'We could not load what was worn on this date.',
+            onAction: () => ref.invalidate(selectedDayWearHistoryProvider),
+          ),
+          data: (List<WearLog> dayLogs) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (dayLogs.isEmpty)
+                const AppEmptyState(
+                  icon: Icons.event_note_outlined,
+                  title: 'Nothing worn this day',
+                  message:
+                      'No garments or outfits were recorded for this date.',
+                )
+              else
+                ..._buildWearTiles(dayLogs, garments, outfits),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton.icon(
+                onPressed: () => context.push('/ootd/plan/${_dateKey(day)}'),
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('Plan outfit for this date'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   List<Widget> _buildWearTiles(
     List<WearLog> logs,
     List<Garment> garments,
@@ -153,11 +408,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     final List<Widget> tiles = <Widget>[
       for (final WearLog log in soloLogs)
-        _DayWearTile(
-          garment: garments
-              .where((Garment item) => item.id == log.garmentId)
-              .firstOrNull,
-          wornDate: log.wornDate,
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: _DayWearTile(
+            garment: garments
+                .where((Garment item) => item.id == log.garmentId)
+                .firstOrNull,
+            wornDate: log.wornDate,
+          ),
         ),
     ];
 
@@ -169,11 +427,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       if (outfit == null) {
         tiles.addAll(
           entry.value.map(
-            (WearLog log) => _DayWearTile(
-              garment: garments
-                  .where((Garment item) => item.id == log.garmentId)
-                  .firstOrNull,
-              wornDate: log.wornDate,
+            (WearLog log) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: _DayWearTile(
+                garment: garments
+                    .where((Garment item) => item.id == log.garmentId)
+                    .firstOrNull,
+                wornDate: log.wornDate,
+              ),
             ),
           ),
         );
@@ -181,17 +442,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       }
 
       tiles.add(
-        _OutfitWearTile(
-          outfit: outfit,
-          garments: entry.value
-              .map(
-                (WearLog log) => garments
-                    .where((Garment item) => item.id == log.garmentId)
-                    .firstOrNull,
-              )
-              .whereType<Garment>()
-              .toList(),
-          wornDate: entry.value.first.wornDate,
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: _OutfitWearTile(
+            outfit: outfit,
+            garments: entry.value
+                .map(
+                  (WearLog log) => garments
+                      .where((Garment item) => item.id == log.garmentId)
+                      .firstOrNull,
+                )
+                .whereType<Garment>()
+                .toList(),
+            wornDate: entry.value.first.wornDate,
+          ),
         ),
       );
     }
@@ -200,193 +464,79 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 }
 
-class _MonthHeader extends StatelessWidget {
-  const _MonthHeader({
-    required this.month,
-    required this.onPrevious,
-    required this.onNext,
-  });
-  final DateTime month;
-  final VoidCallback onPrevious;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: <Widget>[
-      IconButton(onPressed: onPrevious, icon: const Icon(Icons.chevron_left)),
-      Text(
-        '${_monthName(month.month)} ${month.year}',
-        style: Theme.of(
-          context,
-        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-      ),
-      IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right)),
-    ],
-  );
-}
-
-class _MonthGrid extends StatelessWidget {
-  const _MonthGrid({
-    required this.month,
-    required this.logs,
-    required this.selectedDay,
-    required this.onSelect,
-  });
-  final DateTime month;
-  final List<WearLog> logs;
-  final DateTime? selectedDay;
-  final ValueChanged<DateTime> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final Set<int> activeDays = logs
-        .map((WearLog log) => log.wornDate.day)
-        .toSet();
-    final int leading = DateTime(month.year, month.month).weekday % 7;
-    final int days = DateTime(month.year, month.month + 1, 0).day;
-    return Column(
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            for (final String day in <String>[
-              'S',
-              'M',
-              'T',
-              'W',
-              'T',
-              'F',
-              'S',
-            ])
-              Expanded(child: Center(child: Text(day))),
-          ],
-        ),
-        const SizedBox(height: 8),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: leading + days,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            childAspectRatio: 1,
-          ),
-          itemBuilder: (BuildContext context, int index) {
-            if (index < leading) return const SizedBox();
-            final int day = index - leading + 1;
-            final DateTime date = DateTime(month.year, month.month, day);
-            final bool active = activeDays.contains(day);
-            final bool selected =
-                selectedDay != null && _sameDay(selectedDay!, date);
-            final ColorScheme colors = Theme.of(context).colorScheme;
-            return Padding(
-              padding: const EdgeInsets.all(3),
-              child: InkWell(
-                onTap: () => onSelect(date),
-                borderRadius: BorderRadius.circular(99),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? colors.primary
-                        : active
-                        ? colors.primaryContainer
-                        : null,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: <Widget>[
-                      Text(
-                        '$day',
-                        style: TextStyle(
-                          color: selected ? colors.onPrimary : null,
-                        ),
-                      ),
-                      if (active)
-                        Positioned(
-                          bottom: 5,
-                          child: Container(
-                            width: 4,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? colors.onPrimary
-                                  : colors.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  bool _sameDay(DateTime first, DateTime second) =>
-      first.year == second.year &&
-      first.month == second.month &&
-      first.day == second.day;
-}
-
 class _OutfitWearTile extends StatelessWidget {
   const _OutfitWearTile({
     required this.outfit,
     required this.garments,
     required this.wornDate,
   });
+
   final Outfit outfit;
   final List<Garment> garments;
   final DateTime wornDate;
 
   @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: SizedBox(
-          width: 48,
-          height: 48,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: GarmentImage(imageUrl: outfit.coverPhotoUrl),
-          ),
+  Widget build(BuildContext context) => AppCard(
+    padding: const EdgeInsets.all(AppSpacing.lg),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            SizedBox(
+              width: AppDimensions.touchTarget,
+              height: AppDimensions.touchTarget,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                child: GarmentImage(imageUrl: outfit.coverPhotoUrl),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    outfit.name ?? 'Untitled outfit',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Outfit worn ${_formatShortDate(wornDate)}'
+                    '${garments.isEmpty ? '' : ' \u00b7 ${garments.length} garment${garments.length == 1 ? '' : 's'}'}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        title: Text(outfit.name ?? 'Untitled outfit'),
-        subtitle: Text(
-          'Outfit worn ${_formatShortDate(wornDate)}'
-          '${garments.isEmpty ? '' : ' \u00b7 ${garments.length} garment${garments.length == 1 ? '' : 's'}'}',
-        ),
-      ),
-      if (garments.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12, left: 56),
-          child: SizedBox(
-            height: 44,
+        if (garments.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            height: AppDimensions.controlMd,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: garments.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) =>
+                  const SizedBox(width: AppSpacing.sm),
               itemBuilder: (BuildContext context, int index) {
                 final Garment garment = garments[index];
-                return SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: GarmentImage(imageUrl: garment.coverImageUrl),
-                  ),
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  child: GarmentImage(imageUrl: garment.coverImageUrl),
                 );
               },
             ),
           ),
-        ),
-    ],
+        ],
+      ],
+    ),
   );
 }
 
@@ -395,60 +545,56 @@ class _DayWearTile extends StatelessWidget {
     required this.garment,
     required this.wornDate,
   });
+
   final Garment? garment;
   final DateTime wornDate;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    leading: SizedBox(
-      width: 48,
-      height: 48,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: GarmentImage(imageUrl: garment?.coverImageUrl),
-      ),
-    ),
-    title: Text(garment?.name ?? 'In Closet Vault'),
-    subtitle: Text('Worn ${_formatShortDate(wornDate)}'),
-  );
-}
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme colors = Theme.of(context).colorScheme;
 
-class _CalendarFeedback extends StatelessWidget {
-  const _CalendarFeedback({
-    required this.title,
-    required this.message,
-    this.action,
-  });
-  final String title;
-  final String message;
-  final VoidCallback? action;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Row(
         children: <Widget>[
-          Icon(
-            Icons.calendar_month_outlined,
-            size: 64,
-            color: Theme.of(context).colorScheme.primary,
+          SizedBox(
+            width: AppDimensions.touchTarget,
+            height: AppDimensions.touchTarget,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: GarmentImage(imageUrl: garment?.coverImageUrl),
+            ),
           ),
-          const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center),
-          if (action != null) ...<Widget>[
-            const SizedBox(height: 20),
-            FilledButton(onPressed: action, child: const Text('Retry')),
-          ],
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  garment?.name ?? 'In Closet Vault',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Worn ${_formatShortDate(wornDate)}',
+                  style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
+
+bool _sameDay(DateTime first, DateTime second) =>
+    first.year == second.year &&
+    first.month == second.month &&
+    first.day == second.day;
 
 String _monthName(int month) => const <String>[
   'January',

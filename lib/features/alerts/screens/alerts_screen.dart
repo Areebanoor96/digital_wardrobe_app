@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/features/alerts/navigation/alert_target_resolver.dart';
@@ -29,7 +32,6 @@ class AlertsScreen extends ConsumerWidget {
         leading: canNavigateBack
             ? BackArrowButton(onPressed: onNavigateBack)
             : null,
-        title: const Text('Alerts'),
         actions: <Widget>[
           IconButton(
             tooltip: 'Refresh alerts',
@@ -45,26 +47,38 @@ class AlertsScreen extends ConsumerWidget {
         ],
       ),
       body: alerts.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object error, StackTrace stackTrace) => _AlertFeedback(
-          icon: Icons.notifications_off_outlined,
+        loading: () => const AppLoadingState(
+          showIcon: false,
+          label: 'Loading your alerts',
+        ),
+        error: (Object error, StackTrace stackTrace) => AppErrorState(
           title: 'Could not load alerts',
           message: 'Check your connection and try again.',
-          actionLabel: 'Retry',
           onAction: () {
             ref.invalidate(alertsProvider);
           },
         ),
         data: (List<Alert> items) {
+          final int unreadCount =
+              items.where((Alert alert) => !alert.isRead).length;
+
+          final Widget content;
           if (items.isEmpty) {
-            return RefreshIndicator(
+            content = RefreshIndicator(
               onRefresh: () =>
                   ref.read(alertsProvider.notifier).regenerateAlerts(),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                children: const <Widget>[
-                  SizedBox(height: 140),
-                  _AlertFeedback(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  AppSpacing.xxxl,
+                ),
+                children: <Widget>[
+                  _AlertsHeader(unreadCount: 0, totalCount: 0),
+                  const SizedBox(height: AppSpacing.hero),
+                  const AppEmptyState(
                     icon: Icons.notifications_none_outlined,
                     title: 'All caught up!',
                     message: 'You have no alerts right now.',
@@ -72,32 +86,47 @@ class AlertsScreen extends ConsumerWidget {
                 ],
               ),
             );
+          } else {
+            content = RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(alertsProvider.notifier).regenerateAlerts(),
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  AppSpacing.xxxl,
+                ),
+                itemCount: items.length + 1,
+                separatorBuilder: (BuildContext context, int index) =>
+                    SizedBox(
+                      height: index == 0 ? AppSpacing.lg : AppSpacing.md,
+                    ),
+                itemBuilder: (BuildContext context, int index) {
+                  if (index == 0) {
+                    return _AlertsHeader(
+                      unreadCount: unreadCount,
+                      totalCount: items.length,
+                    );
+                  }
+
+                  final Alert alert = items[index - 1];
+                  return AlertCard(
+                    alert: alert,
+                    onTap: () {
+                      _handleAlertTap(context, ref, alert);
+                    },
+                    onDismiss: () async {
+                      await _dismissAlert(context, ref, alert);
+                    },
+                  );
+                },
+              ),
+            );
           }
 
-          return RefreshIndicator(
-            onRefresh: () =>
-                ref.read(alertsProvider.notifier).regenerateAlerts(),
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              itemCount: items.length,
-              separatorBuilder: (BuildContext context, int index) =>
-                  const SizedBox(height: 12),
-              itemBuilder: (BuildContext context, int index) {
-                final Alert alert = items[index];
-
-                return AlertCard(
-                  alert: alert,
-                  onTap: () {
-                    _handleAlertTap(context, ref, alert);
-                  },
-                  onDismiss: () async {
-                    await _dismissAlert(context, ref, alert);
-                  },
-                );
-              },
-            ),
-          );
+          return content;
         },
       ),
     );
@@ -152,41 +181,41 @@ class AlertsScreen extends ConsumerWidget {
   }
 }
 
-class _AlertFeedback extends StatelessWidget {
-  const _AlertFeedback({
-    required this.icon,
-    required this.title,
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
+class _AlertsHeader extends StatelessWidget {
+  const _AlertsHeader({required this.unreadCount, required this.totalCount});
 
-  final IconData icon;
-  final String title;
-  final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
+  final int unreadCount;
+  final int totalCount;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            if (actionLabel != null && onAction != null) ...<Widget>[
-              const SizedBox(height: 20),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-            ],
-          ],
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    final String subtitle = totalCount == 0
+        ? 'No alerts'
+        : unreadCount == 0
+        ? 'All alerts read'
+        : unreadCount == 1
+        ? '1 unread alert'
+        : '$unreadCount unread alerts';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text('Alerts', style: textTheme.headlineMedium),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          subtitle,
+          style: textTheme.labelMedium?.copyWith(
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }

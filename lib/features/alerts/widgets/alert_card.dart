@@ -1,3 +1,8 @@
+import 'package:digital_wardrobe_app/core/theme/app_dimensions.dart';
+import 'package:digital_wardrobe_app/core/theme/app_palette.dart';
+import 'package:digital_wardrobe_app/core/theme/app_radius.dart';
+import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
+import 'package:digital_wardrobe_app/core/widgets/app_card.dart';
 import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:flutter/material.dart';
 
@@ -11,26 +16,26 @@ class AlertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: alert.isRead
-              ? colors.outline
-              : colors.primary.withValues(alpha: 0.3),
-        ),
-      ),
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final bool unread = !alert.isRead;
+    final String body = alert.body ?? '';
+
+    return AppCard(
+      padding: EdgeInsets.zero,
+      color: unread ? colors.primaryContainer.withValues(alpha: 0.38) : null,
+      border: unread
+          ? Border.all(color: colors.primary.withValues(alpha: 0.35))
+          : null,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               _AlertIcon(type: alert.type, isRead: alert.isRead),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,40 +45,33 @@ class AlertCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             alert.title,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: alert.isRead
-                                      ? colors.onSurface
-                                      : colors.primary,
-                                ),
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: unread ? colors.primary : colors.onSurface,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: AppSpacing.xs),
                         IconButton(
                           onPressed: onDismiss,
-                          iconSize: 18,
-                          icon: Icon(
-                            Icons.close,
-                            color: colors.onSurface.withValues(alpha: 0.4),
-                          ),
+                          iconSize: AppDimensions.iconSm,
                           visualDensity: VisualDensity.compact,
                           tooltip: 'Dismiss',
+                          icon: Icon(
+                            Icons.close,
+                            color: colors.onSurface.withValues(alpha: 0.45),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      alert.body ?? '',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colors.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    if (body.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(body, style: textTheme.bodySmall),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
                     Text(
                       _formatDate(alert.createdAt),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colors.onSurface.withValues(alpha: 0.4),
-                      ),
+                      style: textTheme.labelSmall,
                     ),
                   ],
                 ),
@@ -102,24 +100,25 @@ class AlertCard extends StatelessWidget {
 
 class _AlertIcon extends StatelessWidget {
   const _AlertIcon({required this.type, required this.isRead});
+
   final AlertType type;
   final bool isRead;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color iconColor = isRead
-        ? colors.onSurface.withValues(alpha: 0.5)
-        : _iconColor(colors);
+    final Color accent = isRead
+        ? colors.onSurface.withValues(alpha: 0.35)
+        : _accentColor(colors, type);
 
     return Container(
-      width: 44,
-      height: 44,
+      width: AppDimensions.touchTarget,
+      height: AppDimensions.touchTarget,
       decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
+        color: accent.withValues(alpha: isRead ? 0.08 : 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
-      child: Icon(_iconData, size: 22, color: iconColor),
+      child: Icon(_iconData, size: AppDimensions.iconLg, color: accent),
     );
   }
 
@@ -134,14 +133,14 @@ class _AlertIcon extends StatelessWidget {
     AlertType.sale => Icons.local_offer_outlined,
   };
 
-  Color _iconColor(ColorScheme colors) => switch (type) {
-    AlertType.unused => Colors.orange,
-    AlertType.laundry => Colors.blue,
+  Color _accentColor(ColorScheme colors, AlertType type) => switch (type) {
+    AlertType.unused => AppPalette.warning,
+    AlertType.laundry => AppPalette.info,
     AlertType.ootd => colors.primary,
-    AlertType.growth => Colors.green,
-    AlertType.lendReturn => Colors.purple,
-    AlertType.handMeDown => Colors.teal,
-    AlertType.expiry => Colors.red,
-    AlertType.sale => Colors.amber,
+    AlertType.growth => AppPalette.success,
+    AlertType.lendReturn => colors.secondary,
+    AlertType.handMeDown => AppPalette.success,
+    AlertType.expiry => colors.error,
+    AlertType.sale => AppPalette.warning,
   };
 }

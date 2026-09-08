@@ -7,6 +7,7 @@ import 'package:digital_wardrobe_app/data/repositories/ootd_recommendation_repos
 import 'package:digital_wardrobe_app/features/alerts/services/alert_rule_service.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
 import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AlertsRepository {
@@ -88,18 +89,20 @@ class AlertsRepository {
 
     final Profile profile = Profile.fromJson(profileRow);
 
-    // OOTD has a separate once-per-day duplicate rule.
-    // Dismissed OOTD alerts still count for the current day.
-    final List<dynamic> todaysOotdRows = await _client
+    // OOTD has a separate once-per-day duplicate rule. Only an ACTIVE
+    // (undismissed) OOTD alert counts as today's alert: a dismissed one must
+    // not permanently block a fresh alert for the rest of the day.
+    final List<dynamic> todaysActiveOotdRows = await _client
         .from('alerts')
         .select('id')
         .eq('user_id', userId)
         .eq('member_id', memberId)
         .eq('type', 'ootd')
+        .eq('is_dismissed', false)
         .gte('created_at', startOfToday.toUtc().toIso8601String())
         .limit(1);
 
-    final bool hasOotdAlertToday = todaysOotdRows.isNotEmpty;
+    final bool hasActiveOotdAlert = todaysActiveOotdRows.isNotEmpty;
 
     // Fetch all active garments for the selected wardrobe profile.
     final List<dynamic> garmentRows = await _client
@@ -130,7 +133,6 @@ class AlertsRepository {
       userId: userId,
       memberId: memberId,
       enabled: profile.ootdAlertsEnabled,
-      isOotdEligible: isOotdEligible,
     );
     // Active alerts are used to prevent duplicate garment alerts.
     final List<dynamic> existingRows = await _client
@@ -166,7 +168,7 @@ class AlertsRepository {
       memberId: memberId,
       garments: garments,
       enabled: profile.ootdAlertsEnabled,
-      hasOotdAlertToday: hasOotdAlertToday,
+      hasActiveOotdAlert: hasActiveOotdAlert,
       isOotdEligible: isOotdEligible,
     );
 
@@ -188,10 +190,14 @@ class AlertsRepository {
     required String memberId,
     required List<Garment> garments,
     required bool enabled,
-    required bool hasOotdAlertToday,
+    required bool hasActiveOotdAlert,
     required bool isOotdEligible,
   }) async {
-    if (!enabled || hasOotdAlertToday || !isOotdEligible) {
+    if (!shouldCreateOotdAlert(
+      enabled: enabled,
+      hasActiveOotdAlert: hasActiveOotdAlert,
+      isOotdEligible: isOotdEligible,
+    )) {
       return null;
     }
 
@@ -202,38 +208,100 @@ class AlertsRepository {
       return null;
     }
 
-    final List<WearLog> wearLogs = await _fetchOotdWearHistory(
-      userId: userId,
-      memberId: memberId,
-    );
-    final OutfitRecommendation recommendation =
-        const OutfitRecommendationService().recommend(
-          allGarments: garments,
-          wearLogs: wearLogs,
-          context: const OutfitContext(),
-          memberId: memberId,
-        );
+    final OutfitRecommendation recommendation;
+    try {
+      final List<WearLog> wearLogs = await _fetchOotdWearHistory(
+        userId: userId,
+        memberId: memberId,
+      );
+      recommendation = const OutfitRecommendationService().recommend(
+        allGarments: garments,
+        wearLogs: wearLogs,
+        context: const OutfitContext(),
+        memberId: memberId,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Could not build OOTD alert recommendation: $error');
+      debugPrint(stackTrace.toString());
+      return null;
+    }
 
     if (recommendation.garments.isEmpty) {
       return null;
     }
 
-    final OotdRecommendationSnapshot snapshot = await snapshotRepository
-        .createSnapshot(
-          memberId: memberId,
-          recommendation: recommendation,
-          context: const OutfitContext(),
-        );
-
-    return ruleService.buildOotdAlert(
+    return buildOotdAlertWithSnapshot(
       userId: userId,
       memberId: memberId,
+      recommendation: recommendation,
       enabled: enabled,
-      hasOotdAlertToday: hasOotdAlertToday,
+      hasActiveOotdAlert: hasActiveOotdAlert,
       isOotdEligible: isOotdEligible,
-      snapshotId: snapshot.id,
     );
   }
+
+  /// Persists the OOTD recommendation snapshot and returns the alert row.
+  ///
+  /// A snapshot persistence failure is isolated here so it can never break the
+  /// wider alerts feed: the OOTD alert is skipped for this generation attempt
+  /// and all other alert types continue normally.
+  Future<Map<String, dynamic>?> buildOotdAlertWithSnapshot({
+    required String userId,
+    required String memberId,
+    required OutfitRecommendation recommendation,
+    required bool enabled,
+    required bool hasActiveOotdAlert,
+    required bool isOotdEligible,
+  }) async {
+    final OotdRecommendationRepository? snapshotRepository =
+        _ootdRecommendationRepository;
+
+    if (snapshotRepository == null) {
+      return null;
+    }
+
+    try {
+      final OotdRecommendationSnapshot snapshot = await snapshotRepository
+          .createSnapshot(
+            memberId: memberId,
+            recommendation: recommendation,
+            context: const OutfitContext(),
+          );
+
+      return ruleService.buildOotdAlert(
+        userId: userId,
+        memberId: memberId,
+        enabled: enabled,
+        hasOotdAlertToday: hasActiveOotdAlert,
+        isOotdEligible: isOotdEligible,
+        snapshotId: snapshot.id,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Could not persist OOTD alert snapshot: $error');
+      debugPrint(stackTrace.toString());
+      return null;
+    }
+  }
+
+  /// Whether a fresh OOTD alert may be created on this generation attempt.
+  ///
+  /// Creation requires the alert type to be enabled, the wardrobe to be
+  /// eligible for a recommendation, and no ACTIVE (undismissed) OOTD alert to
+  /// already exist for today. A dismissed OOTD alert does not block a new one.
+  static bool shouldCreateOotdAlert({
+    required bool enabled,
+    required bool hasActiveOotdAlert,
+    required bool isOotdEligible,
+  }) {
+    return enabled && !hasActiveOotdAlert && isOotdEligible;
+  }
+
+  /// Whether existing OOTD alerts should be auto-dismissed on a regeneration.
+  ///
+  /// Only a disabled OOTD alert preference resolves them. A temporarily
+  /// ineligible wardrobe (e.g. freshly worn, dirty garments) never auto-dismisses
+  /// an already-generated OOTD alert.
+  static bool shouldResolveOotdAlert({required bool enabled}) => !enabled;
 
   Future<List<WearLog>> _fetchOotdWearHistory({
     required String userId,
@@ -323,12 +391,8 @@ class AlertsRepository {
     required String userId,
     required String memberId,
     required bool enabled,
-    required bool isOotdEligible,
   }) async {
-    if (ruleService.shouldHaveOotdAlert(
-      enabled: enabled,
-      isOotdEligible: isOotdEligible,
-    )) {
+    if (!shouldResolveOotdAlert(enabled: enabled)) {
       return;
     }
 
