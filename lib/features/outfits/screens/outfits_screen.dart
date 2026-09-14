@@ -1,6 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/features/calendar/screens/calendar_screen.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
 import 'package:digital_wardrobe_app/features/ootd/providers/ootd_provider.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
@@ -11,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class OutfitsScreen extends ConsumerWidget {
+class OutfitsScreen extends ConsumerStatefulWidget {
   const OutfitsScreen({
     super.key,
     this.canNavigateBack = false,
@@ -22,7 +23,27 @@ class OutfitsScreen extends ConsumerWidget {
   final VoidCallback? onNavigateBack;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OutfitsScreen> createState() => _OutfitsScreenState();
+}
+
+class _OutfitsScreenState extends ConsumerState<OutfitsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final outfits = ref.watch(outfitsProvider);
     final garments = ref.watch(garmentsProvider);
     final ootd = ref.watch(ootdProvider);
@@ -30,17 +51,27 @@ class OutfitsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: canNavigateBack
-            ? BackArrowButton(onPressed: onNavigateBack)
+        leading: widget.canNavigateBack
+            ? BackArrowButton(onPressed: widget.onNavigateBack)
             : null,
         title: const Text('My Outfits'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const <Widget>[
+            Tab(text: 'Outfits', icon: Icon(Icons.style_outlined)),
+            Tab(text: 'Calendar', icon: Icon(Icons.calendar_month_outlined)),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/outfits/new'),
         icon: const Icon(Icons.add),
         label: const Text('Create outfit'),
       ),
-      body: outfits.when(
+        body: TabBarView(
+            controller: _tabController,
+            children: <Widget>[
+       outfits.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => _OutfitFeedback(
           title: 'We could not load your outfits',
@@ -128,7 +159,11 @@ class OutfitsScreen extends ConsumerWidget {
           );
         },
       ),
-    );
+
+    const CalendarScreen(),
+    ], // Closes TabBarView children
+    ),   // Closes TabBarView
+    );     // Closes Scaffold
   }
 }
 

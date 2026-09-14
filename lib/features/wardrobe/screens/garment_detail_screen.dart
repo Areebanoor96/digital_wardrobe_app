@@ -165,7 +165,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                             ),
                           if (!garment.isArchived)
                             PopupMenuButton<GarmentAvailabilityStatus>(
-                              tooltip: 'Change Status',
+                              tooltip: 'Availability Status',
                               onSelected: (status) =>
                                   _changeStatus(context, ref, garment, status),
                               itemBuilder: (BuildContext menuContext) =>
@@ -183,14 +183,14 @@ class GarmentDetailScreen extends ConsumerWidget {
                               offset: const Offset(0, 8),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
+                                  horizontal: 24,
                                 ),
                                 height: 40,
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.secondaryContainer,
+                                  ).colorScheme.primary,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
@@ -201,16 +201,16 @@ class GarmentDetailScreen extends ConsumerWidget {
                                       size: 18,
                                       color: Theme.of(
                                         context,
-                                      ).colorScheme.onSecondaryContainer,
+                                      ).colorScheme.onPrimary,
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 8),
                                     Text(
-                                      'Change Status',
+                                      'Availability Status',
                                       style: TextStyle(
                                         color: Theme.of(
                                           context,
-                                        ).colorScheme.onSecondaryContainer,
-                                        fontWeight: FontWeight.w600,
+                                        ).colorScheme.onPrimary,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ],
@@ -221,48 +221,14 @@ class GarmentDetailScreen extends ConsumerWidget {
                               _isClothing(garment.category))
                             Tooltip(
                               message: 'Update Ironing Status',
-                              child: InkWell(
+                              child: FilledButton.icon(
                                 key: const ValueKey(
                                   'garment-detail-ironing-status-action',
                                 ),
-                                borderRadius: BorderRadius.circular(20),
-                                onTap: () =>
+                                onPressed: () =>
                                     _editIroningStatus(context, ref, garment),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  height: 40,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.secondaryContainer,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Icon(
-                                        Icons.iron_outlined,
-                                        size: 18,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSecondaryContainer,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Ironing Status',
-                                        style: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSecondaryContainer,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                icon: const Icon(Icons.iron_outlined),
+                                label: const Text('Ironing Status'),
                               ),
                             ),
                         ],

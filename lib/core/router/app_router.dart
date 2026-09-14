@@ -23,7 +23,7 @@ import 'package:digital_wardrobe_app/features/auth/screens/forgot_password_scree
 import 'package:digital_wardrobe_app/features/auth/screens/reset_password_otp_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/new_password_screen.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:digital_wardrobe_app/features/alerts/screens/alerts_screen.dart';
 final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
   return GoRouter(
     initialLocation: '/splash',
@@ -108,6 +108,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
         builder: (_, _) => const DeactivatedAccountScreen(),
       ),
       GoRoute(path: '/app', builder: (_, _) => const AppShellScreen()),
+      GoRoute(
+        path: '/alerts',
+        builder: (_, _) => const AlertsScreen(),
+      ),
       GoRoute(
         path: '/garments/new',
         builder: (_, _) => const GarmentFormScreen(),

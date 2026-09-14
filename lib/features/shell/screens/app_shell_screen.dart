@@ -1,10 +1,8 @@
-import 'package:digital_wardrobe_app/features/alerts/screens/alerts_screen.dart';
-import 'package:digital_wardrobe_app/features/calendar/screens/calendar_screen.dart';
+
+
 import 'package:digital_wardrobe_app/features/outfits/screens/outfits_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/profile_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/wardrobe_screen.dart';
-import 'package:digital_wardrobe_app/data/models/alert.dart';
-import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -86,10 +84,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
-
-    final int unreadCount =
-        alerts.valueOrNull?.where((Alert alert) => !alert.isRead).length ?? 0;
     final bool canNavigateBack = _tabHistory.length > 1;
     final List<Widget> screens = <Widget>[
       WardrobeScreen(
@@ -97,14 +91,6 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         onNavigateBack: _navigateToPreviousTab,
       ),
       OutfitsScreen(
-        canNavigateBack: canNavigateBack,
-        onNavigateBack: _navigateToPreviousTab,
-      ),
-      CalendarScreen(
-        canNavigateBack: canNavigateBack,
-        onNavigateBack: _navigateToPreviousTab,
-      ),
-      AlertsScreen(
         canNavigateBack: canNavigateBack,
         onNavigateBack: _navigateToPreviousTab,
       ),
@@ -133,24 +119,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
               selectedIcon: Icon(Icons.auto_awesome),
               label: 'Outfits',
             ),
-            const NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month),
-              label: 'Calendar',
-            ),
-            NavigationDestination(
-              icon: Badge(
-                isLabelVisible: unreadCount > 0,
-                label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
-                child: const Icon(Icons.notifications_outlined),
-              ),
-              selectedIcon: Badge(
-                isLabelVisible: unreadCount > 0,
-                label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
-                child: const Icon(Icons.notifications),
-              ),
-              label: 'Alerts',
-            ),
+
             const NavigationDestination(
               icon: Icon(Icons.person_outline),
               selectedIcon: Icon(Icons.person),

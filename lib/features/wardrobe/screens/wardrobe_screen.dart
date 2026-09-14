@@ -1,5 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
+import 'package:digital_wardrobe_app/data/models/alert.dart';
+import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
@@ -57,6 +59,10 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
       selectedFamilyMemberProvider,
     );
     final AsyncValue<List<Garment>> garments = ref.watch(garmentsProvider);
+    final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
+
+    final int unreadCount =
+        alerts.valueOrNull?.where((Alert alert) => !alert.isRead).length ?? 0;
 
     final WardrobeFilters filters = ref.watch(wardrobeFilterProvider);
 
@@ -85,6 +91,15 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                 radius: 17,
               ),
             ),
+          IconButton(
+            onPressed: () => context.push('/alerts'),
+            tooltip: 'Notifications',
+            icon: Badge(
+              isLabelVisible: unreadCount > 0,
+              label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+          ),
           IconButton(
             onPressed: () => context.push('/garments/archived'),
             icon: const Icon(Icons.archive_outlined),
