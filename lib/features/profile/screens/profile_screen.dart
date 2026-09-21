@@ -4,7 +4,7 @@ import 'package:digital_wardrobe_app/core/services/profile_session_service.dart'
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/core/services/theme_preference_service.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
-
+import 'package:digital_wardrobe_app/features/profile/screens/edit_profile_screen.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/features/analytics/screens/analytics_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/change_password_screen.dart';
@@ -43,23 +43,25 @@ class ProfileScreen extends ConsumerWidget {
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('Could not load profile.')),
+        // NEW CODE TO REPLACE WITH:
         data: (Profile user) => ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           children: <Widget>[
+            // 1. User Header Card
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 children: <Widget>[
-                  FamilyMemberAvatar(name: user.fullName ?? email, radius: 40),
-                  const SizedBox(height: 12),
+                  FamilyMemberAvatar(name: user.fullName ?? email, radius: 36),
+                  const SizedBox(height: 10),
                   Text(
                     user.fullName ?? email,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -68,7 +70,7 @@ class ProfileScreen extends ConsumerWidget {
                     Text(
                       email,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -76,19 +78,18 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            const _SectionHeader('Profile'),
+            // 2. Primary Group Card (Core Settings & Actions)
             _CardGroup(
               children: <Widget>[
                 ListTile(
-                  leading: const Icon(Icons.insights_outlined),
-                  title: const Text('Insights & Analytics'),
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit Account'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (BuildContext context) =>
-                      const AnalyticsScreen(canNavigateBack: true),
+                      builder: (BuildContext context) => const EditProfileScreen(),
                     ),
                   ),
                 ),
@@ -102,35 +103,6 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
-
-            const _SectionHeader('Notifications'),
-            _CardGroup(
-              children: <Widget>[
-                ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: const Text('Notifications'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) =>
-                      const NotificationPreferencesScreen(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const _SectionHeader('Settings'),
-            _CardGroup(
-              children: <Widget>[
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Edit Account'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _editName(context, ref, user.fullName ?? ''),
-                ),
                 ListTile(
                   leading: const Icon(Icons.switch_account_outlined),
                   title: const Text('Switch Profile'),
@@ -143,6 +115,28 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.go('/profiles'),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.insights_outlined),
+                  title: const Text('Insights & Analytics'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) =>
+                      const AnalyticsScreen(canNavigateBack: true),
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: const Text('Notifications'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) =>
+                      const NotificationPreferencesScreen(),
+                    ),
+                  ),
+                ),
+                ListTile(
                   leading: const Icon(Icons.lock_outline),
                   title: const Text('Password'),
                   trailing: const Icon(Icons.chevron_right),
@@ -151,10 +145,16 @@ class ProfileScreen extends ConsumerWidget {
                 SwitchListTile(
                   secondary: const Icon(Icons.dark_mode_outlined),
                   title: const Text('Dark Mode'),
-                  subtitle: const Text('Switch to a dark color scheme.'),
                   value: ref.watch(themeModeProvider) == ThemeMode.dark,
                   onChanged: (bool value) => _setDarkMode(context, ref, value),
                 ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // 3. Support & About Group Card
+            _CardGroup(
+              children: <Widget>[
                 ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text('About Digital Wardrobe'),
@@ -177,37 +177,9 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 20),
 
-            const _SectionHeader('Account Actions'),
-            _CardGroup(
-              children: <Widget>[
-                ListTile(
-                  leading: Icon(
-                    Icons.person_remove_outlined,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    'Deactivate My Account',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
-                  onTap: () => _confirmDeactivateAccount(context, ref),
-                ),
-                ListTile(
-                  leading: Icon(
-                    Icons.delete_forever_outlined,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  title: Text(
-                    'Delete My Account Permanently',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
-                  ),
-                  onTap: () => _confirmDeleteAccount(context, ref),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
+            // 4. Log Out Button
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -225,6 +197,40 @@ class ProfileScreen extends ConsumerWidget {
               },
               icon: const Icon(Icons.logout, size: 20),
               label: const Text('Log Out'),
+            ),
+            const SizedBox(height: 12),
+
+            // 5. Account Destruction Links
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => _confirmDeactivateAccount(context, ref),
+                  child: Text(
+                    'Deactivate Account',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+                Text(
+                  '•',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _confirmDeleteAccount(context, ref),
+                  child: Text(
+                    'Delete Account',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -259,41 +265,6 @@ class ProfileScreen extends ConsumerWidget {
         : ThemeMode.light;
     await ThemePreferenceService.setDarkModeEnabled(enabled);
   }
-
-  Future<void> _editName(
-      BuildContext context,
-      WidgetRef ref,
-      String currentName,
-      ) async {
-    final TextEditingController controller = TextEditingController(
-      text: currentName,
-    );
-    final String? name = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('Edit account name'),
-        content: TextField(
-          controller: controller,
-          textCapitalization: TextCapitalization.words,
-          autofocus: true,
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (name == null || name.isEmpty) return;
-    await ref.read(profileRepositoryProvider).updateName(name);
-    ref.invalidate(profileProvider);
-  }
-
   Future<void> _confirmDeactivateAccount(
       BuildContext context,
       WidgetRef ref,
@@ -384,26 +355,6 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 }
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-}
-
 class _CardGroup extends StatelessWidget {
   const _CardGroup({required this.children});
 
