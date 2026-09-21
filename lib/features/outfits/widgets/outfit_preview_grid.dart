@@ -10,16 +10,23 @@ class OutfitPreviewGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Garment> preview = garments.take(4).toList();
-    return SizedBox(
+    return Container(
       width: size,
       height: size,
-      child: ClipRRect(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4),
         borderRadius: BorderRadius.circular(16),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
         child: preview.isEmpty
             ? const GarmentImage(imageUrl: null)
             : GridView.count(
-                crossAxisCount: preview.length == 1 ? 1 : 2,
-                physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: preview.length == 1 ? 1 : 2,
+          mainAxisSpacing: 2,
+          crossAxisSpacing: 2,
+          physics: const NeverScrollableScrollPhysics(),
                 children: preview
                     .map(
                       (Garment garment) =>

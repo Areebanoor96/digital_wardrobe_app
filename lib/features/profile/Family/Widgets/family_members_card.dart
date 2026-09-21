@@ -15,9 +15,16 @@ class FamilyMemberCard extends StatelessWidget {
   final VoidCallback? onDelete;
 
   @override
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: ListTile(
         onTap: onTap,
 
         leading: FamilyMemberAvatar(
@@ -45,11 +52,19 @@ class FamilyMemberCard extends StatelessWidget {
 
           itemBuilder: (context) => [
             const PopupMenuItem(value: "edit", child: Text("Edit")),
-
-            const PopupMenuItem(value: "delete", child: Text("Delete")),
+            PopupMenuItem(
+              value: "delete",
+              child: Text(
+                "Delete",
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
           ],
         ),
       ),
+        )
     );
   }
 }

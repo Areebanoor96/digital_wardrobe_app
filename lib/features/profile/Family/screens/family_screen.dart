@@ -42,9 +42,10 @@ class FamilyScreen extends ConsumerWidget {
             return const Center(child: Text("No family members yet"));
           }
 
-          return ListView.builder(
-            itemCount: members.length,
-            itemBuilder: (context, index) {
+return ListView.builder(
+padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+itemCount: members.length,
+itemBuilder: (context, index)  {
               final FamilyMember member = members[index];
 
               return FamilyMemberCard(
@@ -79,6 +80,9 @@ class FamilyScreen extends ConsumerWidget {
                             child: const Text('Cancel'),
                           ),
                           FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
                             onPressed: () => Navigator.pop(dialogContext, true),
                             child: const Text('Delete'),
                           ),

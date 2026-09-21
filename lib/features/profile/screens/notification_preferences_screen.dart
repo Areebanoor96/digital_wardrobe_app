@@ -4,8 +4,6 @@ import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Notification preference switches.
-///
 /// All toggles are backed by the existing `profiles` alert-preference columns
 /// through [ProfileRepository.updateAlertPreferences] — see the
 /// `add_alert_preferences` and `add_growth_alert_preference` migrations.
@@ -43,50 +41,61 @@ class NotificationPreferencesScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            SwitchListTile(
-              secondary: const Icon(Icons.watch_later_outlined),
-              title: const Text('Unused garment alerts'),
-              subtitle: const Text(
-                'Remind me about clothes I have not worn recently.',
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
               ),
-              value: user.unusedAlertsEnabled,
-              onChanged: (bool value) async {
-                await _updateAlertPreferences(
-                  ref,
-                  user,
-                  unusedAlertsEnabled: value,
-                );
-              },
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.local_laundry_service_outlined),
-              title: const Text('Laundry alerts'),
-              subtitle: const Text(
-                'Remind me when garments need washing.',
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  SwitchListTile(
+                    secondary: const Icon(Icons.watch_later_outlined),
+                    title: const Text('Unused garment alerts'),
+                    subtitle: const Text(
+                      'Remind me about clothes I have not worn recently.',
+                    ),
+                    value: user.unusedAlertsEnabled,
+                    onChanged: (bool value) async {
+                      await _updateAlertPreferences(
+                        ref,
+                        user,
+                        unusedAlertsEnabled: value,
+                      );
+                    },
+                  ),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.local_laundry_service_outlined),
+                    title: const Text('Laundry alerts'),
+                    subtitle: const Text(
+                      'Remind me when garments need washing.',
+                    ),
+                    value: user.laundryAlertsEnabled,
+                    onChanged: (bool value) async {
+                      await _updateAlertPreferences(
+                        ref,
+                        user,
+                        laundryAlertsEnabled: value,
+                      );
+                    },
+                  ),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.auto_awesome_outlined),
+                    title: const Text('Outfit of the Day'),
+                    subtitle: const Text(
+                      'Receive Outfit of the Day reminders.',
+                    ),
+                    value: user.ootdAlertsEnabled,
+                    onChanged: (bool value) async {
+                      await _updateAlertPreferences(
+                        ref,
+                        user,
+                        ootdAlertsEnabled: value,
+                      );
+                    },
+                  ),
+                ],
               ),
-              value: user.laundryAlertsEnabled,
-              onChanged: (bool value) async {
-                await _updateAlertPreferences(
-                  ref,
-                  user,
-                  laundryAlertsEnabled: value,
-                );
-              },
-            ),
-            SwitchListTile(
-              secondary: const Icon(Icons.auto_awesome_outlined),
-              title: const Text('Outfit of the Day'),
-              subtitle: const Text(
-                'Receive Outfit of the Day reminders.',
-              ),
-              value: user.ootdAlertsEnabled,
-              onChanged: (bool value) async {
-                await _updateAlertPreferences(
-                  ref,
-                  user,
-                  ootdAlertsEnabled: value,
-                );
-              },
             ),
             ],
         ),

@@ -71,25 +71,22 @@ class _OotdCardState extends State<OotdCard> {
     final List<OutfitRecommendation> pool = _pool;
     final OutfitRecommendation rec = _current;
 
-    return Card(
-      elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: colors.primary.withValues(alpha: 0.2)),
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
       ),
-      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: 6,
+                  runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
                     _headlinePill(
@@ -97,8 +94,8 @@ class _OotdCardState extends State<OotdCard> {
                       theme: theme,
                       icon: Icons.auto_awesome,
                       label: 'Outfit of the Day',
-                      background: colors.primaryContainer,
-                      foreground: colors.onPrimaryContainer,
+                      background: colors.primaryContainer.withOpacity(0.5),
+                      foreground: colors.primary,
                     ),
                     if (rec.score > 0)
                       _headlinePill(
@@ -112,33 +109,29 @@ class _OotdCardState extends State<OotdCard> {
                   ],
                 ),
                 if (rec.garments.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      IconButton(
+                        onPressed: () => _showWhySheet(context),
+                        icon: const Icon(Icons.insights_outlined, size: 20),
+                        tooltip: 'Why this look?',
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      if (widget.onContextChanged != null)
                         IconButton(
-                          onPressed: () => _showWhySheet(context),
-                          icon: const Icon(Icons.insights_outlined),
-                          tooltip: 'Why this look?',
+                          onPressed: () => _showPersonalizeSheet(context),
+                          icon: const Icon(Icons.tune_rounded, size: 20),
+                          tooltip: 'Personalize outfit',
                           visualDensity: VisualDensity.compact,
                         ),
-                        if (widget.onContextChanged != null)
-                          IconButton(
-                            onPressed: () => _showPersonalizeSheet(context),
-                            icon: const Icon(Icons.tune),
-                            tooltip: 'Personalize outfit',
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        if (widget.onRefresh != null)
-                          IconButton.filledTonal(
-                            onPressed: widget.onRefresh,
-                            icon: const Icon(Icons.refresh),
-                            tooltip: 'New look',
-                            visualDensity: VisualDensity.compact,
-                          ),
-                      ],
-                    ),
+                      if (widget.onRefresh != null)
+                        IconButton(
+                          onPressed: widget.onRefresh,
+                          icon: const Icon(Icons.refresh_rounded, size: 20),
+                          tooltip: 'New look',
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
                   ),
               ],
             ),
@@ -154,11 +147,18 @@ class _OotdCardState extends State<OotdCard> {
                 ),
               )
             else ...<Widget>[
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: KeyedSubtree(
-                  key: ValueKey<String>(_stripKey(rec)),
-                  child: _GarmentStrip(rec: rec),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: KeyedSubtree(
+                    key: ValueKey<String>(_stripKey(rec)),
+                    child: _GarmentStrip(rec: rec),
+                  ),
                 ),
               ),
               if (pool.length > 1) ...<Widget>[
@@ -168,19 +168,32 @@ class _OotdCardState extends State<OotdCard> {
                   runSpacing: 8,
                   children: <Widget>[
                     for (int index = 0; index < pool.length; index++)
-                      FilterChip(
-                        selected: index == _selectedIndex,
-                        showCheckmark: false,
-                        avatar: Icon(
-                          index == _selectedIndex
-                              ? Icons.check
-                              : Icons.swap_horiz,
-                          size: 16,
+                      GestureDetector(
+                        onTap: () => _select(index),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: index == _selectedIndex
+                                ? colors.primary
+                                : colors.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${pool[index].label} • ${pool[index].score}%',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: index == _selectedIndex
+                                  ? colors.onPrimary
+                                  : colors.onSurfaceVariant,
+                              fontWeight: index == _selectedIndex
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
                         ),
-                        label: Text(
-                          '${pool[index].label} ${pool[index].score}%',
-                        ),
-                        onSelected: (_) => _select(index),
                       ),
                   ],
                 ),
@@ -190,13 +203,21 @@ class _OotdCardState extends State<OotdCard> {
                 children: <Widget>[
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: widget.isSaving ? null : () => widget.onSave?.call(rec),
+                      style: OutlinedButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: widget.isSaving
+                          ? null
+                          : () => widget.onSave?.call(rec),
                       icon: widget.isSaving
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
                           : const Icon(Icons.bookmark_outline, size: 18),
                       label: Text(widget.isSaving ? 'Saving...' : 'Save'),
                     ),
@@ -204,16 +225,22 @@ class _OotdCardState extends State<OotdCard> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: widget.isWearing ? null : () => widget.onWear?.call(rec),
+                      style: FilledButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: widget.isWearing
+                          ? null
+                          : () => widget.onWear?.call(rec),
                       icon: widget.isWearing
                           ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                           : const Icon(Icons.check_circle_outline, size: 18),
                       label: Text(widget.isWearing ? 'Wearing...' : 'Wear'),
                     ),

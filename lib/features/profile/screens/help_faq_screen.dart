@@ -45,19 +45,18 @@ class HelpFaqScreen extends StatelessWidget {
                 'Open the Calendar, choose a date and tap the plan action to '
                 'get an outfit suggestion for that day.',
           ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 0,
-            color: colors.surfaceContainerLow,
-            shape: RoundedRectangleBorder(
+          const SizedBox(height: 4),
+          Container(
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(16),
             ),
             child: ListTile(
-              leading: const Icon(Icons.language),
+              leading: Icon(Icons.language, color: colors.primary),
               title: const Text('Online help center'),
               subtitle: Text(
                 HelpFaqConfig.webUrl.isEmpty
-                    ? 'The Digital Wardrobe web help/FAQ page is coming soon.'
+                    ? ' help/FAQ page '
                     : 'Opens the Digital Wardrobe web help/FAQ page.',
               ),
             ),
@@ -87,26 +86,34 @@ class _FaqCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            expandedCrossAxisAlignment: CrossAxisAlignment.start,
+            title: Text(
               question,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(answer),
-          ],
+            children: <Widget>[
+              Text(
+                answer,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

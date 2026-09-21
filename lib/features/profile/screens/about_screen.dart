@@ -25,30 +25,51 @@ class AboutScreen extends ConsumerWidget {
         data: (AppInfo info) => ListView(
           padding: const EdgeInsets.all(20),
           children: <Widget>[
-            const SizedBox(height: 16),
-            Icon(Icons.checkroom, size: 64, color: colors.primary),
-            const SizedBox(height: 16),
-            Text(
-              info.appName.isEmpty ? 'Digital Wardrobe' : info.appName,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.checkroom,
+                      size: 48,
+                      color: colors.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    info.appName.isEmpty ? 'Digital Wardrobe' : info.appName,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Your personal wardrobe, outfit and style assistant.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Your personal wardrobe, outfit and style assistant.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 28),
-            Card(
-              elevation: 0,
-              color: colors.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
               ),
               child: ListTile(
                 leading: const Icon(Icons.info_outline),

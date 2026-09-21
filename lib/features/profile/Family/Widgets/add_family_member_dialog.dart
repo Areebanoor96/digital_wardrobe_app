@@ -95,8 +95,16 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
               if (_selectedAvatarBytes != null ||
                   widget.member?.avatarUrl != null)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline),
-                  title: const Text('Remove photo'),
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    'Remove photo',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
                   onTap: () async {
                     Navigator.pop(sheetContext);
 
@@ -131,30 +139,37 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            GestureDetector(
-              onTap: _isSaving ? null : _showAvatarOptions,
-              child: CircleAvatar(
-                radius: 42,
-                backgroundImage: _selectedAvatarBytes != null
-                    ? MemoryImage(_selectedAvatarBytes!)
-                    : (widget.member?.avatarUrl != null
-                              ? NetworkImage(widget.member!.avatarUrl!)
-                              : null)
-                          as ImageProvider?,
-                child:
-                    (_selectedAvatarBytes == null &&
-                        widget.member?.avatarUrl == null)
-                    ? const Icon(Icons.add_a_photo_outlined, size: 28)
-                    : null,
+            Center(
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: _isSaving ? null : _showAvatarOptions,
+                    child: CircleAvatar(
+                      radius: 42,
+                      backgroundImage: _selectedAvatarBytes != null
+                          ? MemoryImage(_selectedAvatarBytes!)
+                          : (widget.member?.avatarUrl != null
+                          ? NetworkImage(widget.member!.avatarUrl!)
+                          : null)
+                      as ImageProvider?,
+                      child:
+                      (_selectedAvatarBytes == null &&
+                          widget.member?.avatarUrl == null)
+                          ? const Icon(Icons.add_a_photo_outlined, size: 28)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    (_selectedAvatarBytes == null && widget.member?.avatarUrl == null)
+                        ? 'Add photo (optional)'
+                        : 'Change photo',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-            ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              (_selectedAvatarBytes == null && widget.member?.avatarUrl == null)
-                  ? 'Add photo (optional)'
-                  : 'Change photo',
             ),
 
             const SizedBox(height: 20),
