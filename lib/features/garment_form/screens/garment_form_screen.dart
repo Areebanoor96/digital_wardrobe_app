@@ -348,6 +348,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
   static const String _addNewLocationValue = '__add_new_location__';
 
   FamilyMember? _mismatchedGarmentMember;
+
   static const List<String> _occasionOptions = <String>[
     'casual',
     'college',
@@ -863,6 +864,29 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         '${date.year}';
   }
 
+  /// Resolves the account holder's member id, used as the last-resort owner
+  /// for a new garment when no profile is currently selected.
+  ///
+  /// Returns an empty string when the family list cannot be read, which the
+  /// caller surfaces as a "No profile selected" error.
+  Future<String> _primaryAccountMemberId() async {
+    try {
+      final List<FamilyMember> family = await ref.read(
+        familyMembersProvider.future,
+      );
+
+      for (final FamilyMember member in family) {
+        if (member.isAccount) {
+          return member.id;
+        }
+      }
+    } catch (_) {
+      // Best effort: the caller already handles an unresolved owner.
+    }
+
+    return '';
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -901,9 +925,18 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       }
     }
 
-    final selectedMember = ref.read(selectedFamilyMemberProvider);
+    final FamilyMember? selectedMember = ref.read(selectedFamilyMemberProvider);
 
-    if (selectedMember == null) {
+    // The owner is never chosen by the user. New garments inherit the active
+    // profile, falling back to the primary account when nothing is selected;
+    // edits keep the owner the garment was already saved under.
+    final String? existingMemberId = widget.garment?.memberId;
+    final String assignedMemberId =
+        existingMemberId ??
+        selectedMember?.id ??
+        await _primaryAccountMemberId();
+
+    if (assignedMemberId.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -912,11 +945,12 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       return;
     }
 
-    if (widget.garment != null &&
-        widget.garment!.memberId != null &&
-        widget.garment!.memberId != selectedMember.id) {
+    if (existingMemberId != null && existingMemberId != selectedMember?.id) {
       if (mounted) {
         final FamilyMember? owner = _mismatchedGarmentMember;
+        final String selectedName =
+            selectedMember?.name ?? 'another profile';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -924,7 +958,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
                   ? 'This garment belongs to a different profile. '
                         'Switch to that profile before saving it.'
                   : 'This garment belongs to "${owner.name}", but '
-                        '"${selectedMember.name}" is selected. '
+                        '"$selectedName" is selected. '
                         'Switch to ${owner.name}’s profile to save this item.',
             ),
           ),
@@ -982,7 +1016,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         id: id,
         name: _name.text.trim(),
         category: _category,
-        memberId: selectedMember.id,
+        memberId: assignedMemberId,
         photoPaths: photoPaths,
         photoUrls: widget.garment?.photoUrls ?? const <String>[],
         receiptPath: uploadedReceiptPath ?? _existingReceiptPath,
@@ -1025,7 +1059,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       await ref
           .read(lendingRepositoryProvider)
           .syncForAvailability(
-            memberId: selectedMember.id,
+            memberId: assignedMemberId,
             garmentId: garment.id,
             status: _availabilityStatus,
             personName: _lendingPerson.text,
@@ -1048,6 +1082,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       ref.invalidate(analyticsSummaryProvider);
       ref.invalidate(garmentLocationsProvider);
       ref.invalidate(activeLendingRecordProvider(id));
+      ref.invalidate(familyMemberPieceCountsProvider);
 
       if (widget.garment != null) {
         ref.invalidate(garmentProvider(widget.garment!.id));

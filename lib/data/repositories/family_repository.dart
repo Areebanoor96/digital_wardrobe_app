@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FamilyRepository {
@@ -124,10 +124,16 @@ class FamilyRepository {
     required String name,
     required String relationship,
     DateTime? birthDate,
+    double? heightCm,
+    double? weightKg,
   }) async {
     final Map<String, dynamic> values = <String, dynamic>{
       'name': name,
       'relationship': relationship,
+      // Height and weight are explicitly written so that cleared values are
+      // removed instead of silently preserved.
+      'height_cm': heightCm,
+      'weight_kg': weightKg,
     };
 
     // Only write the birth date when the caller provides one so that
@@ -142,6 +148,92 @@ class FamilyRepository {
         .eq('id', id)
         .eq('user_id', _requireUserId());
   }
+
+  /// Persists everything the Edit Profile screen owns for a family member.
+  ///
+  /// Unlike [updateFamilyMember] this writes explicit `null`s so that cleared
+  /// fields are removed rather than silently preserved. `current_size` is
+  /// derived from [topsSize] because the outgrowth prediction engine in
+  /// `size_growth_prediction_service.dart` ranks garments against that single
+  /// column; it has no vocabulary for numeric waist sizes.
+  ///
+  /// Kept separate from [updateFamilyMember] so the add-member dialog keeps
+  /// its preserve-`birth_date` behaviour.
+  Future<void> updateMemberProfileDetails({
+    required String id,
+    required String name,
+    required String relationship,
+    DateTime? birthDate,
+    String? pronouns,
+    String? gender,
+    double? heightCm,
+    double? weightKg,
+    String? shoeSize,
+    String? shoeUnit,
+    String? topsSize,
+    String? bottomsSize,
+    List<String>? styleAesthetics,
+    List<String>? colorPreferences,
+  }) async {
+    await _client
+        .from('family_members')
+        .update(
+          buildProfileDetailsRow(
+            name: name,
+            relationship: relationship,
+            birthDate: birthDate,
+            pronouns: pronouns,
+            gender: gender,
+            heightCm: heightCm,
+            weightKg: weightKg,
+            shoeSize: shoeSize,
+            shoeUnit: shoeUnit,
+            topsSize: topsSize,
+            bottomsSize: bottomsSize,
+            styleAesthetics: styleAesthetics,
+            colorPreferences: colorPreferences,
+          ),
+        )
+        .eq('id', id)
+        .eq('user_id', _requireUserId());
+  }
+
+  /// Builds the `family_members` update payload for
+  /// [updateMemberProfileDetails].
+  ///
+  /// Exposed for unit testing the `current_size` derivation without a live
+  /// Supabase client.
+  @visibleForTesting
+  static Map<String, dynamic> buildProfileDetailsRow({
+    required String name,
+    required String relationship,
+    DateTime? birthDate,
+    String? pronouns,
+    String? gender,
+    double? heightCm,
+    double? weightKg,
+    String? shoeSize,
+    String? shoeUnit,
+    String? topsSize,
+    String? bottomsSize,
+    List<String>? styleAesthetics,
+    List<String>? colorPreferences,
+  }) => <String, dynamic>{
+    'name': name,
+    'relationship': relationship,
+    'birth_date': birthDate?.toIso8601String().split('T').first,
+    'pronouns': pronouns,
+    'gender': gender,
+    'height_cm': heightCm,
+    'weight_kg': weightKg,
+    'shoe_size': shoeSize,
+    'shoe_unit': shoeUnit,
+    'tops_size': topsSize,
+    'bottoms_size': bottomsSize,
+    'current_size': topsSize,
+    'style_aesthetics': styleAesthetics ?? const <String>[],
+    'color_preferences': colorPreferences ?? const <String>[],
+  };
 
   Future<void> updateMemberShoeSize({
     required String id,

@@ -2,14 +2,17 @@ import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/services/growth_intelligence_service.dart';
+import 'package:digital_wardrobe_app/features/profile/Family/services/size_growth_prediction_service.dart';
 
 class AlertRuleService {
   const AlertRuleService({
     this.growthIntelligenceService = const GrowthIntelligenceService(),
+    this.sizeGrowthPredictionService = const SizeGrowthPredictionService(),
     this.now = _defaultNow,
   });
 
   final GrowthIntelligenceService growthIntelligenceService;
+  final SizeGrowthPredictionService sizeGrowthPredictionService;
   final DateTime Function() now;
 
   List<Map<String, dynamic>> buildGarmentAlerts({
@@ -299,6 +302,83 @@ class AlertRuleService {
     );
 
     return comparison?.hasGrowthChange ?? false;
+  }
+
+  Map<String, dynamic>? buildSizeGrowthAlert({
+    required FamilyMember member,
+    required Garment garment,
+    required List<GrowthMeasurement> measurements,
+    required String userId,
+    required Set<String> existingKeys,
+    required bool enabled,
+  }) {
+    if (!enabled) {
+      return null;
+    }
+
+    if (!growthIntelligenceService.isEligibleForGrowthTracking(member)) {
+      return null;
+    }
+
+    final SizeGrowthPrediction? prediction = sizeGrowthPredictionService
+        .predict(
+          member: member,
+          garment: garment,
+          measurements: measurements,
+          now: now(),
+        );
+
+    if (prediction == null) {
+      return null;
+    }
+
+    final String key = 'growth_${garment.id}';
+
+    if (existingKeys.contains(key)) {
+      return null;
+    }
+
+    return <String, dynamic>{
+      'user_id': userId,
+      'member_id': member.id,
+      'type': 'growth',
+      'garment_id': garment.id,
+      'target_type': 'garment',
+      'target_id': garment.id,
+      'action_payload': <String, dynamic>{
+        'route': '/garments/${garment.id}',
+      },
+      'title': 'Growing fast!',
+      'body':
+          '${member.name} will outgrow ${garment.name} '
+          '(size ${prediction.garmentSize}) by ${prediction.estimatedOutgrowthMonth}. '
+          'Review their wardrobe to see what still fits.',
+      'is_read': false,
+      'is_dismissed': false,
+    };
+  }
+
+  bool shouldHaveSizeGrowthAlert({
+    required FamilyMember member,
+    required Garment garment,
+    required List<GrowthMeasurement> measurements,
+    required bool enabled,
+  }) {
+    if (!enabled) {
+      return false;
+    }
+
+    if (!growthIntelligenceService.isEligibleForGrowthTracking(member)) {
+      return false;
+    }
+
+    return sizeGrowthPredictionService.predict(
+      member: member,
+      garment: garment,
+      measurements: measurements,
+      now: now(),
+    ) !=
+    null;
   }
 
   String _joinChanges(List<String> changes) {

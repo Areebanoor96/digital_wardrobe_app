@@ -1,5 +1,7 @@
 import 'package:digital_wardrobe_app/data/models/alert.dart';
+import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/models/ootd_recommendation_snapshot.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
@@ -80,7 +82,8 @@ class AlertsRepository {
                 'id, '
                 'unused_alerts_enabled, '
                 'laundry_alerts_enabled, '
-                'ootd_alerts_enabled',
+                'ootd_alerts_enabled, '
+                'growth_alerts_enabled',
               )
               .eq('id', userId)
               .single()
@@ -119,6 +122,45 @@ class AlertsRepository {
         )
         .toList();
 
+    // Growth alerts need the owner's record and their latest measurements.
+    // Loading is best-effort so a missing member never breaks the feed.
+    FamilyMember? growthMember;
+    final List<GrowthMeasurement> growthMeasurements =
+        <GrowthMeasurement>[];
+
+    if (profile.growthAlertsEnabled) {
+      final List<dynamic> memberRows = await _client
+          .from('family_members')
+          .select()
+          .eq('user_id', userId)
+          .eq('id', memberId);
+
+      if (memberRows.isNotEmpty) {
+        growthMember = FamilyMember.fromJson(
+          Map<String, dynamic>.from(memberRows.first as Map),
+        );
+
+        try {
+          final List<dynamic> measurementRows = await _client
+              .from('growth_measurements')
+              .select()
+              .eq('member_id', memberId)
+              .order('recorded_at', ascending: false);
+
+          growthMeasurements.addAll(
+            measurementRows.map(
+              (dynamic row) => GrowthMeasurement.fromJson(
+                Map<String, dynamic>.from(row as Map),
+              ),
+            ),
+          );
+        } catch (error, stackTrace) {
+          debugPrint('Could not load growth measurements for alerts: $error');
+          debugPrint(stackTrace.toString());
+        }
+      }
+    }
+
     // Remove alerts whose underlying condition no longer exists.
     await _resolveGarmentAlerts(
       userId: userId,
@@ -126,6 +168,14 @@ class AlertsRepository {
       garments: garments,
       unusedAlertsEnabled: profile.unusedAlertsEnabled,
       laundryAlertsEnabled: profile.laundryAlertsEnabled,
+    );
+    await _resolveGrowthAlerts(
+      userId: userId,
+      memberId: memberId,
+      garments: garments,
+      enabled: profile.growthAlertsEnabled,
+      member: growthMember,
+      measurements: growthMeasurements,
     );
     final bool isOotdEligible = const OutfitRecommendationService()
         .isEligibleForRecommendation(garments, memberId: memberId);
@@ -160,6 +210,22 @@ class AlertsRepository {
           laundryAlertsEnabled: profile.laundryAlertsEnabled,
         ),
       );
+
+      if (growthMember != null) {
+        final Map<String, dynamic>? growthAlert = ruleService
+            .buildSizeGrowthAlert(
+              member: growthMember,
+              garment: garment,
+              measurements: growthMeasurements,
+              userId: userId,
+              existingKeys: existingKeys,
+              enabled: profile.growthAlertsEnabled,
+            );
+
+        if (growthAlert != null) {
+          newAlerts.add(growthAlert);
+        }
+      }
     }
 
     // Generate today's OOTD alert if allowed and the wardrobe is eligible.
@@ -367,6 +433,55 @@ class AlertsRepository {
         memberId: memberId,
         garmentIds: unusedDismissIds,
         type: 'unused',
+      );
+    }
+  }
+
+  Future<void> _resolveGrowthAlerts({
+    required String userId,
+    required String memberId,
+    required List<Garment> garments,
+    required bool enabled,
+    required FamilyMember? member,
+    required List<GrowthMeasurement> measurements,
+  }) async {
+    // When growth alerts are disabled every existing growth alert resolves.
+    // Otherwise alerts resolve per garment once the prediction no longer holds
+    // (garment archived, condition no longer predicted, or member unchanged).
+    if (!enabled) {
+      await _client
+          .from('alerts')
+          .update(<String, bool>{'is_dismissed': true})
+          .eq('user_id', userId)
+          .eq('member_id', memberId)
+          .eq('type', 'growth')
+          .eq('is_dismissed', false);
+      return;
+    }
+
+    if (member == null) {
+      return;
+    }
+
+    final List<String> dismissIds = <String>[];
+
+    for (final Garment garment in garments) {
+      if (!ruleService.shouldHaveSizeGrowthAlert(
+        member: member,
+        garment: garment,
+        measurements: measurements,
+        enabled: enabled,
+      )) {
+        dismissIds.add(garment.id);
+      }
+    }
+
+    if (dismissIds.isNotEmpty) {
+      await _dismissGarmentAlerts(
+        userId: userId,
+        memberId: memberId,
+        garmentIds: dismissIds,
+        type: 'growth',
       );
     }
   }

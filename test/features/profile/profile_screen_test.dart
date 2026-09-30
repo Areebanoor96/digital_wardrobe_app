@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:digital_wardrobe_app/core/config/supabase_config.dart';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
@@ -40,6 +42,20 @@ class _EditNameProfileRepository implements ProfileRepository {
 
   @override
   Future<Profile> fetchProfile() async => throw UnimplementedError();
+
+  @override
+  Future<String?> getAvatarSignedUrl(String path) async => null;
+
+  @override
+  Future<String> uploadAvatar(File file) async => 'avatars/fake_path.jpg';
+
+  @override
+  Future<void> updateProfileDetails({
+    required String fullName,
+    required String username,
+    String? pronouns,
+    String? gender,
+  }) async {}
 
   @override
   Future<void> updateName(String name) async {
@@ -87,31 +103,31 @@ void main() {
     final Map<String, Object> store = <String, Object>{};
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-          const MethodChannel('plugins.flutter.io/shared_preferences'),
+      const MethodChannel('plugins.flutter.io/shared_preferences'),
           (MethodCall call) async {
-            if (call.method == 'getAll') {
-              return Map<String, Object>.from(store);
-            }
-            if (call.method == 'setBool' ||
-                call.method == 'setString' ||
-                call.method == 'setDouble' ||
-                call.method == 'setInt') {
-              final Map<String, dynamic> args = Map<String, dynamic>.from(
-                call.arguments as Map,
-              );
-              store[args['key'] as String] = args['value'] as Object;
-              return true;
-            }
-            if (call.method == 'remove') {
-              final Map<String, dynamic> args = Map<String, dynamic>.from(
-                call.arguments as Map,
-              );
-              store.remove(args['key'] as String);
-              return true;
-            }
-            return null;
-          },
-        );
+        if (call.method == 'getAll') {
+          return Map<String, Object>.from(store);
+        }
+        if (call.method == 'setBool' ||
+            call.method == 'setString' ||
+            call.method == 'setDouble' ||
+            call.method == 'setInt') {
+          final Map<String, dynamic> args = Map<String, dynamic>.from(
+            call.arguments as Map,
+          );
+          store[args['key'] as String] = args['value'] as Object;
+          return true;
+        }
+        if (call.method == 'remove') {
+          final Map<String, dynamic> args = Map<String, dynamic>.from(
+            call.arguments as Map,
+          );
+          store.remove(args['key'] as String);
+          return true;
+        }
+        return null;
+      },
+    );
 
     await Supabase.initialize(
       url: SupabaseConfig.url,
@@ -125,10 +141,10 @@ void main() {
   const Profile profile = Profile(id: 'user-1', fullName: 'Test User');
 
   Future<void> pumpProfile(
-    WidgetTester tester, {
-    Profile? override,
-    AccountRepository? accountRepository,
-  }) async {
+      WidgetTester tester, {
+        Profile? override,
+        AccountRepository? accountRepository,
+      }) async {
     await tester.binding.setSurfaceSize(const Size(600, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -175,8 +191,8 @@ void main() {
   });
 
   testWidgets('Insights & Analytics opens the Analytics screen', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     await pumpProfile(tester);
 
     await tester.ensureVisible(find.text('Insights & Analytics'));
@@ -188,8 +204,8 @@ void main() {
   });
 
   testWidgets('Edit Account opens the existing edit-name dialog', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     await pumpProfile(tester);
 
     await tester.tap(find.text('Edit Account'));
@@ -201,7 +217,7 @@ void main() {
 
   testWidgets(
     'Edit Account save immediately updates the displayed account name',
-    (tester) async {
+        (tester) async {
       final Map<String, Profile> holder = <String, Profile>{
         'profile': const Profile(id: 'user-1', fullName: 'Old Name'),
       };
@@ -256,9 +272,9 @@ void main() {
 
   testWidgets(
     'deactivate account requires confirmation then deactivates and signs out',
-    (tester) async {
+        (tester) async {
       final _RecordingAccountRepository accountRepository =
-          _RecordingAccountRepository();
+      _RecordingAccountRepository();
 
       await pumpProfile(tester, accountRepository: accountRepository);
 
@@ -283,10 +299,10 @@ void main() {
   );
 
   testWidgets('delete account requires typing DELETE before confirming', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     final _RecordingAccountRepository accountRepository =
-        _RecordingAccountRepository();
+    _RecordingAccountRepository();
 
     await pumpProfile(tester, accountRepository: accountRepository);
 

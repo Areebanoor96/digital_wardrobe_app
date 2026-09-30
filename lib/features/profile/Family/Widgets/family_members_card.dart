@@ -7,11 +7,13 @@ class FamilyMemberCard extends StatelessWidget {
     super.key,
     required this.member,
     this.onTap,
+    this.onEdit,
     this.onDelete,
   });
 
   final FamilyMember member;
   final VoidCallback? onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   @override
@@ -41,7 +43,7 @@ class FamilyMemberCard extends StatelessWidget {
           onSelected: (value) {
             switch (value) {
               case "edit":
-                onTap?.call();
+                onEdit?.call();
                 break;
 
               case "delete":

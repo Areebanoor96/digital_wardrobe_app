@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
@@ -11,6 +13,20 @@ class _FakeProfileRepository implements ProfileRepository {
 
   @override
   Future<Profile> fetchProfile() async => throw UnimplementedError();
+
+  @override
+  Future<String?> getAvatarSignedUrl(String path) async => null;
+
+  @override
+  Future<String> uploadAvatar(File file) async => 'avatars/fake_path.jpg';
+
+  @override
+  Future<void> updateProfileDetails({
+    required String fullName,
+    required String username,
+    String? pronouns,
+    String? gender,
+  }) async {}
 
   @override
   Future<void> updateName(String name) async {}
@@ -43,8 +59,8 @@ class _FakeProfileRepository implements ProfileRepository {
 
 void main() {
   testWidgets('shows supported notification preferences from the profile', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     const Profile profile = Profile(
       id: 'user-1',
       fullName: 'Test User',
@@ -80,8 +96,8 @@ void main() {
   });
 
   testWidgets('toggling persists through updateAlertPreferences', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     const Profile profile = Profile(
       id: 'user-1',
       fullName: 'Test User',

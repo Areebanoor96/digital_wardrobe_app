@@ -36,6 +36,9 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
     final garments = ref.watch(garmentsProvider);
     final ootd = ref.watch(ootdProvider);
     final actionState = ref.watch(ootdActionControllerProvider);
+    final DateTime? selectedCalendarDay = ref.watch(
+      selectedCalendarDayProvider,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -45,11 +48,13 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
         title: const Text('My Outfits'),
 
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/outfits/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Create outfit'),
-      ),
+      floatingActionButton: _selectedTabIndex == 1 && selectedCalendarDay != null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => context.push('/outfits/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('Create outfit'),
+            ),
       body: Column(
         children: [
           // Custom Editorial Pill Segment Controller

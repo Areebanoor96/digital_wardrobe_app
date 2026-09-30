@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'dart:io';
 import 'package:digital_wardrobe_app/core/services/app_info_service.dart';
 import 'package:digital_wardrobe_app/core/services/country_currency_service.dart';
 import 'package:digital_wardrobe_app/core/services/currency_formatter.dart';
@@ -27,8 +27,8 @@ import 'package:digital_wardrobe_app/data/repositories/outfit_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/wear_log_repository.dart';
 import 'package:digital_wardrobe_app/data/repositories/growth_repository.dart';
-import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart'
-    as alerts;
+import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart'as alerts;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -901,5 +901,45 @@ class FamilyMutationController extends AutoDisposeAsyncNotifier<void> {
             currentSize: currentSize,
           ),
     );
+  }
+}
+final profileControllerProvider =
+AutoDisposeAsyncNotifierProvider<ProfileController, void>(
+  ProfileController.new,
+);
+
+class ProfileController extends AutoDisposeAsyncNotifier<void> {
+  @override
+  FutureOr<void> build() {}
+
+  Future<void> updateProfile({
+    required String fullName,
+    required String username,
+    String? pronouns,
+    String? gender,
+  }) async {
+    state = const AsyncLoading<void>();
+    state = await AsyncValue.guard(
+          () => ref.read(profileRepositoryProvider).updateProfileDetails(
+        fullName: fullName,
+        username: username,
+        pronouns: pronouns,
+        gender: gender,
+      ),
+    );
+    if (!state.hasError) {
+      ref.invalidate(profileProvider);
+    }
+  }
+
+  Future<void> uploadAvatar(XFile file) async {
+    state = const AsyncLoading<void>();
+    state = await AsyncValue.guard(() async {
+      final repository = ref.read(profileRepositoryProvider);
+      await repository.uploadAvatar(File(file.path));
+    });
+    if (!state.hasError) {
+      ref.invalidate(profileProvider);
+    }
   }
 }

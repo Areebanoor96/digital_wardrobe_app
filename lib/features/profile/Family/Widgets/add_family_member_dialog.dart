@@ -24,6 +24,8 @@ bool isChildBirthDateValid({
 
 class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _heightController = TextEditingController();
+  final TextEditingController _weightController = TextEditingController();
 
   RelationshipType _relationship = RelationshipType.self;
   DateTime? _birthDate;
@@ -33,6 +35,8 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
   @override
   void dispose() {
     _nameController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -44,7 +48,19 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
       _nameController.text = widget.member!.name;
       _relationship = widget.member!.relationship;
       _birthDate = widget.member!.birthDate;
+      _heightController.text = _numberOrEmpty(widget.member!.heightCm);
+      _weightController.text = _numberOrEmpty(widget.member!.weightKg);
     }
+  }
+
+  static String _numberOrEmpty(double? value) {
+    if (value == null) {
+      return '';
+    }
+
+    return value % 1 == 0
+        ? value.toInt().toString()
+        : value.toStringAsFixed(1);
   }
 
   Future<void> _pickAvatar({required bool fromCamera}) async {
@@ -193,12 +209,38 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
 
                       setState(() {
                         _relationship = value;
-
-                        if (value != RelationshipType.child) {
-                          _birthDate = null;
-                        }
                       });
                     },
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _heightController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Height (cm)',
+                      hintText: 'Optional',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _weightController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Weight (kg)',
+                      hintText: 'Optional',
+                    ),
+                  ),
+                ),
+              ],
             ),
             if (_relationship == RelationshipType.child) ...<Widget>[
               const SizedBox(height: 16),
@@ -264,10 +306,43 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
         '${date.year}';
   }
 
+  double? _parseOptionalNumber(String value) {
+    final String trimmed = value.trim();
+
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final double? parsed = double.tryParse(trimmed);
+
+    if (parsed == null || parsed < 0) {
+      return null;
+    }
+
+    return parsed;
+  }
+
   Future<void> _saveMember() async {
     final String name = _nameController.text.trim();
 
     if (name.isEmpty || _isSaving) {
+      return;
+    }
+
+    final double? heightCm = _parseOptionalNumber(_heightController.text);
+    final double? weightKg = _parseOptionalNumber(_weightController.text);
+
+    if (heightCm == null && _heightController.text.trim().isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid height.')),
+      );
+      return;
+    }
+
+    if (weightKg == null && _weightController.text.trim().isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid weight.')),
+      );
       return;
     }
 
@@ -295,6 +370,8 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
               relationship: _relationship.name,
               avatarBytes: _selectedAvatarBytes,
               birthDate: _birthDate,
+              heightCm: heightCm,
+              weightKg: weightKg,
             );
       } else {
         // Update existing family member
@@ -305,6 +382,8 @@ class _AddFamilyMemberDialogState extends ConsumerState<AddFamilyMemberDialog> {
               name: name,
               relationship: _relationship.name,
               birthDate: _birthDate,
+              heightCm: heightCm,
+              weightKg: weightKg,
             );
 
         // Upload new avatar if user selected one

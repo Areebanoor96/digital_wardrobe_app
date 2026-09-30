@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/repositories/profile_repository.dart';
@@ -15,6 +17,27 @@ class _FakeProfileRepository implements ProfileRepository {
 
   @override
   Future<Profile> fetchProfile() async => profile;
+
+  @override
+  Future<String?> getAvatarSignedUrl(String path) async => null;
+
+  @override
+  Future<String> uploadAvatar(File file) async => 'avatars/fake_path.jpg';
+
+  @override
+  Future<void> updateProfileDetails({
+    required String fullName,
+    required String username,
+    String? pronouns,
+    String? gender,
+  }) async {
+    profile = profile.copyWith(
+      fullName: fullName,
+      username: username,
+      pronouns: pronouns,
+      gender: gender,
+    );
+  }
 
   @override
   Future<void> updateName(String name) async {}
@@ -47,10 +70,10 @@ class _FakeProfileRepository implements ProfileRepository {
 
 void main() {
   Future<void> pumpWizard(
-    WidgetTester tester,
-    Profile profile,
-    _FakeProfileRepository profileRepository,
-  ) async {
+      WidgetTester tester,
+      Profile profile,
+      _FakeProfileRepository profileRepository,
+      ) async {
     await tester.binding.setSurfaceSize(const Size(500, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -75,10 +98,10 @@ void main() {
   }
 
   testWidgets('country selector opens a searchable alphabetical list', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     final _FakeProfileRepository repository =
-        _FakeProfileRepository(const Profile(id: 'user-1'));
+    _FakeProfileRepository(const Profile(id: 'user-1'));
     await pumpWizard(tester, const Profile(id: 'user-1'), repository);
 
     expect(find.text('Country / Location'), findsOneWidget);
@@ -96,7 +119,7 @@ void main() {
 
   testWidgets('search filters the country list', (tester) async {
     final _FakeProfileRepository repository =
-        _FakeProfileRepository(const Profile(id: 'user-1'));
+    _FakeProfileRepository(const Profile(id: 'user-1'));
     await pumpWizard(tester, const Profile(id: 'user-1'), repository);
 
     await tester.tap(find.text('Pakistan'), warnIfMissed: false);
@@ -112,10 +135,10 @@ void main() {
   });
 
   testWidgets('selecting a country updates the field and persists on finish', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     final _FakeProfileRepository repository =
-        _FakeProfileRepository(const Profile(id: 'user-1'));
+    _FakeProfileRepository(const Profile(id: 'user-1'));
     await pumpWizard(tester, const Profile(id: 'user-1'), repository);
 
     await tester.tap(find.text('Pakistan'), warnIfMissed: false);
@@ -146,8 +169,8 @@ void main() {
   });
 
   testWidgets('existing saved country remains selected when returning', (
-    tester,
-  ) async {
+      tester,
+      ) async {
     const Profile profile = Profile(id: 'user-1', countryCode: 'GB');
     final _FakeProfileRepository repository = _FakeProfileRepository(profile);
     await pumpWizard(tester, profile, repository);
@@ -160,7 +183,7 @@ void main() {
 
   testWidgets('renders without overflow on a narrow screen', (tester) async {
     final _FakeProfileRepository repository =
-        _FakeProfileRepository(const Profile(id: 'user-1'));
+    _FakeProfileRepository(const Profile(id: 'user-1'));
     await pumpWizard(tester, const Profile(id: 'user-1'), repository);
 
     final FlutterError? overflow = tester.takeException() as FlutterError?;

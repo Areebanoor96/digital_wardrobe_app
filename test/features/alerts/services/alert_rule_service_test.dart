@@ -607,6 +607,171 @@ void main() {
       );
     });
   });
+
+  // ============================================================
+  // SIZE-GROWTH ALERTS
+  // ============================================================
+
+  group('AlertRuleService - Size Growth Alerts', () {
+    final DateTime fixedNow = DateTime(2026, 1, 15);
+    final AlertRuleService fixedService = AlertRuleService(now: () => fixedNow);
+
+    FamilyMember toddler({String? currentSize}) => FamilyMember(
+      id: 'child-1',
+      name: 'Ali',
+      relationship: RelationshipType.child,
+      birthDate: DateTime(2025, 1, 1),
+      currentSize: currentSize,
+    );
+
+    test('does not create size growth alert when preference is disabled', () {
+      final Map<String, dynamic>? alert = fixedService.buildSizeGrowthAlert(
+        member: toddler(currentSize: '0-1M'),
+        garment: _makeGarment(size: '1-3M'),
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: false,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('does not create size growth alert for an adult', () {
+      final FamilyMember adult = FamilyMember(
+        id: 'adult-1',
+        name: 'Adult',
+        relationship: RelationshipType.self,
+        birthDate: DateTime(2000, 1, 1),
+        currentSize: 'M',
+      );
+
+      final Map<String, dynamic>? alert = fixedService.buildSizeGrowthAlert(
+        member: adult,
+        garment: _makeGarment(size: 'L'),
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('does not create size growth alert for non-size garments', () {
+      final Map<String, dynamic>? alert = fixedService.buildSizeGrowthAlert(
+        member: toddler(currentSize: '0-1M'),
+        garment: _makeGarment(
+          size: 'M',
+          category: GarmentCategory.accessory,
+        ),
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('does not create size growth alert when garment is already smaller '
+        'than the child', () {
+      final Map<String, dynamic>? alert = fixedService.buildSizeGrowthAlert(
+        member: toddler(currentSize: '6-9M'),
+        garment: _makeGarment(size: '0-1M'),
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('does not create size growth alert beyond the lead time', () {
+      final Map<String, dynamic>? alert = fixedService.buildSizeGrowthAlert(
+        // Garment three steps above current: 3 x 3 months = 9 months, which is
+        // beyond the 3 month lead time for a one-year-old.
+        member: toddler(currentSize: '0-1M'),
+        garment: _makeGarment(size: '6-9M'),
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('creates size growth alert predicted within the lead time', () {
+      final Map<String, dynamic>? alert = fixedService.buildSizeGrowthAlert(
+        // One-year-old spends ~3 months per size step and the garment is one
+        // step ahead, so it will stop fitting in ~3 months.
+        member: toddler(currentSize: '0-1M'),
+        garment: _makeGarment(size: '1-3M'),
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{},
+        enabled: true,
+      );
+
+      expect(alert, isNotNull);
+      expect(alert!['type'], 'growth');
+      expect(alert['garment_id'], 'garment-1');
+      expect(alert['target_type'], 'garment');
+      expect(alert['target_id'], 'garment-1');
+      expect(alert['title'], 'Growing fast!');
+      expect(
+        (alert['action_payload'] as Map<String, dynamic>)['route'],
+        '/garments/garment-1',
+      );
+      expect(alert['body'], contains('Ali'));
+      expect(alert['body'], contains('by April'));
+    });
+
+    test('does not create a duplicate active size growth alert', () {
+      final Map<String, dynamic>? alert = fixedService.buildSizeGrowthAlert(
+        member: toddler(currentSize: '0-1M'),
+        garment: _makeGarment(size: '1-3M'),
+        measurements: const <GrowthMeasurement>[],
+        userId: 'user-1',
+        existingKeys: <String>{'growth_garment-1'},
+        enabled: true,
+      );
+
+      expect(alert, isNull);
+    });
+
+    test('shouldHaveSizeGrowthAlert reflects the prediction', () {
+      expect(
+        fixedService.shouldHaveSizeGrowthAlert(
+          member: toddler(currentSize: '0-1M'),
+          garment: _makeGarment(size: '1-3M'),
+          measurements: const <GrowthMeasurement>[],
+          enabled: true,
+        ),
+        isTrue,
+      );
+      expect(
+        fixedService.shouldHaveSizeGrowthAlert(
+          member: toddler(currentSize: '0-1M'),
+          garment: _makeGarment(size: '6-9M'),
+          measurements: const <GrowthMeasurement>[],
+          enabled: true,
+        ),
+        isFalse,
+      );
+      expect(
+        fixedService.shouldHaveSizeGrowthAlert(
+          member: toddler(currentSize: '0-1M'),
+          garment: _makeGarment(size: '1-3M'),
+          measurements: const <GrowthMeasurement>[],
+          enabled: false,
+        ),
+        isFalse,
+      );
+    });
+  });
 }
 
 // ============================================================
@@ -630,11 +795,14 @@ Garment _makeGarment({
   DateTime? lastWornDate,
   DateTime? createdAt,
   List<String> seasons = const <String>[],
+  String? size,
+  GarmentCategory category = GarmentCategory.top,
 }) {
   return Garment(
     id: id,
     name: 'Test Garment',
-    category: GarmentCategory.top,
+    category: category,
+    size: size,
     photoPaths: const <String>[],
     photoUrls: const <String>[],
     laundryStatus: laundryStatus,

@@ -83,30 +83,33 @@ class _OotdCardState extends State<OotdCard> {
           children: <Widget>[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    _headlinePill(
-                      colors: colors,
-                      theme: theme,
-                      icon: Icons.auto_awesome,
-                      label: 'Outfit of the Day',
-                      background: colors.primaryContainer.withOpacity(0.5),
-                      foreground: colors.primary,
-                    ),
-                    if (rec.score > 0)
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
                       _headlinePill(
                         colors: colors,
                         theme: theme,
-                        label: '${rec.score}% match',
-                        background: colors.primary,
-                        foreground: colors.onPrimary,
-                        bold: true,
+                        icon: Icons.auto_awesome,
+                        label: 'Outfit of the Day',
+                        background: colors.primaryContainer.withOpacity(0.5),
+                        foreground: colors.primary,
                       ),
-                  ],
+                      if (rec.score > 0)
+                        _headlinePill(
+                          colors: colors,
+                          theme: theme,
+                          label: '${rec.score}% match',
+                          background: colors.primary,
+                          foreground: colors.onPrimary,
+                          bold: true,
+                        ),
+                    ],
+                  ),
                 ),
                 if (rec.garments.isNotEmpty)
                   Row(

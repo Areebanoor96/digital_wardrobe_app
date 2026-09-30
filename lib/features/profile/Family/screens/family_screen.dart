@@ -1,12 +1,13 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
-import 'package:digital_wardrobe_app/core/services/profile_session_service.dart';
-import 'package:go_router/go_router.dart';
-import 'package:digital_wardrobe_app/features/profile/Family/screens/family_member_detail_screen.dart';
+import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/widgets/add_family_member_dialog.dart';
+import 'package:digital_wardrobe_app/features/profile/screens/edit_profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../widgets/family_members_card.dart';
 
@@ -51,13 +52,15 @@ itemBuilder: (context, index)  {
               return FamilyMemberCard(
                 member: member,
 
-                onTap: () {
+                onTap: () => context.push('/family/${member.id}'),
+                onEdit: () {
+                  final Profile? primaryUser = ref.read(profileProvider).valueOrNull;
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (BuildContext context) =>
-                          FamilyMemberDetailScreen(
-                            member: member,
-                          ),
+                      builder: (BuildContext context) => EditProfileScreen(
+                        member: member,
+                        profile: member.isAccount ? primaryUser : null,
+                      ),
                     ),
                   );
                 },

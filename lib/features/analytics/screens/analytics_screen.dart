@@ -1,16 +1,22 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/currency_formatter.dart';
+import 'package:digital_wardrobe_app/core/theme/app_radius.dart';
 import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_section_header.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/analytics.dart';
+import 'package:digital_wardrobe_app/data/models/garment.dart';
+import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/features/analytics/widgets/analytics_metric_card.dart';
 import 'package:digital_wardrobe_app/features/analytics/widgets/outfit_insights_section.dart';
 import 'package:digital_wardrobe_app/features/analytics/widgets/wear_activity_section.dart';
+import 'package:digital_wardrobe_app/features/shell/screens/app_shell_screen.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({
@@ -66,7 +72,14 @@ class AnalyticsScreen extends ConsumerWidget {
                 AppSpacing.xxxl,
               ),
               children: <Widget>[
-                _KeyMetricsGrid(data: data, formatter: formatter),
+                _KeyMetricsGrid(
+                  data: data,
+                  formatter: formatter,
+                  onTotalGarmentsTap: () => _openWardrobe(context, ref),
+                  onActiveTap: () => _openWardrobe(context, ref),
+                  onWearHistoryTap: () => _openWearHistory(context),
+                  onVaultTap: () => context.push('/garments/archived'),
+                ),
                 const SizedBox(height: AppSpacing.xxl),
                 _CategoryBreakdown(data: data),
                 const SizedBox(height: AppSpacing.xxl),
@@ -84,6 +97,28 @@ class AnalyticsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  /// Switches the shell back to the Wardrobe tab. Analytics is usually pushed
+  /// on top of the shell, so after the request the screen is popped to reveal
+  /// the freshly-selected tab underneath.
+  void _openWardrobe(BuildContext context, WidgetRef ref) {
+    ref.read(shellTabRequestProvider.notifier).state = 0;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// Opens a bottom sheet with a per-garment wear breakdown built from the
+  /// existing recent-wear activity provider.
+  void _openWearHistory(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (BuildContext sheetContext) => const _WearHistorySheet(),
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -91,10 +126,21 @@ class AnalyticsScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _KeyMetricsGrid extends StatelessWidget {
-  const _KeyMetricsGrid({required this.data, required this.formatter});
+  const _KeyMetricsGrid({
+    required this.data,
+    required this.formatter,
+    required this.onTotalGarmentsTap,
+    required this.onActiveTap,
+    required this.onWearHistoryTap,
+    required this.onVaultTap,
+  });
 
   final AnalyticsSummary data;
   final CurrencyFormatter formatter;
+  final VoidCallback onTotalGarmentsTap;
+  final VoidCallback onActiveTap;
+  final VoidCallback onWearHistoryTap;
+  final VoidCallback onVaultTap;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +166,7 @@ class _KeyMetricsGrid extends StatelessWidget {
                 title: 'Total garments',
                 value: '${data.totalGarments}',
                 icon: Icons.checkroom_outlined,
+                onTap: onTotalGarmentsTap,
               ),
             ),
             SizedBox(
@@ -129,6 +176,7 @@ class _KeyMetricsGrid extends StatelessWidget {
                 value: '${data.activeGarments}',
                 icon: Icons.inventory_2_outlined,
                 color: Theme.of(context).colorScheme.tertiary,
+                onTap: onActiveTap,
               ),
             ),
             SizedBox(
@@ -137,6 +185,7 @@ class _KeyMetricsGrid extends StatelessWidget {
                 title: 'Total wears',
                 value: '${data.totalWears}',
                 icon: Icons.bar_chart_outlined,
+                onTap: onWearHistoryTap,
               ),
             ),
             SizedBox(
@@ -156,6 +205,7 @@ class _KeyMetricsGrid extends StatelessWidget {
                   value: '${data.archivedGarments}',
                   icon: Icons.archive_outlined,
                   color: Theme.of(context).colorScheme.outline,
+                  onTap: onVaultTap,
                 ),
               ),
             if (avgWears != null && avgWears > 0)
@@ -454,4 +504,213 @@ class _WearRankItem {
   final String label;
   final String name;
   final int? wears;
+}
+
+// ---------------------------------------------------------------------------
+// Wear History Bottom Sheet
+// ---------------------------------------------------------------------------
+
+/// Detailed wear-history modal: groups the recent wear activity by garment so
+/// each garment shows its individual wear breakdown (count + last worn date).
+/// Reuses the existing [recentWearActivityProvider] and [garmentsProvider] —
+/// no new queries are issued.
+class _WearHistorySheet extends ConsumerWidget {
+  const _WearHistorySheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final AsyncValue<List<WearLog>> activity = ref.watch(
+      recentWearActivityProvider,
+    );
+    final List<Garment> garments =
+        ref.watch(garmentsProvider).valueOrNull ?? const <Garment>[];
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.72,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.xs,
+            AppSpacing.xl,
+            AppSpacing.xxxl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Wear history',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Individual garment wear breakdown',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              activity.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                  child: Center(
+                    child: AppLoadingState(
+                      showIcon: false,
+                      label: 'Loading wear history',
+                    ),
+                  ),
+                ),
+                error: (_, _) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.xxl,
+                  ),
+                  child: Center(
+                    child: Text(
+                      'Could not load wear history.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+                data: (List<WearLog> logs) {
+                  if (logs.isEmpty) {
+                    return const AppEmptyState(
+                      icon: Icons.history,
+                      title: 'No wear history yet',
+                      message:
+                          'Wear records will appear here as you mark '
+                          'garments as worn.',
+                    );
+                  }
+
+                  final List<_GarmentWearEntry> entries = _groupBreakdown(
+                    logs,
+                    garments,
+                  );
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      for (
+                        int index = 0;
+                        index < entries.length;
+                        index++
+                      ) ...<Widget>[
+                        if (index > 0)
+                          const Divider(
+                            height: 1,
+                            indent: 68,
+                            endIndent: 0,
+                          ),
+                        _WearBreakdownTile(entry: entries[index]),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GarmentWearEntry {
+  const _GarmentWearEntry({
+    required this.garment,
+    required this.count,
+    required this.lastWorn,
+  });
+
+  final Garment? garment;
+  final int count;
+  final DateTime lastWorn;
+}
+
+List<_GarmentWearEntry> _groupBreakdown(
+  List<WearLog> logs,
+  List<Garment> garments,
+) {
+  final Map<String, List<WearLog>> byGarment = <String, List<WearLog>>{};
+  for (final WearLog log in logs) {
+    byGarment.putIfAbsent(log.garmentId, () => <WearLog>[]).add(log);
+  }
+
+  final List<_GarmentWearEntry> entries = <_GarmentWearEntry>[];
+  byGarment.forEach((String garmentId, List<WearLog> garmentLogs) {
+    garmentLogs.sort((WearLog a, WearLog b) => b.wornDate.compareTo(a.wornDate));
+    final Garment? garment = _garmentById(garments, garmentId);
+    entries.add(
+      _GarmentWearEntry(
+        garment: garment,
+        count: garmentLogs.length,
+        lastWorn: garmentLogs.first.wornDate,
+      ),
+    );
+  });
+
+  entries.sort(
+    (_GarmentWearEntry a, _GarmentWearEntry b) =>
+        b.lastWorn.compareTo(a.lastWorn),
+  );
+  return entries;
+}
+
+Garment? _garmentById(List<Garment> garments, String garmentId) {
+  for (final Garment garment in garments) {
+    if (garment.id == garmentId) {
+      return garment;
+    }
+  }
+  return null;
+}
+
+class _WearBreakdownTile extends StatelessWidget {
+  const _WearBreakdownTile({required this.entry});
+
+  final _GarmentWearEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme text = Theme.of(context).textTheme;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 0,
+        vertical: AppSpacing.xs,
+      ),
+      leading: SizedBox(
+        width: 48,
+        height: 48,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: GarmentImage(imageUrl: entry.garment?.coverImageUrl),
+        ),
+      ),
+      title: Text(
+        entry.garment?.name ?? 'In Closet Vault',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        '${entry.count} wear${entry.count == 1 ? '' : 's'}',
+        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+      ),
+      trailing: Text(
+        formatWearDate(entry.lastWorn),
+        style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+      ),
+    );
+  }
 }

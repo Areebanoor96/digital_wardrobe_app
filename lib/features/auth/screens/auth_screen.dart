@@ -1,7 +1,7 @@
 import 'package:digital_wardrobe_app/core/config/supabase_config.dart';
+import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/features/auth/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -123,7 +123,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         }
       },
     );
+
     if (!SupabaseConfig.isConfigured) return const _SupabaseSetupNotice();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Digital Wardrobe')),
       body: SafeArea(
@@ -169,26 +171,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             Form(
               key: _formKey,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  if (_isSignUp)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: TextFormField(
-                        controller: _nameController,
-                        textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(labelText: 'Name'),
-                        validator: (String? value) =>
-                            value == null || value.trim().isEmpty
-                            ? 'Enter your name'
-                            : null,
+                  if (_isSignUp) ...<Widget>[
+                    TextFormField(
+                      controller: _nameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Name',
+                        prefixIcon: Icon(Icons.person_outline),
                       ),
+                      validator: (String? value) =>
+                      value == null || value.trim().isEmpty
+                          ? 'Enter your name'
+                          : null,
                     ),
+                    const SizedBox(height: 12),
+                  ],
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
                     validator: (String? value) =>
-                        value == null || !value.contains('@')
+                    value == null || !value.contains('@')
                         ? 'Enter a valid email'
                         : null,
                   ),
@@ -198,11 +206,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         onPressed: () {
                           setState(() {
-                            _obscurePassword =
-                            !_obscurePassword;
+                            _obscurePassword = !_obscurePassword;
                           });
                         },
                         icon: Icon(
@@ -217,32 +225,38 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         ? 'Use at least 6 characters'
                         : null,
                   ),
+                  const SizedBox(height: 8),
+                  if (!_isSignUp)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          context.push('/forgot-password');
+                        },
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    child: _submitting
+                        ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : Text(_isSignUp ? 'Create account' : 'Sign in'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                    child: Text(
+                      _isSignUp
+                          ? 'Already have an account? Sign in'
+                          : 'New here? Create an account',
+                    ),
+                  ),
                 ],
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  context.push('/forgot-password');
-                },
-                child: const Text('Forgot password?'),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: _submitting ? null : _submit,
-              child: Text(
-                _submitting
-                    ? 'Please wait...'
-                    : (_isSignUp ? 'Create account' : 'Sign in'),
-              ),
-            ),
-            TextButton(
-              onPressed: () => setState(() => _isSignUp = !_isSignUp),
-              child: Text(
-                _isSignUp
-                    ? 'Already have an account? Sign in'
-                    : 'New here? Create an account',
               ),
             ),
           ],
@@ -273,7 +287,7 @@ class _SupabaseSetupNotice extends StatelessWidget {
               const SizedBox(height: 12),
               const Text(
                 'Run the app with SUPABASE_URL and SUPABASE_ANON_KEY '
-                'dart-defines after creating your Supabase project.',
+                    'dart-defines after creating your Supabase project.',
                 textAlign: TextAlign.center,
               ),
             ],

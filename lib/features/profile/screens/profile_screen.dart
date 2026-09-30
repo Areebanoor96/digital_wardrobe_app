@@ -4,12 +4,13 @@ import 'package:digital_wardrobe_app/core/services/profile_session_service.dart'
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/core/services/theme_preference_service.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
-import 'package:digital_wardrobe_app/features/profile/screens/edit_profile_screen.dart';
+import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/features/analytics/screens/analytics_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/change_password_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/Family/screens/family_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/about_screen.dart';
+import 'package:digital_wardrobe_app/features/profile/screens/edit_profile_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/help_faq_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/notification_preferences_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
@@ -29,8 +30,10 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(profileProvider);
-    final selectedMember = ref.watch(selectedFamilyMemberProvider);
+    final AsyncValue<Profile> profileAsync = ref.watch(profileProvider);
+    final FamilyMember? activeMember = ref.watch(
+      selectedFamilyMemberProvider,
+    );
     final String email = SupabaseService.client.auth.currentUser?.email ?? '';
 
     return Scaffold(
@@ -40,199 +43,272 @@ class ProfileScreen extends ConsumerWidget {
             : null,
         title: const Text('Profile'),
       ),
-      body: profile.when(
+      body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('Could not load profile.')),
-        // NEW CODE TO REPLACE WITH:
-        data: (Profile user) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            // 1. User Header Card
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(20),
+        data: (Profile primaryUser) {
+          // Resolve the active context: a selected sub-profile (family member)
+          // takes precedence over the primary account holder.
+          final String displayName =
+              activeMember?.name ?? primaryUser.fullName ?? email;
+          final String? displayAvatar =
+              activeMember?.avatarUrl ?? primaryUser.avatarUrl;
+          final String displaySubTitle = _resolveDisplaySubTitle(
+            activeMember,
+            primaryUser,
+            email,
+          );
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: <Widget>[
+              // 1. Dynamic Context Header
+              _ProfileHeaderCard(
+                displayName: displayName,
+                displayAvatar: displayAvatar,
+                displaySubTitle: displaySubTitle,
+                isSubProfile: activeMember != null,
               ),
-              child: Column(
+              const SizedBox(height: 24),
+
+              // 2. Section A: Active Profile Actions (contextual)
+              const _SectionHeader(title: 'Active Profile'),
+              const SizedBox(height: 8),
+              _CardGroup(
                 children: <Widget>[
-                  FamilyMemberAvatar(name: user.fullName ?? email, radius: 36),
-                  const SizedBox(height: 10),
-                  Text(
-                    user.fullName ?? email,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  ListTile(
+                    leading: const Icon(Icons.edit_outlined),
+                    title: const Text('Edit Profile'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        _editActiveProfile(context, ref, activeMember),
                   ),
-                  if (email.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 2),
-                    Text(
-                      email,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  ListTile(
+                    leading: const Icon(Icons.switch_account_outlined),
+                    title: const Text('Switch Profile'),
+                    subtitle: Text('Currently managing $displayName'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/profiles'),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // 2. Primary Group Card (Core Settings & Actions)
-            _CardGroup(
-              children: <Widget>[
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined),
-                  title: const Text('Edit Account'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) => const EditProfileScreen(),
+              // 3. Section B: Primary Account & System Settings
+              const _SectionHeader(title: 'Account & System'),
+              const SizedBox(height: 8),
+              _CardGroup(
+                children: <Widget>[
+                  ListTile(
+                    leading: const Icon(Icons.people_outline),
+                    title: const Text('Manage Family Members'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) => const FamilyScreen(),
+                      ),
                     ),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.people_outline),
-                  title: const Text('Manage Family Members'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) => const FamilyScreen(),
+                  ListTile(
+                    leading: const Icon(Icons.insights_outlined),
+                    title: const Text('Insights & Analytics'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) =>
+                            const AnalyticsScreen(canNavigateBack: true),
+                      ),
                     ),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.switch_account_outlined),
-                  title: const Text('Switch Profile'),
-                  subtitle: Text(
-                    selectedMember == null
-                        ? 'No wardrobe selected'
-                        : 'Currently using ${selectedMember.name}',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go('/profiles'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.insights_outlined),
-                  title: const Text('Insights & Analytics'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) =>
-                      const AnalyticsScreen(canNavigateBack: true),
+                  ListTile(
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: const Text('Notifications & Preferences'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) =>
+                            const NotificationPreferencesScreen(),
+                      ),
                     ),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: const Text('Notifications'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) =>
-                      const NotificationPreferencesScreen(),
-                    ),
+                  ListTile(
+                    leading: const Icon(Icons.lock_outline),
+                    title: const Text('Password & Security'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _openChangePassword(context),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: const Text('Password'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _openChangePassword(context),
-                ),
-                SwitchListTile(
-                  secondary: const Icon(Icons.dark_mode_outlined),
-                  title: const Text('Dark Mode'),
-                  value: ref.watch(themeModeProvider) == ThemeMode.dark,
-                  onChanged: (bool value) => _setDarkMode(context, ref, value),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // 3. Support & About Group Card
-            _CardGroup(
-              children: <Widget>[
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text('About Digital Wardrobe'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) => const AboutScreen(),
-                    ),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.dark_mode_outlined),
+                    title: const Text('Dark Mode'),
+                    value: ref.watch(themeModeProvider) == ThemeMode.dark,
+                    onChanged: (bool value) =>
+                        _setDarkMode(context, ref, value),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.help_outline),
-                  title: const Text('Help / FAQ'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (BuildContext context) => const HelpFaqScreen(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // 4. Log Out Button
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                ],
               ),
-              onPressed: () async {
-                await ProfileSessionService.clearSelectedProfile();
-                ref.read(selectedFamilyMemberProvider.notifier).state = null;
-                await SupabaseService.client.auth.signOut();
-                if (context.mounted) {
-                  context.go('/auth');
-                }
-              },
-              icon: const Icon(Icons.logout, size: 20),
-              label: const Text('Log Out'),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 24),
 
-            // 5. Account Destruction Links
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () => _confirmDeactivateAccount(context, ref),
-                  child: Text(
-                    'Deactivate Account',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                      fontSize: 13,
+              // 4. Support & Legal
+              const _SectionHeader(title: 'Support & Legal'),
+              const SizedBox(height: 8),
+              _CardGroup(
+                children: <Widget>[
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('About Digital Wardrobe'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) => const AboutScreen(),
+                      ),
                     ),
                   ),
-                ),
-                Text(
-                  '•',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => _confirmDeleteAccount(context, ref),
-                  child: Text(
-                    'Delete Account',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                      fontSize: 13,
+                  ListTile(
+                    leading: const Icon(Icons.help_outline),
+                    title: const Text('Help / FAQ'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (BuildContext context) => const HelpFaqScreen(),
+                      ),
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // 5. Danger Zone (always primary account context)
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
-              ],
-            ),
-          ],
+                onPressed: () async {
+                  await ProfileSessionService.clearSelectedProfile();
+                  ref.read(selectedFamilyMemberProvider.notifier).state = null;
+                  await SupabaseService.client.auth.signOut();
+                  if (context.mounted) {
+                    context.go('/auth');
+                  }
+                },
+                icon: const Icon(Icons.logout, size: 20),
+                label: const Text('Log Out'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => _confirmDeactivateAccount(context, ref),
+                    child: Text(
+                      'Deactivate Account',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '•',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _confirmDeleteAccount(context, ref),
+                    child: Text(
+                      'Delete Account',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Resolves the header subtitle based on the active context.
+  ///
+  /// The primary user shows their identity line directly beneath the name:
+  /// `@username • pronouns` when both are present, falling back to whichever
+  /// is available, then email. A selected sub-profile shows its relationship
+  /// badge instead (members carry no username/pronouns on the FamilyMember
+  /// model or backend).
+  String _resolveDisplaySubTitle(
+    FamilyMember? activeMember,
+    Profile primaryUser,
+    String email,
+  ) {
+    if (activeMember != null) {
+      return 'Family Profile • ${activeMember.relationship.label}';
+    }
+
+    final List<String> parts = <String>[
+      if (primaryUser.username != null && primaryUser.username!.isNotEmpty)
+        '@${primaryUser.username}',
+      if (primaryUser.pronouns != null && primaryUser.pronouns!.isNotEmpty)
+        primaryUser.pronouns!,
+    ];
+
+    if (parts.isNotEmpty) {
+      return parts.join(' • ');
+    }
+
+    return email;
+  }
+
+  /// Opens [EditProfileScreen] for the currently active profile.
+  ///
+  /// The screen edits any profile in the household. When the active member is
+  /// the account holder's own `self` row, [EditProfileScreen.profile] is passed
+  /// through so the username field appears and `profiles` stays in step.
+  ///
+  /// Splash and the setup wizard both auto-select the Self member, so the null
+  /// case is rare; it still falls back to resolving the Self member explicitly
+  /// rather than opening an editor bound to a non-existent row.
+  ///
+  /// [EditProfileScreen] refreshes the selected member itself after saving, so
+  /// the header does not go stale.
+  Future<void> _editActiveProfile(
+    BuildContext context,
+    WidgetRef ref,
+    FamilyMember? activeMember,
+  ) async {
+    FamilyMember? target = activeMember;
+
+    if (target == null) {
+      final List<FamilyMember> members =
+          await ref.read(familyMembersProvider.future);
+      target = members.where((FamilyMember m) => m.isAccount).firstOrNull;
+    }
+
+    if (!context.mounted) return;
+
+    final FamilyMember? resolved = target;
+    if (resolved == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No profile selected. Choose a profile first.'),
+        ),
+      );
+      return;
+    }
+
+    final Profile? primaryUser = ref.read(profileProvider).valueOrNull;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => EditProfileScreen(
+          member: resolved,
+          profile: resolved.isAccount ? primaryUser : null,
         ),
       ),
     );
@@ -256,19 +332,20 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _setDarkMode(
-      BuildContext context,
-      WidgetRef ref,
-      bool enabled,
-      ) async {
+    BuildContext context,
+    WidgetRef ref,
+    bool enabled,
+  ) async {
     ref.read(themeModeProvider.notifier).state = enabled
         ? ThemeMode.dark
         : ThemeMode.light;
     await ThemePreferenceService.setDarkModeEnabled(enabled);
   }
+
   Future<void> _confirmDeactivateAccount(
-      BuildContext context,
-      WidgetRef ref,
-      ) async {
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -320,9 +397,9 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDeleteAccount(
-      BuildContext context,
-      WidgetRef ref,
-      ) async {
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => const _DeleteAccountConfirmationDialog(),
@@ -355,6 +432,80 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 }
+
+/// Dynamic profile header that renders the active account context: name,
+/// avatar (primary user or family member), and a contextual subtitle.
+class _ProfileHeaderCard extends StatelessWidget {
+  const _ProfileHeaderCard({
+    required this.displayName,
+    required this.displayAvatar,
+    required this.displaySubTitle,
+    this.isSubProfile = false,
+  });
+
+  final String displayName;
+  final String? displayAvatar;
+  final String displaySubTitle;
+  final bool isSubProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: <Widget>[
+          FamilyMemberAvatar(
+            name: displayName,
+            avatarUrl: displayAvatar,
+            radius: 36,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            displayName,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            displaySubTitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: isSubProfile ? colors.primary : colors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small uppercase-style label separating screen sections.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.2,
+      ),
+    );
+  }
+}
+
 class _CardGroup extends StatelessWidget {
   const _CardGroup({required this.children});
 

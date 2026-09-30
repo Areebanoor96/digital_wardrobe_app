@@ -365,26 +365,23 @@ class _DayDetails extends ConsumerWidget {
             message: 'We could not load what was worn on this date.',
             onAction: () => ref.invalidate(selectedDayWearHistoryProvider),
           ),
-          data: (List<WearLog> dayLogs) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (dayLogs.isEmpty)
-                const AppEmptyState(
+          data: (List<WearLog> dayLogs) => dayLogs.isEmpty
+              ? const AppEmptyState(
                   icon: Icons.event_note_outlined,
                   title: 'Nothing worn this day',
                   message:
                       'No garments or outfits were recorded for this date.',
                 )
-              else
-                ..._buildWearTiles(dayLogs, garments, outfits),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton.icon(
-                onPressed: () => context.push('/ootd/plan/${_dateKey(day)}'),
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Plan outfit for this date'),
-              ),
-            ],
-          ),
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _buildWearTiles(dayLogs, garments, outfits),
+                ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FilledButton.icon(
+          onPressed: () => context.push('/ootd/plan/${_dateKey(day)}'),
+          icon: const Icon(Icons.auto_awesome),
+          label: const Text('Plan outfit for this date'),
         ),
       ],
     );

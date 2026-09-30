@@ -1,12 +1,16 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
-import 'package:digital_wardrobe_app/features/auth/screens/verify_email_screen.dart';
+import 'package:digital_wardrobe_app/features/alerts/screens/alerts_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/auth_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/deactivated_account_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/forgot_password_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/new_password_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/onboarding_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/reset_password_otp_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/setup_wizard_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/splash_screen.dart';
-import 'package:digital_wardrobe_app/features/auth/screens/deactivated_account_screen.dart';
+import 'package:digital_wardrobe_app/features/auth/screens/verify_email_screen.dart';
 import 'package:digital_wardrobe_app/features/garment_form/screens/garment_form_screen.dart';
 import 'package:digital_wardrobe_app/features/ootd/screens/ootd_plan_screen.dart';
 import 'package:digital_wardrobe_app/features/ootd/screens/ootd_recommendation_screen.dart';
@@ -15,15 +19,11 @@ import 'package:digital_wardrobe_app/features/outfits/screens/outfit_detail_scre
 import 'package:digital_wardrobe_app/features/profile/Family/screens/family_member_detail_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/profile_selection_screen.dart';
 import 'package:digital_wardrobe_app/features/shell/screens/app_shell_screen.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/screens/archived_garments_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_detail_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/garment_locations_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/screens/archived_garments_screen.dart';
-import 'package:digital_wardrobe_app/features/auth/screens/forgot_password_screen.dart';
-import 'package:digital_wardrobe_app/features/auth/screens/reset_password_otp_screen.dart';
-import 'package:digital_wardrobe_app/features/auth/screens/new_password_screen.dart';
 import 'package:go_router/go_router.dart';
-import 'package:digital_wardrobe_app/features/alerts/screens/alerts_screen.dart';
 final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
   return GoRouter(
     initialLocation: '/splash',

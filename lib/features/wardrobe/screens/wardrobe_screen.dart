@@ -155,7 +155,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                           AppSpacing.xl,
                           0,
                           AppSpacing.xl,
-                          AppSpacing.md,
+                          AppSpacing.sm,
                         ),
                         child: WardrobeHeader(
                           title: 'My Wardrobe',
@@ -201,7 +201,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.xl,
-                      AppSpacing.lg,
+                      AppSpacing.sm,
                       AppSpacing.xl,
                       0,
                     ),

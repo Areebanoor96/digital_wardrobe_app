@@ -8,6 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Ephemeral channel that lets screens pushed above the shell (e.g. Analytics)
+/// request switching the active bottom-navigation tab. The shell consumes the
+/// request immediately after applying it, so the state settles back to `null`.
+final StateProvider<int?> shellTabRequestProvider = StateProvider<int?>(
+  (Ref ref) => null,
+);
+
 class AppShellScreen extends ConsumerStatefulWidget {
   const AppShellScreen({super.key});
 
@@ -84,6 +91,14 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int?>(shellTabRequestProvider, (int? previous, int? next) {
+      if (next == null) {
+        return;
+      }
+      _selectTab(next);
+      ref.read(shellTabRequestProvider.notifier).state = null;
+    });
+
     final bool canNavigateBack = _tabHistory.length > 1;
     final List<Widget> screens = <Widget>[
       WardrobeScreen(

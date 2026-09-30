@@ -64,7 +64,7 @@ class WardrobeFilterToolbar extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Align(
-            alignment: Alignment.centerLeft,
+            alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
               onPressed: onOpenFilters,
               icon: const Icon(Icons.tune, size: AppDimensions.iconMd),
