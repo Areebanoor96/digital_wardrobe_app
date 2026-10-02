@@ -44,13 +44,16 @@ class AnalyticsMetricCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
               ],
               Expanded(
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: effectiveColor,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: text.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: effectiveColor,
+                    ),
                   ),
                 ),
               ),

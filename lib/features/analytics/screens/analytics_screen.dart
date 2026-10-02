@@ -151,10 +151,10 @@ class _KeyMetricsGrid extends StatelessWidget {
             constraints.maxWidth >= spacing
                 ? (constraints.maxWidth - spacing) / 2
                 : constraints.maxWidth;
-        final double? avgWears =
-            data.activeGarments > 0
-                ? data.totalWears / data.activeGarments
-                : null;
+        // final double? avgWears =
+        //     data.activeGarments > 0
+        //         ? data.totalWears / data.activeGarments
+        //         : null;
 
         return Wrap(
           spacing: spacing,
@@ -206,15 +206,6 @@ class _KeyMetricsGrid extends StatelessWidget {
                   icon: Icons.archive_outlined,
                   color: Theme.of(context).colorScheme.outline,
                   onTap: onVaultTap,
-                ),
-              ),
-            if (avgWears != null && avgWears > 0)
-              SizedBox(
-                width: cardWidth,
-                child: AnalyticsMetricCard(
-                  title: 'Avg wears per garment',
-                  value: avgWears.toStringAsFixed(1),
-                  icon: Icons.straighten_outlined,
                 ),
               ),
           ],

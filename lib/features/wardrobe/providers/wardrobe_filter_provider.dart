@@ -103,6 +103,9 @@ final Provider<List<Garment>> filteredGarmentsProvider =
                 garment.subcategory?.toLowerCase() ==
                     filters.outerwearSubcategory!.toLowerCase());
 
+        final bool matchesNeverWorn = !filters.neverWornOnly ||
+            (garment.wearCount == 0 || garment.lastWornDate == null);
+
         return matchesSearch &&
             matchesCategory &&
             matchesColor &&
@@ -116,7 +119,8 @@ final Provider<List<Garment>> filteredGarmentsProvider =
             matchesLocation &&
             matchesStitching &&
             matchesIroning &&
-            matchesOuterwearSubcategory;
+            matchesOuterwearSubcategory &&
+            matchesNeverWorn;
       }).toList();
 
       _sortGarments(filtered, filters.sortOption);
@@ -213,6 +217,13 @@ class WardrobeFilterNotifier extends StateNotifier<WardrobeFilters> {
     state = state.copyWith(sortOption: value);
   }
 
+  void setNeverWornOnly(bool? value) {
+    state = state.copyWith(
+      neverWornOnly: value,
+      clearNeverWornOnly: value == null,
+    );
+  }
+
   void clearFilters() {
     state = WardrobeFilters(
       searchQuery: state.searchQuery,
@@ -296,6 +307,17 @@ void _sortGarments(List<Garment> garments, WardrobeSortOption option) {
       garments.sort(
         (Garment a, Garment b) =>
             b.name.toLowerCase().compareTo(a.name.toLowerCase()),
+      );
+
+    case WardrobeSortOption.neverWorn:
+      garments.sort(
+        (Garment a, Garment b) {
+          final bool aNever = a.wearCount == 0 || a.lastWornDate == null;
+          final bool bNever = b.wearCount == 0 || b.lastWornDate == null;
+          if (aNever && !bNever) return -1;
+          if (bNever && !aNever) return 1;
+          return 0;
+        },
       );
   }
 }

@@ -222,7 +222,7 @@ class GarmentDetailScreen extends ConsumerWidget {
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            'Availability Status',
+                                            'Change Status',
                                             style: TextStyle(
                                               color: Theme.of(
                                                 context,
@@ -1084,7 +1084,10 @@ class _GarmentHeroState extends State<_GarmentHero> {
             fit: StackFit.expand,
             children: <Widget>[
               if (widget.photoUrls.isEmpty)
-                const GarmentImage(imageUrl: null)
+                const ColoredBox(
+                  color: Color(0xFFF4F4F8),
+                  child: Center(child: GarmentImage(imageUrl: null)),
+                )
               else
                 PageView.builder(
                   itemCount: widget.photoUrls.length,
@@ -1094,7 +1097,14 @@ class _GarmentHeroState extends State<_GarmentHero> {
                     });
                   },
                   itemBuilder: (BuildContext context, int index) {
-                    return GarmentImage(imageUrl: widget.photoUrls[index]);
+                    return ColoredBox(
+                      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                      child: GarmentImage(
+                        imageUrl: widget.photoUrls[index],
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
+                      ),
+                    );
                   },
                 ),
               if (widget.photoUrls.length > 1)

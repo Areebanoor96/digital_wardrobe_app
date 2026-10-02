@@ -12,7 +12,8 @@ enum WardrobeSortOption {
   purchaseNewest,
   purchaseOldest,
   nameAZ,
-  nameZA;
+  nameZA,
+  neverWorn;
 
   String get label => switch (this) {
     WardrobeSortOption.newestAdded => 'Newest Added',
@@ -27,6 +28,7 @@ enum WardrobeSortOption {
     WardrobeSortOption.purchaseOldest => 'Purchase Date: Oldest',
     WardrobeSortOption.nameAZ => 'Name: A-Z',
     WardrobeSortOption.nameZA => 'Name: Z-A',
+    WardrobeSortOption.neverWorn => 'Never Worn',
   };
 }
 
@@ -48,6 +50,7 @@ class WardrobeFilters {
     this.ironingStatus,
     this.outerwearSubcategory,
     this.sortOption = WardrobeSortOption.leastWorn,
+    this.neverWornOnly = false,
   });
 
   final String searchQuery;
@@ -66,6 +69,7 @@ class WardrobeFilters {
   final IroningStatus? ironingStatus;
   final String? outerwearSubcategory;
   final WardrobeSortOption sortOption;
+  final bool neverWornOnly;
 
   int get activeFilterCount {
     int count = 0;
@@ -106,6 +110,7 @@ class WardrobeFilters {
     IroningStatus? ironingStatus,
     String? outerwearSubcategory,
     WardrobeSortOption? sortOption,
+    bool? neverWornOnly,
     bool clearCategory = false,
     bool clearColor = false,
     bool clearBrand = false,
@@ -119,6 +124,7 @@ class WardrobeFilters {
     bool clearStitchingStatus = false,
     bool clearIroningStatus = false,
     bool clearOuterwearSubcategory = false,
+    bool clearNeverWornOnly = false,
   }) {
     return WardrobeFilters(
       searchQuery: searchQuery ?? this.searchQuery,
@@ -147,6 +153,8 @@ class WardrobeFilters {
           ? null
           : outerwearSubcategory ?? this.outerwearSubcategory,
       sortOption: sortOption ?? this.sortOption,
+      neverWornOnly:
+          clearNeverWornOnly ? false : neverWornOnly ?? this.neverWornOnly,
     );
   }
 }

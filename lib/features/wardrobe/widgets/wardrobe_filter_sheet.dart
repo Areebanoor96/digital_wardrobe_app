@@ -343,6 +343,30 @@ class WardrobeFilterSheet extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
 
+                    DropdownButtonFormField<bool?>(
+                      initialValue: filters.neverWornOnly ? true : null,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.access_time_outlined),
+                        labelText: 'Never worn',
+                      ),
+                      items: const <DropdownMenuItem<bool?>>[
+                        DropdownMenuItem<bool?>(
+                          value: null,
+                          child: Text('All garments'),
+                        ),
+                        DropdownMenuItem<bool?>(
+                          value: true,
+                          child: Text('Never worn'),
+                        ),
+                      ],
+                      onChanged: (bool? value) {
+                        ref
+                            .read(wardrobeFilterProvider.notifier)
+                            .setNeverWornOnly(value ?? false);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
                     _FilterDropdown(
                       label: 'Outerwear Subcategory',
                       icon: Icons.layers_outlined,

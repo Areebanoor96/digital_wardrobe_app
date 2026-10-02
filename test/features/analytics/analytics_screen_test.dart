@@ -398,8 +398,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Avg wears per garment'), findsOneWidget);
-      expect(find.text('3.0'), findsOneWidget);
+      // Avg wears per garment card removed per requirements
+      expect(find.text('Avg wears per garment'), findsNothing);
     });
 
     testWidgets('shows avg cost per wear when value and wears exist', (

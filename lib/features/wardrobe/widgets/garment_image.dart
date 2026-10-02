@@ -6,11 +6,13 @@ class GarmentImage extends StatelessWidget {
     required this.imageUrl,
     this.fit = BoxFit.cover,
     this.aspectRatio,
+    this.alignment = Alignment.center,
   });
 
   final String? imageUrl;
   final BoxFit fit;
   final double? aspectRatio;
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +27,7 @@ class GarmentImage extends StatelessWidget {
       image = Image.network(
         imageUrl!,
         fit: fit,
+        alignment: alignment,
         errorBuilder: (_, _, _) => const ColoredBox(
           color: Color(0xFFF4F4F8),
           child: Center(child: Icon(Icons.broken_image_outlined)),

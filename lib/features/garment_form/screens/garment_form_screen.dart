@@ -2095,19 +2095,24 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
               onRemove: _removeReceipt,
             ),
 
-            const SizedBox(height: 28),
-            FilledButton.icon(
-              onPressed: (_saving || memberMismatch) ? null : _save,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check),
-              label: Text(_saving ? 'Saving Item...' : 'Save Item'),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        bottom: true,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: FilledButton.icon(
+            onPressed: (_saving || memberMismatch) ? null : _save,
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: Text(_saving ? 'Saving Item...' : 'Save Item'),
+          ),
         ),
       ),
     );
