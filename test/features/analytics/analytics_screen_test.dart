@@ -125,7 +125,7 @@ void main() {
         profile: const Profile(id: 'user-1', countryCode: 'PK'),
       );
 
-      expect(find.text('PKR 125,000'), findsOneWidget);
+      expect(find.text('PKR 125K'), findsOneWidget);
     });
 
     testWidgets('wardrobe value uses USD for a United States country', (
@@ -136,7 +136,7 @@ void main() {
         profile: const Profile(id: 'user-1', countryCode: 'US'),
       );
 
-      expect(find.text('USD 125,000'), findsOneWidget);
+      expect(find.text('USD 125K'), findsOneWidget);
     });
 
     testWidgets('wardrobe value uses GBP for a United Kingdom country', (
@@ -147,7 +147,7 @@ void main() {
         profile: const Profile(id: 'user-1', countryCode: 'GB'),
       );
 
-      expect(find.text('GBP 125,000'), findsOneWidget);
+      expect(find.text('GBP 125K'), findsOneWidget);
     });
 
     testWidgets('missing country falls back to PKR without crashing', (
@@ -158,7 +158,15 @@ void main() {
         profile: const Profile(id: 'user-1'),
       );
 
-      expect(find.text('PKR 125,000'), findsOneWidget);
+      expect(find.text('PKR 125K'), findsOneWidget);
+    });
+
+    test('formatCompactCurrency compact formatting logic', () {
+      expect(formatCompactCurrency('PKR', 1200000), 'PKR 1.2M');
+      expect(formatCompactCurrency('PKR', 108740), 'PKR 109K');
+      expect(formatCompactCurrency('PKR', 950), 'PKR 950');
+      expect(formatCompactCurrency('USD', 0), 'USD 0');
+      expect(formatCompactCurrency('USD', null), '—');
     });
   });
 
@@ -173,7 +181,7 @@ void main() {
         value: 125000,
       );
 
-      expect(find.text('USD 125,000'), findsOneWidget);
+      expect(find.text('USD 125K'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -187,7 +195,7 @@ void main() {
         value: 12500000,
       );
 
-      expect(find.text('PKR 12,500,000'), findsOneWidget);
+      expect(find.text('PKR 12.5M'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

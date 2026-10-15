@@ -92,7 +92,7 @@ class GarmentDetailScreen extends ConsumerWidget {
               ],
             ),
             body: ListView(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.only(bottom: 100),
               children: <Widget>[
                 _GarmentHero(photoUrls: garment.photoUrls),
                 Padding(
@@ -1097,12 +1097,15 @@ class _GarmentHeroState extends State<_GarmentHero> {
                     });
                   },
                   itemBuilder: (BuildContext context, int index) {
-                    return ColoredBox(
-                      color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                      child: GarmentImage(
-                        imageUrl: widget.photoUrls[index],
-                        fit: BoxFit.contain,
-                        alignment: Alignment.center,
+                    return GestureDetector(
+                      onTap: () => _openLightbox(context, index),
+                      child: ColoredBox(
+                        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                        child: GarmentImage(
+                          imageUrl: widget.photoUrls[index],
+                          fit: BoxFit.contain,
+                          alignment: Alignment.center,
+                        ),
                       ),
                     );
                   },
@@ -1139,6 +1142,140 @@ class _GarmentHeroState extends State<_GarmentHero> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _openLightbox(BuildContext context, int initialIndex) {
+    showDialog<void>(
+      context: context,
+      useSafeArea: false,
+      barrierColor: Colors.black,
+      builder: (BuildContext dialogContext) {
+        return _GarmentImageLightbox(
+          photoUrls: widget.photoUrls,
+          initialIndex: initialIndex,
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen pinch-to-zoom garment image viewer.
+class _GarmentImageLightbox extends StatefulWidget {
+  const _GarmentImageLightbox({
+    required this.photoUrls,
+    required this.initialIndex,
+  });
+
+  final List<String> photoUrls;
+  final int initialIndex;
+
+  @override
+  State<_GarmentImageLightbox> createState() => _GarmentImageLightboxState();
+}
+
+class _GarmentImageLightboxState extends State<_GarmentImageLightbox> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      backgroundColor: Colors.black,
+      child: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: widget.photoUrls.length == 1
+                ? InteractiveViewer(
+                    minScale: 0.8,
+                    maxScale: 4.0,
+                    panEnabled: true,
+                    child: Center(
+                      child: GarmentImage(
+                        imageUrl: widget.photoUrls.first,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  )
+                : PageView.builder(
+                    controller: _pageController,
+                    itemCount: widget.photoUrls.length,
+                    onPageChanged: (int index) {
+                      setState(() => _currentIndex = index);
+                    },
+                    itemBuilder: (BuildContext context, int index) {
+                      return InteractiveViewer(
+                        minScale: 0.8,
+                        maxScale: 4.0,
+                        panEnabled: true,
+                        child: Center(
+                          child: GarmentImage(
+                            imageUrl: widget.photoUrls[index],
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          Positioned(
+            top: 16,
+            right: 16,
+            child: SafeArea(
+              child: IconButton(
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 30,
+                ),
+                tooltip: 'Close',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+          if (widget.photoUrls.length > 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 24,
+              child: SafeArea(
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      '${_currentIndex + 1} / ${widget.photoUrls.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

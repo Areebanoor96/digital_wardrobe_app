@@ -20,6 +20,8 @@ class GarmentCard extends StatelessWidget {
     this.actionIcon,
     this.actionTooltip,
     this.showArchivedBadge = false,
+    this.isFavorite = false,
+    this.onToggleFavorite,
   });
 
   final Garment garment;
@@ -28,6 +30,8 @@ class GarmentCard extends StatelessWidget {
   final IconData? actionIcon;
   final String? actionTooltip;
   final bool showArchivedBadge;
+  final bool isFavorite;
+  final VoidCallback? onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +69,32 @@ class GarmentCard extends StatelessWidget {
                         colors: colors,
                       ),
                     ),
-                  if (onAction != null && actionIcon != null)
+                  if (onToggleFavorite != null)
+                    Positioned(
+                      top: AppSpacing.sm,
+                      right: AppSpacing.sm,
+                      child: Material(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: onToggleFavorite,
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.xs + 2),
+                            child: Icon(
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 18,
+                              color: isFavorite
+                                  ? const Color(0xFF2E4B33)
+                                  : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (onAction != null && actionIcon != null)
                     Positioned(
                       top: AppSpacing.sm,
                       right: AppSpacing.sm,

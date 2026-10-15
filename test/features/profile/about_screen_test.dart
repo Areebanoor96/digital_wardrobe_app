@@ -55,7 +55,7 @@ void main() {
     expect(find.text('About Digital Wardrobe'), findsOneWidget);
     expect(find.text('Digital Wardrobe'), findsOneWidget);
     expect(
-      find.text('Your personal wardrobe, outfit and style assistant.'),
+      find.textContaining('Your personal AI-powered wardrobe assistant'),
       findsOneWidget,
     );
     expect(find.text('App Version'), findsOneWidget);

@@ -271,7 +271,7 @@ void main() {
     expect(find.text('Date of Birth'), findsOneWidget);
     expect(
       find.widgetWithText(DropdownButtonFormField<String>, 'Pronouns (Optional)'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.widgetWithText(DropdownButtonFormField<String>, 'Gender'),

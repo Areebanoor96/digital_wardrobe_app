@@ -254,8 +254,6 @@ class ProfileScreen extends ConsumerWidget {
     final List<String> parts = <String>[
       if (primaryUser.username != null && primaryUser.username!.isNotEmpty)
         '@${primaryUser.username}',
-      if (primaryUser.pronouns != null && primaryUser.pronouns!.isNotEmpty)
-        primaryUser.pronouns!,
     ];
 
     if (parts.isNotEmpty) {
@@ -513,11 +511,10 @@ class _CardGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: children,

@@ -1,11 +1,10 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/app_info_service.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
-import 'package:flutter/material.dart';
-import 'package:digital_wardrobe_app/features/profile/screens/terms_of_service_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/privacy_policy_screen.dart';
+import 'package:digital_wardrobe_app/features/profile/screens/terms_of_service_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class AboutScreen extends ConsumerWidget {
   const AboutScreen({super.key});
@@ -94,11 +93,10 @@ class AboutScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 3. Legal & Open Source Information
-            Container(
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(20),
-              ),
+            Material(
+              color: colors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   ListTile(

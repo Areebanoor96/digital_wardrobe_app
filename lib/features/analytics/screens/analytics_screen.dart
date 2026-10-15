@@ -192,7 +192,7 @@ class _KeyMetricsGrid extends StatelessWidget {
               width: cardWidth,
               child: AnalyticsMetricCard(
                 title: 'Wardrobe value',
-                value: formatter.format(data.totalValue),
+                value: formatter.formatCompact(data.totalValue),
                 icon: Icons.payments_outlined,
                 color: Theme.of(context).colorScheme.tertiary,
               ),
@@ -703,5 +703,21 @@ class _WearBreakdownTile extends StatelessWidget {
         style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
       ),
     );
+  }
+}
+
+/// Formats a currency value compactly for analytics metric cards:
+/// - Values >= 1,000,000 -> `$currency ${(val / 1000000).toStringAsFixed(1)}M` (e.g. `PKR 1.2M`)
+/// - Values >= 1,000 -> `$currency ${(val / 1000).round()}K` (e.g. `PKR 109K`)
+/// - Values < 1,000 -> `$currency ${val.toInt()}`
+String formatCompactCurrency(String currency, num? value) {
+  if (value == null) return '—';
+  final double val = value.toDouble();
+  if (val >= 1000000) {
+    return '$currency ${(val / 1000000).toStringAsFixed(1)}M';
+  } else if (val >= 1000) {
+    return '$currency ${(val / 1000).round()}K';
+  } else {
+    return '$currency ${val.toInt()}';
   }
 }

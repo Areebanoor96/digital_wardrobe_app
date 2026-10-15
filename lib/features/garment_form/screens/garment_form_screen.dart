@@ -1312,6 +1312,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         leading: const BackArrowButton(),
         title: Text(widget.garment == null ? 'Add Garment' : 'Edit Garment'),
@@ -1319,7 +1320,8 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
           children: <Widget>[
             if (memberMismatch) ...<Widget>[
               Container(
@@ -2099,6 +2101,7 @@ class _GarmentFormScreenState extends ConsumerState<GarmentFormScreen> {
         ),
       ),
       bottomNavigationBar: SafeArea(
+        top: false,
         bottom: true,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),

@@ -278,7 +278,7 @@ final Provider<CountryCurrencyService> countryCurrencyServiceProvider =
 final Provider<CurrencyFormatter> userCurrencyProvider =
     Provider<CurrencyFormatter>((Ref ref) {
       final AsyncValue<Profile> profile = ref.watch(profileProvider);
-      final String? countryCode =
+      final String countryCode =
           profile.valueOrNull?.countryCode ??
           CountryCurrencyService.defaultCountry.code;
       return ref.watch(countryCurrencyServiceProvider).formatterFor(countryCode);

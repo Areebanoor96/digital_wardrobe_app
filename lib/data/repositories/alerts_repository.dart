@@ -2,8 +2,8 @@ import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/growth_measurement.dart';
-import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/models/ootd_recommendation_snapshot.dart';
+import 'package:digital_wardrobe_app/data/models/profile.dart';
 import 'package:digital_wardrobe_app/data/models/wear_log.dart';
 import 'package:digital_wardrobe_app/data/repositories/ootd_recommendation_repository.dart';
 import 'package:digital_wardrobe_app/features/alerts/services/alert_rule_service.dart';
@@ -16,8 +16,8 @@ class AlertsRepository {
   AlertsRepository(
     this._client, {
     this.ruleService = const AlertRuleService(),
-    OotdRecommendationRepository? ootdRecommendationRepository,
-  }) : _ootdRecommendationRepository = ootdRecommendationRepository;
+    this._ootdRecommendationRepository,
+  });
 
   final SupabaseClient _client;
   final AlertRuleService ruleService;

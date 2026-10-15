@@ -20,6 +20,24 @@ class CurrencyFormatter {
     return '$currencyCode ${_groupThousands(number)}';
   }
 
+  /// Formats [number] using compact currency notation for large values:
+  /// - Values >= 1,000,000 -> `$currencyCode ${(val / 1000000).toStringAsFixed(1)}M` (e.g. `PKR 1.2M`)
+  /// - Values >= 1,000 -> `$currencyCode ${(val / 1000).round()}K` (e.g. `PKR 109K`)
+  /// - Values < 1,000 -> `$currencyCode ${val.toInt()}`
+  String formatCompact(num? number) {
+    if (number == null) {
+      return '—';
+    }
+    final double val = number.toDouble();
+    if (val >= 1000000) {
+      return '$currencyCode ${(val / 1000000).toStringAsFixed(1)}M';
+    } else if (val >= 1000) {
+      return '$currencyCode ${(val / 1000).round()}K';
+    } else {
+      return '$currencyCode ${val.toInt()}';
+    }
+  }
+
   /// Rounds to whole units then inserts comma thousands separators. A negative
   /// sign (if any) is preserved before the first group.
   static String _groupThousands(num number) {

@@ -1,6 +1,7 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/services/supabase_service.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/screens/favorites_screen.dart';
 import 'package:digital_wardrobe_app/features/alerts/screens/alerts_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/auth_screen.dart';
 import 'package:digital_wardrobe_app/features/auth/screens/deactivated_account_screen.dart';
@@ -119,6 +120,10 @@ final Provider<GoRouter> appRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/garments/archived',
         builder: (_, _) => const ArchivedGarmentsScreen(),
+      ),
+      GoRoute(
+        path: '/favorites',
+        builder: (_, _) => const FavoritesScreen(),
       ),
       GoRoute(
         path: '/garment-locations',

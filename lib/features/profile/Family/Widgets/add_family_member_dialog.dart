@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:image_picker/image_picker.dart';
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:flutter/material.dart';

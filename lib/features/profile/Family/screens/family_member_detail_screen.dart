@@ -121,7 +121,7 @@ class FamilyMemberDetailScreen extends ConsumerWidget {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
           children: <Widget>[
             _MemberHeader(
               member: currentMember,
@@ -183,8 +183,9 @@ class _MemberActionBar extends ConsumerWidget {
       ),
       child: SafeArea(
         top: false,
+        bottom: true,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: SizedBox(
             width: double.infinity,
             child: FilledButton.icon(

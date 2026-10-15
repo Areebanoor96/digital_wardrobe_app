@@ -489,6 +489,41 @@ void main() {
 
     expect(find.text('Purchase Receipt'), findsOneWidget);
   });
+
+  testWidgets('tapping garment hero image opens full-screen pinch-to-zoom lightbox', (
+    WidgetTester tester,
+  ) async {
+    const Garment garment = Garment(
+      id: 'g-1',
+      name: 'Everyday Shirt',
+      memberId: 'member-1',
+      category: GarmentCategory.top,
+      photoPaths: <String>['photos/g-1.jpg'],
+      photoUrls: <String>['https://example.com/photos/g-1.jpg'],
+    );
+
+    await _pumpDetail(tester, garment);
+
+    // Tap on the hero image
+    await tester.tap(find.byType(PageView));
+    await tester.pumpAndSettle();
+
+    // Verify lightbox dialog is opened with InteractiveViewer
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+    final InteractiveViewer viewer = tester.widget<InteractiveViewer>(
+      find.byType(InteractiveViewer),
+    );
+    expect(viewer.minScale, 0.8);
+    expect(viewer.maxScale, 4.0);
+    expect(viewer.panEnabled, isTrue);
+
+    // Verify close button exists and dismisses the lightbox
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(InteractiveViewer), findsNothing);
+  });
 }
 
 class _SuccessfulArchiveController extends GarmentArchiveController {

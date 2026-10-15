@@ -1,13 +1,14 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/providers/favorites_provider.dart';
 import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
-import 'package:digital_wardrobe_app/data/models/alert.dart';
-import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
+import 'package:digital_wardrobe_app/data/models/alert.dart';
 import 'package:digital_wardrobe_app/data/models/family_member.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/garment_location.dart';
+import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
@@ -58,6 +59,8 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
     final FamilyMember? selectedMember = ref.watch(
       selectedFamilyMemberProvider,
     );
+    final Set<String> favoriteIds =
+        ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
     final AsyncValue<List<Garment>> garments = ref.watch(garmentsProvider);
     final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
 
@@ -101,11 +104,17 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
             ),
           ),
           IconButton(
+            onPressed: () => context.push('/favorites'),
+            icon: const Icon(Icons.favorite_border_rounded),
+            tooltip: 'My Favorites',
+          ),
+          IconButton(
             onPressed: () => context.push('/garments/archived'),
             icon: const Icon(Icons.archive_outlined),
             tooltip: 'Closet Vault',
           ),
         ],
+
       ),
       floatingActionButton: garments.maybeWhen(
         data: (List<Garment> allGarments) {
@@ -305,11 +314,18 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                     ),
                     sliver: SliverGrid(
                       delegate: SliverChildBuilderDelegate(
-                        (BuildContext context, int index) => GarmentCard(
-                          garment: filtered[index],
-                          onTap: () =>
-                              context.push('/garments/${filtered[index].id}'),
-                        ),
+                            (BuildContext context, int index) {
+                          final Garment garment = filtered[index];
+                          return GarmentCard(
+                            garment: garment,
+                            isFavorite: favoriteIds.contains(garment.id),
+                            onToggleFavorite: () => ref
+                                .read(favoritesProvider.notifier)
+                                .toggleFavorite(garment.id),
+                            onTap: () =>
+                                context.push('/garments/${garment.id}'),
+                          );
+                        },
                         childCount: filtered.length,
                       ),
                       gridDelegate:

@@ -39,8 +39,6 @@ class _FakeProfileRepository implements ProfileRepository {
     );
   }
 
-  @override
-  Future<void> updateName(String name) async {}
 
   @override
   Future<void> updateLocationCity(String? city) async {}

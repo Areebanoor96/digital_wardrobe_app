@@ -1,8 +1,8 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
-import 'package:digital_wardrobe_app/features/calendar/screens/calendar_screen.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
+import 'package:digital_wardrobe_app/features/calendar/screens/calendar_screen.dart';
 import 'package:digital_wardrobe_app/features/ootd/providers/ootd_provider.dart';
 import 'package:digital_wardrobe_app/features/ootd/services/outfit_recommendation_service.dart';
 import 'package:digital_wardrobe_app/features/ootd/widgets/ootd_card.dart';
@@ -28,7 +28,6 @@ class OutfitsScreen extends ConsumerStatefulWidget {
 class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
 
   int _selectedTabIndex = 0;
-  late final TabController _tabController;
 
   @override
   Widget build(BuildContext context) {

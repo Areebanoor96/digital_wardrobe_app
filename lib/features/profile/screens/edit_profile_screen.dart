@@ -51,12 +51,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   static const double _inchesPerFoot = 12;
   static const double _lbsPerKg = 2.2046226218;
 
-  static const List<String> _pronounOptions = <String>[
-    'she/her',
-    'he/him',
-    'they/them',
-    'Prefer not to say',
-  ];
 
   static const List<String> _genderOptions = <String>[
     'Female',
@@ -558,6 +552,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         leading: const BackArrowButton(),
         title: Text(_isAccount ? 'Edit Profile' : 'Edit ${widget.member.name}'),
@@ -582,7 +577,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         key: _formKey,
         child: ListView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
           children: <Widget>[
             _SectionCard(
               title: 'Personal Information',
@@ -657,13 +652,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             ? 'Username is required'
                             : null,
                   ),
-                _ProfileDropdown<String>(
-                  labelText: 'Pronouns (Optional)',
-                  prefixIcon: Icons.face_outlined,
-                  value: _pronounOptions.contains(_pronouns) ? _pronouns : null,
-                  options: _pronounOptions,
-                  onChanged: (String? val) => setState(() => _pronouns = val),
-                ),
                 _ProfileDropdown<String>(
                   labelText: 'Gender',
                   prefixIcon: Icons.wc_outlined,
@@ -848,19 +836,31 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 28),
-            FilledButton.icon(
-              onPressed: _isSaving ? null : _saveProfile,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Save Changes'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        bottom: true,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: FilledButton.icon(
+            onPressed: _isSaving ? null : _saveProfile,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save_outlined),
+            label: Text(_isSaving ? 'Saving Changes...' : 'Save Changes'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

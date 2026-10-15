@@ -57,7 +57,6 @@ class _EditNameProfileRepository implements ProfileRepository {
     String? gender,
   }) async {}
 
-  @override
   Future<void> updateName(String name) async {
     updated = true;
     holder['profile'] = Profile(id: 'user-1', fullName: name);

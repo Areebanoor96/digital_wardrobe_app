@@ -2,12 +2,12 @@ import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
 import 'package:digital_wardrobe_app/core/widgets/back_arrow_button.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/data/models/outfit.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
-import 'package:flutter/material.dart';
 import 'package:digital_wardrobe_app/features/outfits/models/outfit_context.dart';
-import 'package:digital_wardrobe_app/features/outfits/services/outfit_intelligence_engine.dart';
 import 'package:digital_wardrobe_app/features/outfits/models/outfit_intelligence_recommendation.dart';
 import 'package:digital_wardrobe_app/features/outfits/providers/outfit_intelligence_provider.dart';
+import 'package:digital_wardrobe_app/features/outfits/services/outfit_intelligence_engine.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -171,6 +171,7 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
       outfitRecommendationProvider,
     );
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         leading: const BackArrowButton(),
         title: Text(widget.outfit == null ? 'Build outfit' : 'Edit outfit'),
@@ -180,6 +181,8 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
         error: (_, _) =>
             const Center(child: Text('Could not load your wardrobe.')),
         data: (List<Garment> items) => SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.only(bottom: 100),
           child: Column(
             children: <Widget>[
               Padding(
@@ -668,16 +671,23 @@ class _OutfitBuilderScreenState extends ConsumerState<OutfitBuilderScreen> {
                   );
                 },
               ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: ElevatedButton(
-                  onPressed: saving ? null : () => _save(items),
-                  child: Text(saving ? 'Saving...' : 'Save outfit'),
-                ),
-              ),
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: garments.maybeWhen(
+        data: (List<Garment> items) => SafeArea(
+          top: false,
+          bottom: true,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: ElevatedButton(
+              onPressed: saving ? null : () => _save(items),
+              child: Text(saving ? 'Saving...' : 'Save outfit'),
+            ),
+          ),
+        ),
+        orElse: () => null,
       ),
     );
   }
