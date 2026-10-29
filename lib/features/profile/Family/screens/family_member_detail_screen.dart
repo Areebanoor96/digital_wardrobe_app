@@ -212,7 +212,7 @@ class _MemberActionBar extends ConsumerWidget {
                 // deterministic. The shell consumes the request immediately
                 // and `_selectTab` no-ops when it is already on tab 0, so
                 // this is safe to send unconditionally.
-                ref.read(shellTabRequestProvider.notifier).state = 0;
+                ref.read(shellTabRequestProvider.notifier).state = AppShellTabs.wardrobe;
 
                 // `go` replaces the entire route stack, so the `/family/:id`
                 // detail route and any screen pushed above it are discarded

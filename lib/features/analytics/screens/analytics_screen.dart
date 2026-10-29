@@ -102,7 +102,7 @@ class AnalyticsScreen extends ConsumerWidget {
   /// on top of the shell, so after the request the screen is popped to reveal
   /// the freshly-selected tab underneath.
   void _openWardrobe(BuildContext context, WidgetRef ref) {
-    ref.read(shellTabRequestProvider.notifier).state = 0;
+    ref.read(shellTabRequestProvider.notifier).state = AppShellTabs.wardrobe;
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }

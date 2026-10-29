@@ -42,11 +42,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final outfits = ref.watch(outfitsProvider).valueOrNull ?? const <Outfit>[];
 
     return Scaffold(
-      appBar: AppBar(
-        leading: widget.canNavigateBack
-            ? BackArrowButton(onPressed: widget.onNavigateBack)
-            : null,
-      ),
+      appBar: widget.canNavigateBack ? AppBar(leading: BackArrowButton(onPressed: widget.onNavigateBack)) : null,
       body: activity.when(
         loading: () => const AppLoadingState(
           showIcon: false,

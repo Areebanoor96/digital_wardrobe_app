@@ -25,8 +25,8 @@ class OutfitsScreen extends ConsumerStatefulWidget {
   @override
   ConsumerState<OutfitsScreen> createState() => _OutfitsScreenState();
 }
-class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
 
+class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
   int _selectedTabIndex = 0;
 
   @override
@@ -35,114 +35,117 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
     final garments = ref.watch(garmentsProvider);
     final ootd = ref.watch(ootdProvider);
     final actionState = ref.watch(ootdActionControllerProvider);
-    final DateTime? selectedCalendarDay = ref.watch(
-      selectedCalendarDayProvider,
-    );
 
     return Scaffold(
       appBar: AppBar(
         leading: widget.canNavigateBack
             ? BackArrowButton(onPressed: widget.onNavigateBack)
             : null,
-        title: const Text('My Outfits'),
-
-      ),
-      floatingActionButton: _selectedTabIndex == 1 && selectedCalendarDay != null
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: () => context.push('/outfits/new'),
-              icon: const Icon(Icons.add),
-              label: const Text('Create outfit'),
-            ),
-      body: Column(
-        children: [
-          // Custom Editorial Pill Segment Controller
-          Container(
-            height: 48,
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedTabIndex = 0),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: _selectedTabIndex == 0
-                            ? Theme.of(context).colorScheme.surface
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: _selectedTabIndex == 0
-                            ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                            : [],
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Stylist Suggestions',
-                          style: TextStyle(
-                            fontWeight: _selectedTabIndex == 0 ? FontWeight.bold : FontWeight.w500,
-                            color: _selectedTabIndex == 0
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedTabIndex = 1),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
-                        color: _selectedTabIndex == 1
-                            ? Theme.of(context).colorScheme.surface
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: _selectedTabIndex == 1
-                            ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                            : [],
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Outfit Calendar',
-                          style: TextStyle(
-                            fontWeight: _selectedTabIndex == 1 ? FontWeight.bold : FontWeight.w500,
-                            color: _selectedTabIndex == 1
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        title: const Text(
+          'My Outfits',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 24,
+            letterSpacing: -0.4,
+            color: Color(0xFF1C1C1E),
           ),
-
-          // Tab Content Area
-          Expanded(
-            child: _selectedTabIndex == 0
-                ? outfits.when(
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedTabIndex = 0),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            color: _selectedTabIndex == 0
+                                ? const Color(0xFF4A5D4E)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Stylist Suggestions',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _selectedTabIndex == 0
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: _selectedTabIndex == 0
+                                  ? Colors.white
+                                  : const Color(0xFF8E8E93),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedTabIndex = 1),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          decoration: BoxDecoration(
+                            color: _selectedTabIndex == 1
+                                ? const Color(0xFF4A5D4E)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Outfit Calender',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _selectedTabIndex == 1
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: _selectedTabIndex == 1
+                                  ? Colors.white
+                                  : const Color(0xFF8E8E93),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FloatingActionButton(
+              onPressed: () => context.push('/outfits/new'),
+              tooltip: 'Create outfit',
+              backgroundColor: const Color(0xFF4A5D4E),
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, size: 28),
+            ),
+          ],
+        ),
+      ),
+      body: _selectedTabIndex == 0
+          ? outfits.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => _OutfitFeedback(
                 title: 'We could not load your outfits',
@@ -159,7 +162,7 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                     ref.invalidate(ootdProvider);
                   },
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
                     children: <Widget>[
                       ootd.when(
                         loading: () => const Padding(
@@ -178,7 +181,7 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                           child: OotdCard(
                             recommendation: rec,
                             onRefresh: () =>
-                            ref.read(ootdRefreshTokenProvider.notifier).state++,
+                                ref.read(ootdRefreshTokenProvider.notifier).state++,
                             outfitContext: ref.watch(ootdContextProvider),
                             onContextChanged: (OutfitContext value) {
                               ref.read(ootdContextProvider.notifier).state = value;
@@ -186,13 +189,13 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                             onSave: actionState.isLoading
                                 ? null
                                 : (current) => ref
-                                .read(ootdActionControllerProvider.notifier)
-                                .saveAsOutfit(current.garments),
+                                    .read(ootdActionControllerProvider.notifier)
+                                    .saveAsOutfit(current.garments),
                             onWear: actionState.isLoading
                                 ? null
                                 : (current) => ref
-                                .read(ootdActionControllerProvider.notifier)
-                                .wearOutfit(current.garments),
+                                    .read(ootdActionControllerProvider.notifier)
+                                    .wearOutfit(current.garments),
                             isSaving: actionState.isLoading,
                             isWearing: actionState.isLoading,
                           ),
@@ -202,7 +205,7 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                         _OutfitFeedback(
                           title: 'No saved outfits yet',
                           message:
-                          'Combine garments from your wardrobe into outfits you can reuse.',
+                              'Combine garments from your wardrobe into outfits you can reuse.',
                           actionLabel: 'Create outfit',
                           onAction: () => context.push('/outfits/new'),
                         )
@@ -211,9 +214,9 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                           final List<Garment> items = outfit.garmentIds
                               .map(
                                 (String id) => wardrobe
-                                .where((Garment garment) => garment.id == id)
-                                .firstOrNull,
-                          )
+                                    .where((Garment garment) => garment.id == id)
+                                    .firstOrNull,
+                              )
                               .whereType<Garment>()
                               .toList();
                           return Padding(
@@ -230,11 +233,8 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                 );
               },
             )
-                : const CalendarScreen(),
-          ),
-        ],
-      ),   // Closes TabBarView
-    );     // Closes Scaffold
+          : const CalendarScreen(),
+    );
   }
 }
 
@@ -245,6 +245,7 @@ class _OutfitFeedback extends StatelessWidget {
     this.actionLabel,
     this.onAction,
   });
+
   final String title;
   final String message;
   final String? actionLabel;
@@ -252,26 +253,34 @@ class _OutfitFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(
-            Icons.auto_awesome_outlined,
-            size: 64,
-            color: Theme.of(context).colorScheme.primary,
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(
+                Icons.auto_awesome_outlined,
+                size: 64,
+                color: Color(0xFF4A5D4E),
+              ),
+              const SizedBox(height: 16),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+              if (actionLabel != null && onAction != null) ...<Widget>[
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: onAction,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A5D4E),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(actionLabel!),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center),
-          if (actionLabel != null && onAction != null) ...<Widget>[
-            const SizedBox(height: 20),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-          ],
-        ],
-      ),
-    ),
-  );
+        ),
+      );
+
 }

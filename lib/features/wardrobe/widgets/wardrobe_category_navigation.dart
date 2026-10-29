@@ -1,13 +1,8 @@
-import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
 import 'package:digital_wardrobe_app/data/models/garment.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/utils/garment_metadata_formatter.dart';
 import 'package:flutter/material.dart';
 
-/// Clean, tab-like category navigation for the wardrobe catalog.
-///
-/// Avoids pill chips. Each category is a quiet text control scrollable
-/// horizontally; the selected one is emphasised with brand color and a short
-/// underline, so the chosen filter is obvious without visual noise.
+/// Figma-matched horizontal pill category selector.
 class WardrobeCategoryNavigation extends StatelessWidget {
   const WardrobeCategoryNavigation({
     super.key,
@@ -21,23 +16,26 @@ class WardrobeCategoryNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: AppSpacing.xxxl + 8,
+      height: 38,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: AppSpacing.hStandard,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         children: <Widget>[
-          _CategoryNavItem(
+          _CategoryChipItem(
             label: 'All',
             selected: selectedCategory == null,
             onSelected: () => onSelected(null),
           ),
+          const SizedBox(width: 8),
           ...GarmentCategory.values.map(
             (GarmentCategory category) => Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.sm),
-              child: _CategoryNavItem(
+              padding: const EdgeInsets.only(right: 8),
+              child: _CategoryChipItem(
                 label: GarmentMetadataFormatter.categoryNavLabel(category),
                 selected: selectedCategory == category,
-                onSelected: () => onSelected(category),
+                onSelected: () => onSelected(
+                  selectedCategory == category ? null : category,
+                ),
               ),
             ),
           ),
@@ -47,8 +45,8 @@ class WardrobeCategoryNavigation extends StatelessWidget {
   }
 }
 
-class _CategoryNavItem extends StatelessWidget {
-  const _CategoryNavItem({
+class _CategoryChipItem extends StatelessWidget {
+  const _CategoryChipItem({
     required this.label,
     required this.selected,
     required this.onSelected,
@@ -60,34 +58,29 @@ class _CategoryNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
+    const Color activeChipColor = Color(0xFF4A5D4E);
 
     return InkWell(
       onTap: onSelected,
-      child: SizedBox(
-        height: AppSpacing.xxxl + 8,
-        child: Center(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: selected ? colors.primary : colors.onSurfaceVariant,
-                ),
-              ),
-              SizedBox(
-                width: selected ? 20 : 0,
-                height: 3,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: selected ? colors.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(1.5),
-                  ),
-                ),
-              ),
-            ],
+      borderRadius: BorderRadius.circular(24),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? activeChipColor : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: selected ? activeChipColor : const Color(0xFFE5E4DE),
+            width: 1,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : const Color(0xFF8E8E93),
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            fontSize: 13,
           ),
         ),
       ),

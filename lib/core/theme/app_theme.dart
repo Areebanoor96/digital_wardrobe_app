@@ -9,13 +9,9 @@ import 'app_spacing.dart';
 /// Central application theme for Digital Wardrobe — the "Modern Fashion OS".
 ///
 /// This file is the single source of truth for the Material visual language.
-/// Screens should inherit styling from these themes rather than inventing
-/// their own colours, radii, shadows or button styles. This keeps the app
-/// looking coherent and removes styling drift between screens.
-///
-/// The lavender/purple brand identity ([AppPalette.primary]) is preserved and
-/// used intentionally — as an accent and for primary actions — rather than
-/// covering the whole interface in purple.
+/// Screens inherit styling from these themes to maintain cohesive typography,
+/// rounded radii, and the Figma Warm Cream (#F8F7F2) + Dark Olive Green (#4A5D4E)
+/// palette.
 abstract final class AppTheme {
   static const Color primary = AppPalette.primary;
 
@@ -74,13 +70,13 @@ ThemeData _build(Palette p, Brightness brightness) {
     brightness: brightness,
   ).copyWith(
     primary: AppPalette.primary,
-    // Refine primary container to a softer lavender tint.
+    // Soft olive/cream tint for containers
     primaryContainer: brightness == Brightness.light
-        ? const Color(0xFFEDEAFD)
-        : const Color(0xFF322A63),
+        ? const Color(0xFFE3E8E4)
+        : const Color(0xFF2A362D),
     onPrimaryContainer: brightness == Brightness.light
-        ? const Color(0xFF241D52)
-        : const Color(0xFFE7E3F9),
+        ? const Color(0xFF263329)
+        : const Color(0xFFDCE3DF),
     surface: p.surface,
     onSurface: p.textPrimary,
     onSurfaceVariant: p.textSecondary,
@@ -90,10 +86,10 @@ ThemeData _build(Palette p, Brightness brightness) {
     surfaceContainerLow: p.surfaceMuted,
     surfaceContainer: p.surfaceMuted,
     surfaceContainerHigh: brightness == Brightness.light
-        ? const Color(0xFFEFEFF4)
+        ? const Color(0xFFEDECE6)
         : const Color(0xFF292940),
     surfaceContainerHighest: brightness == Brightness.light
-        ? const Color(0xFFECECF2)
+        ? const Color(0xFFE5E4DE)
         : const Color(0xFF2E2E47),
     error: AppPalette.error,
     tertiary: AppPalette.success,
@@ -184,9 +180,7 @@ ThemeData _build(Palette p, Brightness brightness) {
       surfaceTintColor: Colors.transparent,
     ),
 
-    // --- Cards: ONE primary card language ---
-    // elevation 0 + subtle outline + consistent 20px radius, no default
-    // drop shadows unless explicitly requested per instance.
+    // --- Cards: consistent 20px radius, clean fashion language ---
     cardTheme: CardThemeData(
       elevation: 0,
       margin: EdgeInsets.zero,
@@ -194,7 +188,7 @@ ThemeData _build(Palette p, Brightness brightness) {
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.card,
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: p.border),
       ),
     ),
@@ -239,30 +233,36 @@ ThemeData _build(Palette p, Brightness brightness) {
     // --- Buttons: confident primary, quieter secondary ---
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
+        elevation: 0,
+        backgroundColor: AppPalette.primary,
+        foregroundColor: AppPalette.white,
+        disabledBackgroundColor: p.surfaceMuted,
+        disabledForegroundColor: p.textTertiary,
         minimumSize: const Size(0, AppDimensions.controlMd),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-        textStyle: textTheme.labelLarge,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.sm,
-        ),
+        textStyle: textTheme.labelLarge?.copyWith(color: AppPalette.white),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
+        elevation: 0,
+        foregroundColor: p.textPrimary,
         minimumSize: const Size(0, AppDimensions.controlMd),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.md,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         side: BorderSide(color: p.borderStrong),
-        foregroundColor: p.textPrimary,
         textStyle: textTheme.labelLarge,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.sm,
-        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -289,18 +289,15 @@ ThemeData _build(Palette p, Brightness brightness) {
       ),
     ),
 
-    // --- FAB: subtle, keyed to the appbar surface ---
-    floatingActionButtonTheme: FloatingActionButtonThemeData(
+    // --- FAB: solid Dark Olive Green with clean rounded corners ---
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: AppPalette.primary,
       foregroundColor: AppPalette.white,
-      elevation: 0,
-      highlightElevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
+      elevation: 2,
+      shape: CircleBorder(),
     ),
 
-    // --- Chips: restrained, less pill-heavy ---
+    // --- Chips: restrained, clean pill style ---
     chipTheme: ChipThemeData(
       backgroundColor: p.surfaceMuted,
       selectedColor: scheme.primaryContainer,

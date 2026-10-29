@@ -5,12 +5,8 @@ import 'package:digital_wardrobe_app/features/wardrobe/utils/garment_metadata_fo
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_image.dart';
 import 'package:flutter/material.dart';
 
-/// Photography-first garment tile for the fashion catalog.
-///
-/// The garment image is the hero. Metadata underneath stays compact: name,
-/// category and a single "Color - Size" line — a catalog tile, not a card
-/// with buttons. The tile keeps the prior [GarmentCard] behaviour (tap,
-/// optional action overlay, optional "In Closet Vault" badge, wear count).
+/// Designer-matched Garment Card featuring rounded 20px corners, neat image
+/// scaling, and subtle heart favorite icon placed neatly inside the card layout.
 class GarmentCard extends StatelessWidget {
   const GarmentCard({
     super.key,
@@ -22,6 +18,7 @@ class GarmentCard extends StatelessWidget {
     this.showArchivedBadge = false,
     this.isFavorite = false,
     this.onToggleFavorite,
+    this.showMetadata = true,
   });
 
   final Garment garment;
@@ -32,10 +29,95 @@ class GarmentCard extends StatelessWidget {
   final bool showArchivedBadge;
   final bool isFavorite;
   final VoidCallback? onToggleFavorite;
+  final bool showMetadata;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
+
+    final Widget imageContent = Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: GarmentImage(
+            imageUrl: garment.coverImageUrl,
+            fit: BoxFit.cover,
+          ),
+        ),
+        if (showArchivedBadge)
+          Positioned(
+            top: 10,
+            left: 10,
+            child: _GlassLabel(
+              text: 'In Closet Vault',
+              colors: colors,
+            ),
+          ),
+        if (onToggleFavorite != null)
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              elevation: 1,
+              shadowColor: Colors.black26,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onToggleFavorite,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border_rounded,
+                    size: 18,
+                    color: isFavorite
+                        ? const Color(0xFF4A5D4E)
+                        : const Color(0xFF1C1C1E),
+                  ),
+                ),
+              ),
+            ),
+          )
+        else if (onAction != null && actionIcon != null)
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Material(
+              color: Colors.white,
+              shape: const CircleBorder(),
+              elevation: 1,
+              shadowColor: Colors.black26,
+              child: IconButton(
+                onPressed: onAction,
+                icon: Icon(actionIcon, size: 18, color: const Color(0xFF1C1C1E)),
+                tooltip: actionTooltip,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
+        if (garment.wearCount > 0)
+          Positioned(
+            bottom: 10,
+            left: 10,
+            child: _WearCountLabel(
+              count: garment.wearCount,
+              colors: colors,
+            ),
+          ),
+      ],
+    );
+
+    if (!showMetadata) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: imageContent,
+      );
+    }
+
     final String sizeSummary = GarmentMetadataFormatter.sizeSummary(
       garment.effectiveSizes,
     );
@@ -49,81 +131,16 @@ class GarmentCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  GarmentImage(imageUrl: garment.coverImageUrl),
-                  if (showArchivedBadge)
-                    Positioned(
-                      top: AppSpacing.sm,
-                      left: AppSpacing.sm,
-                      child: _GlassLabel(
-                        text: 'In Closet Vault',
-                        colors: colors,
-                      ),
-                    ),
-                  if (onToggleFavorite != null)
-                    Positioned(
-                      top: AppSpacing.sm,
-                      right: AppSpacing.sm,
-                      child: Material(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: onToggleFavorite,
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.xs + 2),
-                            child: Icon(
-                              isFavorite
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              size: 18,
-                              color: isFavorite
-                                  ? const Color(0xFF2E4B33)
-                                  : Colors.black87,
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  else if (onAction != null && actionIcon != null)
-                    Positioned(
-                      top: AppSpacing.sm,
-                      right: AppSpacing.sm,
-                      child: Material(
-                        color: colors.surface.withValues(alpha: 0.88),
-                        shape: const CircleBorder(),
-                        child: IconButton(
-                          onPressed: onAction,
-                          icon: Icon(actionIcon),
-                          tooltip: actionTooltip,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ),
-                  if (garment.wearCount > 0)
-                    Positioned(
-                      bottom: AppSpacing.sm,
-                      right: AppSpacing.sm,
-                      child: _WearCountLabel(
-                        count: garment.wearCount,
-                        colors: colors,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          AspectRatio(
+            aspectRatio: 1,
+            child: imageContent,
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 10),
+            padding: const EdgeInsets.fromLTRB(4, AppSpacing.sm, 4, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -171,7 +188,7 @@ class _GlassLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.onSurface.withValues(alpha: 0.78),
+        color: Colors.black.withValues(alpha: 0.65),
         borderRadius: AppRadius.stadium,
       ),
       child: Padding(
@@ -182,7 +199,8 @@ class _GlassLabel extends StatelessWidget {
         child: Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: colors.surface,
+            color: Colors.white,
+            fontSize: 10,
           ),
         ),
       ),
@@ -201,7 +219,7 @@ class _WearCountLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.onSurface.withValues(alpha: 0.82),
+        color: Colors.black.withValues(alpha: 0.65),
         borderRadius: AppRadius.stadium,
       ),
       child: Padding(
@@ -212,16 +230,17 @@ class _WearCountLabel extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(
+            const Icon(
               Icons.checkroom_outlined,
-              size: AppSpacing.md,
-              color: colors.surface,
+              size: 12,
+              color: Colors.white,
             ),
-            const SizedBox(width: AppSpacing.xs + 1),
+            const SizedBox(width: 4),
             Text(
               '$count',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.surface,
+                color: Colors.white,
+                fontSize: 11,
               ),
             ),
           ],

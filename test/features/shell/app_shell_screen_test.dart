@@ -82,18 +82,21 @@ void main() {
     _setPlatform(TargetPlatform.android);
     await pumpShell(tester);
 
+    expect(_selectedTabIndex(tester), AppShellTabs.wardrobe);
+
     await tester.tap(_navLabel('Outfits'));
     await tester.pumpAndSettle();
-    expect(_selectedTabIndex(tester), 1);
-    await tester.tap(_navLabel('Alerts'));
+    expect(_selectedTabIndex(tester), AppShellTabs.outfits);
+
+    await tester.tap(_navLabel('Profile'));
     await tester.pumpAndSettle();
-    expect(_selectedTabIndex(tester), 3);
+    expect(_selectedTabIndex(tester), AppShellTabs.profile);
 
     final bool handled = await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(_selectedTabIndex(tester), 1);
+    expect(_selectedTabIndex(tester), AppShellTabs.outfits);
     _resetPlatform();
   });
 
@@ -102,6 +105,8 @@ void main() {
   ) async {
     _setPlatform(TargetPlatform.android);
     await pumpShell(tester);
+
+    expect(_selectedTabIndex(tester), AppShellTabs.wardrobe);
 
     final bool handled = await tester.binding.handlePopRoute();
     await tester.pump();
@@ -195,16 +200,17 @@ void main() {
 
     await tester.tap(_navLabel('Profile'));
     await tester.pumpAndSettle();
-    expect(_selectedTabIndex(tester), 4);
-    await tester.tap(_navLabel('Calendar'));
+    expect(_selectedTabIndex(tester), AppShellTabs.profile);
+
+    await tester.tap(_navLabel('Outfits'));
     await tester.pumpAndSettle();
-    expect(_selectedTabIndex(tester), 2);
+    expect(_selectedTabIndex(tester), AppShellTabs.outfits);
 
     final bool handled = await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(handled, isTrue);
-    expect(_selectedTabIndex(tester), 4);
+    expect(_selectedTabIndex(tester), AppShellTabs.profile);
     expect(find.text('Press back again to exit.'), findsNothing);
     _resetPlatform();
   });
@@ -219,6 +225,6 @@ void main() {
     final NavigationBar bar = tester.widget<NavigationBar>(
       find.byType(NavigationBar),
     );
-    expect(bar.destinations.length, 5);
+    expect(bar.destinations.length, 3);
   });
 }

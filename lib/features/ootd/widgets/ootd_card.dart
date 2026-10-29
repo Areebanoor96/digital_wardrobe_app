@@ -85,59 +85,56 @@ class _OotdCardState extends State<OotdCard> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Expanded(
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: <Widget>[
+                Text(
+                  'Outfit of the day!',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: colors.onSurface,
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (rec.score > 0)
                       _headlinePill(
                         colors: colors,
                         theme: theme,
-                        icon: Icons.auto_awesome,
-                        label: 'Outfit of the Day',
-                        background: colors.primaryContainer.withOpacity(0.5),
-                        foreground: colors.primary,
+                        icon: Icons.bolt,
+                        label: '${rec.score}% Match',
+                        background: const Color(0xFF4A5D4E),
+                        foreground: Colors.white,
+                        bold: true,
                       ),
-                      if (rec.score > 0)
-                        _headlinePill(
-                          colors: colors,
-                          theme: theme,
-                          label: '${rec.score}% match',
-                          background: colors.primary,
-                          foreground: colors.onPrimary,
-                          bold: true,
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-                if (rec.garments.isNotEmpty)
-                  Row(
-                    children: <Widget>[
-                      IconButton(
-                        onPressed: () => _showWhySheet(context),
-                        icon: const Icon(Icons.insights_outlined, size: 20),
-                        tooltip: 'Why this look?',
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      if (widget.onContextChanged != null)
-                        IconButton(
-                          onPressed: () => _showPersonalizeSheet(context),
-                          icon: const Icon(Icons.tune_rounded, size: 20),
-                          tooltip: 'Personalize outfit',
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      if (widget.onRefresh != null)
-                        IconButton(
-                          onPressed: widget.onRefresh,
-                          icon: const Icon(Icons.refresh_rounded, size: 20),
-                          tooltip: 'New look',
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
               ],
             ),
+            if (rec.garments.isNotEmpty)
+              Row(
+                children: <Widget>[
+                  IconButton(
+                    onPressed: () => _showWhySheet(context),
+                    icon: const Icon(Icons.insights_outlined, size: 20),
+                    tooltip: 'Why this look?',
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  if (widget.onContextChanged != null)
+                    IconButton(
+                      onPressed: () => _showPersonalizeSheet(context),
+                      icon: const Icon(Icons.tune_rounded, size: 20),
+                      tooltip: 'Personalize outfit',
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  if (widget.onRefresh != null)
+                    IconButton(
+                      onPressed: widget.onRefresh,
+                      icon: const Icon(Icons.refresh, size: 20),
+                      tooltip: 'New look',
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
             const SizedBox(height: 14),
             if (rec.garments.isEmpty)
               Padding(
@@ -186,7 +183,7 @@ class _OotdCardState extends State<OotdCard> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
-                            '${pool[index].label} • ${pool[index].score}%',
+                            '${pool[index].label} - ${pool[index].score}%',
                             style: theme.textTheme.labelMedium?.copyWith(
                               color: index == _selectedIndex
                                   ? colors.onPrimary
@@ -208,6 +205,8 @@ class _OotdCardState extends State<OotdCard> {
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         shape: const StadiumBorder(),
+                        side: const BorderSide(color: Color(0xFFE5E4DE)),
+                        backgroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: widget.isSaving
@@ -221,8 +220,14 @@ class _OotdCardState extends State<OotdCard> {
                           strokeWidth: 2,
                         ),
                       )
-                          : const Icon(Icons.bookmark_outline, size: 18),
-                      label: Text(widget.isSaving ? 'Saving...' : 'Save'),
+                          : const Icon(Icons.bookmark_outline, size: 18, color: Color(0xFF1C1C1E)),
+                      label: Text(
+                        widget.isSaving ? 'Saving...' : 'Save',
+                        style: const TextStyle(
+                          color: Color(0xFF1C1C1E),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -230,6 +235,8 @@ class _OotdCardState extends State<OotdCard> {
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
                         shape: const StadiumBorder(),
+                        backgroundColor: const Color(0xFF4A5D4E),
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                       onPressed: widget.isWearing
@@ -244,8 +251,14 @@ class _OotdCardState extends State<OotdCard> {
                           color: Colors.white,
                         ),
                       )
-                          : const Icon(Icons.check_circle_outline, size: 18),
-                      label: Text(widget.isWearing ? 'Wearing...' : 'Wear'),
+                          : const Icon(Icons.checkroom_outlined, size: 18, color: Colors.white),
+                      label: Text(
+                        widget.isWearing ? 'Wearing...' : 'Wear',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -285,12 +298,12 @@ class _OotdCardState extends State<OotdCard> {
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
               style: (bold
-                      ? theme.textTheme.labelMedium
-                      : theme.textTheme.labelSmall)
+                  ? theme.textTheme.labelMedium
+                  : theme.textTheme.labelSmall)
                   ?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: foreground,
-                  ),
+                fontWeight: FontWeight.w700,
+                color: foreground,
+              ),
             ),
           ),
         ],
@@ -343,7 +356,7 @@ class _OotdCardState extends State<OotdCard> {
                   ),
                   const SizedBox(height: 8),
                   ...rec.reasons.map(
-                    (String reason) => Padding(
+                        (String reason) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,10 +396,10 @@ class _OotdCardState extends State<OotdCard> {
   }
 
   List<Widget> _scoreBreakdown(
-    OutfitRecommendation rec, {
-    required ThemeData theme,
-    required ColorScheme colors,
-  }) {
+      OutfitRecommendation rec, {
+        required ThemeData theme,
+        required ColorScheme colors,
+      }) {
     final List<(String label, int value)> rows = <(String, int)>[
       ('Weather fit', rec.weatherScore),
       ('Occasion fit', rec.occasionScore),
@@ -479,28 +492,28 @@ class _OotdCardState extends State<OotdCard> {
                       initialValue: selectedOccasion,
                       decoration: const InputDecoration(labelText: 'Occasion'),
                       items:
-                          const <String>[
-                                'casual',
-                                'college',
-                                'ethnic',
-                                'formal',
-                                'home',
-                                'party',
-                                'sleep',
-                                'sport',
-                                'travel',
-                                'wedding',
-                                'work',
-                              ]
-                              .map(
-                                (String value) => DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(
-                                    value[0].toUpperCase() + value.substring(1),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                      const <String>[
+                        'casual',
+                        'college',
+                        'ethnic',
+                        'formal',
+                        'home',
+                        'party',
+                        'sleep',
+                        'sport',
+                        'travel',
+                        'wedding',
+                        'work',
+                      ]
+                          .map(
+                            (String value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value[0].toUpperCase() + value.substring(1),
+                          ),
+                        ),
+                      )
+                          .toList(),
                       onChanged: (String? value) {
                         setModalState(() {
                           selectedOccasion = value;
@@ -516,29 +529,29 @@ class _OotdCardState extends State<OotdCard> {
                         labelText: 'Dress code',
                       ),
                       items:
-                          const <String>[
-                                'casual',
-                                'smart casual',
-                                'business casual',
-                                'formal',
-                              ]
-                              .map(
-                                (String value) => DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(
-                                    value
-                                        .replaceAll('_', ' ')
-                                        .split(' ')
-                                        .map(
-                                          (String word) =>
-                                              word[0].toUpperCase() +
-                                              word.substring(1),
-                                        )
-                                        .join(' '),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                      const <String>[
+                        'casual',
+                        'smart casual',
+                        'business casual',
+                        'formal',
+                      ]
+                          .map(
+                            (String value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value
+                                .replaceAll('_', ' ')
+                                .split(' ')
+                                .map(
+                                  (String word) =>
+                              word[0].toUpperCase() +
+                                  word.substring(1),
+                            )
+                                .join(' '),
+                          ),
+                        ),
+                      )
+                          .toList(),
                       onChanged: (String? value) {
                         setModalState(() {
                           selectedDressCode = value;
@@ -552,25 +565,25 @@ class _OotdCardState extends State<OotdCard> {
                       initialValue: selectedMood,
                       decoration: const InputDecoration(labelText: 'Mood'),
                       items:
-                          const <String>[
-                                'bold',
-                                'cozy',
-                                'elegant',
-                                'minimal',
-                                'party',
-                                'professional',
-                                'relaxed',
-                                'sporty',
-                              ]
-                              .map(
-                                (String value) => DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(
-                                    value[0].toUpperCase() + value.substring(1),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                      const <String>[
+                        'bold',
+                        'cozy',
+                        'elegant',
+                        'minimal',
+                        'party',
+                        'professional',
+                        'relaxed',
+                        'sporty',
+                      ]
+                          .map(
+                            (String value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value[0].toUpperCase() + value.substring(1),
+                          ),
+                        ),
+                      )
+                          .toList(),
                       onChanged: (String? value) {
                         setModalState(() {
                           selectedMood = value;
@@ -685,56 +698,116 @@ class _GarmentStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colors = theme.colorScheme;
-
-    return SizedBox(
-      height: 96,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: rec.garments.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (BuildContext context, int index) {
-          final Garment garment = rec.garments[index];
-          final bool isHero = garment.id == rec.heroGarment?.id;
-          return SizedBox(
-            width: 76,
-            child: Column(
-              children: <Widget>[
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: <Widget>[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: GarmentImage(imageUrl: garment.coverImageUrl),
-                      ),
-                      if (isHero)
-                        const Positioned(
-                          top: 4,
-                          right: 4,
-                          child: CircleAvatar(
-                            radius: 10,
-                            child: Icon(Icons.star_rounded, size: 14),
-                          ),
-                        ),
-                    ],
+    if (rec.garments.length <= 1) {
+      final Garment garment = rec.garments.first;
+      return SizedBox(
+        height: 160,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              GarmentImage(imageUrl: garment.coverImageUrl, fit: BoxFit.cover),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.55),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 5),
-                Text(
+              ),
+              Positioned(
+                bottom: 10,
+                left: 12,
+                right: 12,
+                child: Text(
                   garment.name,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colors.onSurface.withValues(alpha: 0.75),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: rec.garments.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.15,
+      ),
+      itemBuilder: (BuildContext context, int index) {
+        final Garment garment = rec.garments[index];
+        final bool isHero = garment.id == rec.heroGarment?.id;
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              GarmentImage(imageUrl: garment.coverImageUrl, fit: BoxFit.cover),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.55),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 8,
+                left: 10,
+                right: 8,
+                child: Text(
+                  garment.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+              if (isHero)
+                const Positioned(
+                  top: 6,
+                  right: 6,
+                  child: CircleAvatar(
+                    radius: 10,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.star_rounded,
+                      size: 14,
+                      color: Color(0xFF4A5D4E),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

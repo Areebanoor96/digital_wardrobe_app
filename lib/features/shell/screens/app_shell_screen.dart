@@ -1,5 +1,3 @@
-
-
 import 'package:digital_wardrobe_app/features/outfits/screens/outfits_screen.dart';
 import 'package:digital_wardrobe_app/features/profile/screens/profile_screen.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/screens/wardrobe_screen.dart';
@@ -7,6 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+/// Indices for the shell tabs.
+abstract final class AppShellTabs {
+  static const int outfits = 0;
+  static const int wardrobe = 1;
+  static const int profile = 2;
+}
 
 /// Ephemeral channel that lets screens pushed above the shell (e.g. Analytics)
 /// request switching the active bottom-navigation tab. The shell consumes the
@@ -25,8 +30,8 @@ class AppShellScreen extends ConsumerStatefulWidget {
 class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   static const Duration _exitConfirmationWindow = Duration(seconds: 2);
 
-  int _index = 0;
-  final List<int> _tabHistory = <int>[0];
+  int _index = AppShellTabs.wardrobe;
+  final List<int> _tabHistory = <int>[AppShellTabs.wardrobe];
   DateTime? _lastBackPressAt;
 
   bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
@@ -101,11 +106,11 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
 
     final bool canNavigateBack = _tabHistory.length > 1;
     final List<Widget> screens = <Widget>[
-      WardrobeScreen(
+      OutfitsScreen(
         canNavigateBack: canNavigateBack,
         onNavigateBack: _navigateToPreviousTab,
       ),
-      OutfitsScreen(
+      WardrobeScreen(
         canNavigateBack: canNavigateBack,
         onNavigateBack: _navigateToPreviousTab,
       ),
@@ -123,21 +128,20 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: _selectTab,
-          destinations: <NavigationDestination>[
-            const NavigationDestination(
+          destinations: const <NavigationDestination>[
+            NavigationDestination(
               icon: Icon(Icons.checkroom_outlined),
-              selectedIcon: Icon(Icons.checkroom),
-              label: 'Wardrobe',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.auto_awesome_outlined),
-              selectedIcon: Icon(Icons.auto_awesome),
+              selectedIcon: Icon(Icons.checkroom_rounded),
               label: 'Outfits',
             ),
-
-            const NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
+            NavigationDestination(
+              icon: Icon(Icons.storefront_outlined),
+              selectedIcon: Icon(Icons.storefront_rounded),
+              label: 'Wardrobe',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
               label: 'Profile',
             ),
           ],

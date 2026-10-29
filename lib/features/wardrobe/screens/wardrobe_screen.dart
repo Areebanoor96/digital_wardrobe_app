@@ -1,5 +1,4 @@
 import 'package:digital_wardrobe_app/core/providers/app_providers.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/providers/favorites_provider.dart';
 import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_empty_state.dart';
 import 'package:digital_wardrobe_app/core/widgets/app_loading_state.dart';
@@ -11,13 +10,13 @@ import 'package:digital_wardrobe_app/data/models/garment_location.dart';
 import 'package:digital_wardrobe_app/features/alerts/providers/alerts_provider.dart';
 import 'package:digital_wardrobe_app/features/profile/widgets/family_member_avatar.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
+import 'package:digital_wardrobe_app/features/wardrobe/providers/favorites_provider.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/providers/wardrobe_filter_provider.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/active_filter_chips.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/garment_card.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_category_navigation.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_sheet.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_filter_toolbar.dart';
-import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_header.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/widgets/wardrobe_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,12 +38,11 @@ class WardrobeScreen extends ConsumerStatefulWidget {
 
 class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
   late final TextEditingController _searchController;
+
   @override
   void initState() {
     super.initState();
-
     final String existingQuery = ref.read(wardrobeFilterProvider).searchQuery;
-
     _searchController = TextEditingController(text: existingQuery);
   }
 
@@ -56,25 +54,17 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final FamilyMember? selectedMember = ref.watch(
-      selectedFamilyMemberProvider,
-    );
-    final Set<String> favoriteIds =
-        ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
+    final FamilyMember? selectedMember = ref.watch(selectedFamilyMemberProvider);
+    final Set<String> favoriteIds = ref.watch(favoritesProvider).valueOrNull ?? const <String>{};
     final AsyncValue<List<Garment>> garments = ref.watch(garmentsProvider);
     final AsyncValue<List<Alert>> alerts = ref.watch(alertsProvider);
 
-    final int unreadCount =
-        alerts.valueOrNull?.where((Alert alert) => !alert.isRead).length ?? 0;
-
+    final int unreadCount = alerts.valueOrNull?.where((Alert alert) => !alert.isRead).length ?? 0;
     final WardrobeFilters filters = ref.watch(wardrobeFilterProvider);
-
     final List<Garment> filtered = ref.watch(filteredGarmentsProvider);
 
     final Map<String, String> locationNames = <String, String>{
-      for (final GarmentLocation location
-          in ref.watch(garmentLocationsProvider).valueOrNull ??
-              const <GarmentLocation>[])
+      for (final GarmentLocation location in ref.watch(garmentLocationsProvider).valueOrNull ?? const <GarmentLocation>[])
         location.id: location.name,
     };
 
@@ -83,49 +73,55 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
         leading: widget.canNavigateBack
             ? BackArrowButton(onPressed: widget.onNavigateBack)
             : null,
+        title: const Text(
+          'My Wardrobe',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 24,
+            letterSpacing: -0.4,
+            color: Color(0xFF1C1C1E),
+          ),
+        ),
+        titleSpacing: AppSpacing.xl,
         actions: <Widget>[
-          if (selectedMember != null)
-            IconButton(
-              onPressed: () => context.push('/profiles'),
-              tooltip: 'Choose your wardrobe',
-              icon: FamilyMemberAvatar(
-                name: selectedMember.name,
-                avatarUrl: selectedMember.avatarUrl,
-                radius: 17,
+          // Profile Avatar at top-right corner matching Screenshot 1
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.xl),
+            child: Center(
+              child: GestureDetector(
+                onTap: () => context.push('/profiles'),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFE8D7CA),
+                      width: 2,
+                    ),
+                  ),
+                  child: FamilyMemberAvatar(
+                    name: selectedMember?.name ?? 'User',
+                    avatarUrl: selectedMember?.avatarUrl,
+                    radius: 18,
+                  ),
+                ),
               ),
             ),
-          IconButton(
-            onPressed: () => context.push('/alerts'),
-            tooltip: 'Notifications',
-            icon: Badge(
-              isLabelVisible: unreadCount > 0,
-              label: Text(unreadCount > 99 ? '99+' : unreadCount.toString()),
-              child: const Icon(Icons.notifications_outlined),
-            ),
-          ),
-          IconButton(
-            onPressed: () => context.push('/favorites'),
-            icon: const Icon(Icons.favorite_border_rounded),
-            tooltip: 'My Favorites',
-          ),
-          IconButton(
-            onPressed: () => context.push('/garments/archived'),
-            icon: const Icon(Icons.archive_outlined),
-            tooltip: 'Closet Vault',
           ),
         ],
-
       ),
       floatingActionButton: garments.maybeWhen(
         data: (List<Garment> allGarments) {
-          if (allGarments.isEmpty) {
-            return null;
-          }
+          if (allGarments.isEmpty) return null;
 
-          return FloatingActionButton.extended(
+          return FloatingActionButton(
             onPressed: () => context.push('/garments/new'),
-            icon: const Icon(Icons.add),
-            label: const Text('Add item'),
+            tooltip: 'Add item',
+            backgroundColor: const Color(0xFF4A5D4E),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            shape: const CircleBorder(),
+            child: const Icon(Icons.add, size: 28),
           );
         },
         orElse: () => null,
@@ -140,13 +136,11 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              WardrobeHeader(title: 'My Wardrobe', pieceCount: 0),
-              SizedBox(height: AppSpacing.hero),
               AppLoadingState(showIcon: false, label: 'Loading your closet'),
             ],
           ),
         ),
-        error: (_, _) => AppErrorState(
+        error: (_, __) => AppErrorState(
           title: 'We could not load your wardrobe',
           message: 'Check your connection and try again.',
           onAction: () => ref.invalidate(garmentsProvider),
@@ -156,47 +150,80 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
             onRefresh: () async => ref.invalidate(garmentsProvider),
             child: CustomScrollView(
               slivers: <Widget>[
+                // Search & Action Row
                 SliverToBoxAdapter(
-                  child: Column(
-                    children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.xl,
-                          0,
-                          AppSpacing.xl,
-                          AppSpacing.sm,
-                        ),
-                        child: WardrobeHeader(
-                          title: 'My Wardrobe',
-                          pieceCount: allGarments.length,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.xl,
-                          0,
-                          AppSpacing.xl,
-                          AppSpacing.md,
-                        ),
-                        child: WardrobeSearchBar(
-                          controller: _searchController,
-                          searchQuery: filters.searchQuery,
-                          onChanged: ref
-                              .read(wardrobeFilterProvider.notifier)
-                              .setSearchQuery,
-                          onClear: () {
-                            _searchController.clear();
-
-                            ref
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xs,
+                      AppSpacing.xl,
+                      AppSpacing.md,
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: WardrobeSearchBar(
+                            controller: _searchController,
+                            searchQuery: filters.searchQuery,
+                            hintText: 'Search Wardrobe',
+                            onChanged: ref
                                 .read(wardrobeFilterProvider.notifier)
-                                .setSearchQuery('');
-                          },
+                                .setSearchQuery,
+                            onClear: () {
+                              _searchController.clear();
+                              ref
+                                  .read(wardrobeFilterProvider.notifier)
+                                  .setSearchQuery('');
+                            },
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.sm),
+                        // Notifications bell (with red unread dot badge)
+                        IconButton(
+                          onPressed: () => context.push('/alerts'),
+                          tooltip: 'Notifications',
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
+                          icon: Badge(
+                            isLabelVisible: unreadCount > 0,
+                            backgroundColor: const Color(0xFFE05C5C),
+                            smallSize: 8,
+                            label: Text(
+                              unreadCount > 99 ? '99+' : unreadCount.toString(),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              size: 26,
+                              color: Color(0xFF1C1C1E),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        // Closet Vault bag icon
+                        IconButton(
+                          onPressed: () => context.push('/garments/archived'),
+                          tooltip: 'Closet Vault',
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
+                          icon: const Icon(
+                            Icons.shopping_bag_outlined,
+                            size: 26,
+                            color: Color(0xFF1C1C1E),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
+                // Category pills
                 SliverToBoxAdapter(
                   child: WardrobeCategoryNavigation(
                     selectedCategory: filters.category,
@@ -206,6 +233,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                   ),
                 ),
 
+                // Sort by / Filter by buttons
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
@@ -292,10 +320,8 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                           ? 'Your wardrobe is empty'
                           : 'No matching garments',
                       message: allGarments.isEmpty
-                          ? 'Add your first piece to start building your '
-                                'digital wardrobe.'
-                          : 'Try changing your search, filters, or sorting '
-                                'options.',
+                          ? 'Add your first piece to start building your digital wardrobe.'
+                          : 'Try changing your search, filters, or sorting options.',
                       actionLabel: allGarments.isEmpty
                           ? 'Add first garment'
                           : null,
@@ -314,11 +340,12 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                     ),
                     sliver: SliverGrid(
                       delegate: SliverChildBuilderDelegate(
-                            (BuildContext context, int index) {
+                        (BuildContext context, int index) {
                           final Garment garment = filtered[index];
                           return GarmentCard(
                             garment: garment,
                             isFavorite: favoriteIds.contains(garment.id),
+                            showMetadata: false,
                             onToggleFavorite: () => ref
                                 .read(favoritesProvider.notifier)
                                 .toggleFavorite(garment.id),
@@ -330,11 +357,11 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                       ),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppSpacing.md,
-                            mainAxisSpacing: AppSpacing.lg,
-                            childAspectRatio: .58,
-                          ),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: AppSpacing.md,
+                        mainAxisSpacing: AppSpacing.md,
+                        childAspectRatio: 0.88,
+                      ),
                     ),
                   ),
               ],

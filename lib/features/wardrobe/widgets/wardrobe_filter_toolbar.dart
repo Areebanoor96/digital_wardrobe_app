@@ -1,14 +1,11 @@
-import 'package:digital_wardrobe_app/core/theme/app_dimensions.dart';
-import 'package:digital_wardrobe_app/core/theme/app_radius.dart';
 import 'package:digital_wardrobe_app/core/theme/app_spacing.dart';
 import 'package:digital_wardrobe_app/features/wardrobe/models/wardrobe_filters.dart';
 import 'package:flutter/material.dart';
 
-/// Compact filter + sort controls for the wardrobe catalog.
+/// Compact filter + sort controls for the wardrobe catalog matching Figma.
 ///
-/// Filters and sort occupy a slim row instead of full-width buttons: a
-/// "Filter" control with an active count badge and a "Sort" popup. All
-/// filtering/sorting behaviour is unchanged.
+/// Features two balanced pill buttons ('Sort by' and 'Filter by') with rounded
+/// pill radii and solid Dark Olive Green active styling.
 class WardrobeFilterToolbar extends StatelessWidget {
   const WardrobeFilterToolbar({
     super.key,
@@ -23,60 +20,107 @@ class WardrobeFilterToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
+    const Color activeColor = Color(0xFF4A5D4E);
+    final bool isFiltered = filters.activeFilterCount > 0;
+    final bool isSorted = filters.sortOption != WardrobeSortOption.newestAdded;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
         Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: PopupMenuButton<WardrobeSortOption>(
-              initialValue: filters.sortOption,
-              tooltip: 'Sort garments',
-              onSelected: onSortSelected,
-              itemBuilder: (BuildContext context) {
-                return WardrobeSortOption.values
-                    .map(
-                      (WardrobeSortOption option) =>
-                          PopupMenuItem<WardrobeSortOption>(
-                            value: option,
-                            child: Row(
-                              children: <Widget>[
-                                if (filters.sortOption == option) ...<Widget>[
-                                  const Icon(Icons.check, size: AppSpacing.lg),
-                                  const SizedBox(width: AppSpacing.sm),
-                                ],
-                                Expanded(child: Text(option.label)),
-                              ],
-                            ),
+          child: PopupMenuButton<WardrobeSortOption>(
+            initialValue: filters.sortOption,
+            tooltip: 'Sort by',
+            onSelected: onSortSelected,
+            itemBuilder: (BuildContext context) {
+              return WardrobeSortOption.values.map(
+                (WardrobeSortOption option) => PopupMenuItem<WardrobeSortOption>(
+                  value: option,
+                  child: Row(
+                    children: <Widget>[
+                      if (filters.sortOption == option) ...<Widget>[
+                        const Icon(Icons.check, size: AppSpacing.lg, color: activeColor),
+                        const SizedBox(width: AppSpacing.sm),
+                      ],
+                      Expanded(
+                        child: Text(
+                          option.label,
+                          style: TextStyle(
+                            fontWeight: filters.sortOption == option
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                           ),
-                    )
-                    .toList();
-              },
-              child: _ToolbarControl(
-                leading: const Icon(Icons.sort, size: AppDimensions.iconMd),
-                label: 'Sort',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ).toList();
+            },
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: isSorted ? activeColor : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isSorted ? activeColor : const Color(0xFFE5E4DE),
+                  width: 1,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                isSorted ? 'Sort: ${filters.sortOption.label}' : 'Sort by',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: isSorted ? Colors.white : const Color(0xFF636366),
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
-              onPressed: onOpenFilters,
-              icon: const Icon(Icons.tune, size: AppDimensions.iconMd),
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
+          child: InkWell(
+            onTap: onOpenFilters,
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: isFiltered ? activeColor : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: isFiltered ? activeColor : const Color(0xFFE5E4DE),
+                  width: 1,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  Text('Filter'),
-                  if (filters.activeFilterCount > 0) ...<Widget>[
-                    const SizedBox(width: AppSpacing.xs),
-                    _CountBadge(
-                      count: filters.activeFilterCount,
-                      colors: colors,
+                  Text(
+                    'Filter by',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isFiltered ? Colors.white : const Color(0xFF636366),
+                    ),
+                  ),
+                  if (isFiltered) ...<Widget>[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${filters.activeFilterCount}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: activeColor,
+                        ),
+                      ),
                     ),
                   ],
                 ],
@@ -85,76 +129,6 @@ class WardrobeFilterToolbar extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ToolbarControl extends StatelessWidget {
-  const _ToolbarControl({required this.leading, required this.label});
-
-  final Widget? leading;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (leading != null) ...<Widget>[
-              leading!,
-              const SizedBox(width: AppSpacing.xs),
-            ],
-            Text(label, style: Theme.of(context).textTheme.labelMedium),
-            const SizedBox(width: AppSpacing.xs),
-            Icon(
-              Icons.arrow_drop_down,
-              size: AppDimensions.iconSm,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.count, required this.colors});
-
-  final int count;
-  final ColorScheme colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.primary.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(AppSpacing.xl),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 2,
-        ),
-        child: Text(
-          '$count',
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: colors.primary),
-        ),
-      ),
     );
   }
 }

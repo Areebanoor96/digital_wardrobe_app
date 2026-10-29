@@ -7,33 +7,32 @@ import 'package:flutter/material.dart';
 /// roles (e.g. `primary`, `surfaceContainerHighest`, `onSurfaceVariant`)
 /// rather than reaching directly for these raw values.
 ///
-/// The palette keeps the existing lavender/purple identity while making the
-/// supporting neutrals more intentional and fashion-oriented.
+/// Updated to match the Figma High-End Fashion design system (Olive & Cream).
 abstract final class AppPalette {
   // --- Brand / primary ---
-  /// Primary accent — a sophisticated lavender-purple.
-  static const Color primary = Color(0xFF6C5CE7);
+  /// Primary accent — a sophisticated dark olive green matching Figma.
+  static const Color primary = Color(0xFF4A5D4E);
 
   /// Slightly deeper brand tone for gradients/emphasis.
-  static const Color primaryDeep = Color(0xFF5B4BCB);
+  static const Color primaryDeep = Color(0xFF38473D);
 
   /// Softer brand tone for tinted secondary surfaces.
-  static const Color primarySoft = Color(0xFF8B7FF0);
+  static const Color primarySoft = Color(0xFF6E8273);
 
   // --- Neutral base ---
   static const Color white = Color(0xFFFFFFFF);
-  static const Color black = Color(0xFF0E0E12);
+  static const Color black = Color(0xFF1C1C1E);
 
-  // --- Light neutrals ---
-  static const Color lightBackground = Color(0xFFFAFAFC);
+  // --- Light neutrals (Warm Cream aesthetic) ---
+  static const Color lightBackground = Color(0xFFF8F7F2);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceMuted = Color(0xFFF4F4F8);
+  static const Color lightSurfaceMuted = Color(0xFFEFEEE9);
   static const Color lightSurfaceRaised = Color(0xFFFFFFFF);
-  static const Color lightTextPrimary = Color(0xFF1A1A2E);
-  static const Color lightTextSecondary = Color(0xFF6B7280);
-  static const Color lightTextTertiary = Color(0xFF9CA3AF);
-  static const Color lightBorder = Color(0xFFEEEFF3);
-  static const Color lightBorderStrong = Color(0xFFE2E3EA);
+  static const Color lightTextPrimary = Color(0xFF1C1C1E);
+  static const Color lightTextSecondary = Color(0xFF636366);
+  static const Color lightTextTertiary = Color(0xFF8E8E93);
+  static const Color lightBorder = Color(0xFFE5E4DE);
+  static const Color lightBorderStrong = Color(0xFFD6D5CF);
 
   // --- Dark neutrals ---
   static const Color darkBackground = Color(0xFF12121C);
@@ -47,7 +46,7 @@ abstract final class AppPalette {
   static const Color darkBorderStrong = Color(0xFF353548);
 
   // --- Semantic status ---
-  static const Color success = Color(0xFF2FA365);
+  static const Color success = Color(0xFF4A5D4E);
   static const Color warning = Color(0xFFE09B3D);
   static const Color error = Color(0xFFE05C5C);
   static const Color info = Color(0xFF4A88C9);
