@@ -51,102 +51,103 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 48,
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTabIndex = 0),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
+      floatingActionButton: (_selectedTabIndex == 1 && ref.watch(selectedCalendarDayProvider) != null)
+          ? null // Hide '+' button when a date is selected in the calendar tab
+          : FloatingActionButton(
+        onPressed: () => context.push('/outfits/new'),
+        tooltip: 'Create outfit',
+        backgroundColor: const Color(0xFF4A5D4E),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, size: 28),
+      ),
+      body: Column(
+        children: <Widget>[
+          // Top Segmented Switcher (Stylist Suggestions / Outfit Calendar)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedTabIndex = 0),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: _selectedTabIndex == 0
+                              ? const Color(0xFF4A5D4E)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Stylist Suggestions',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: _selectedTabIndex == 0
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: _selectedTabIndex == 0
-                                ? const Color(0xFF4A5D4E)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Stylist Suggestions',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: _selectedTabIndex == 0
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: _selectedTabIndex == 0
-                                  ? Colors.white
-                                  : const Color(0xFF8E8E93),
-                            ),
+                                ? Colors.white
+                                : const Color(0xFF8E8E93),
                           ),
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedTabIndex = 1),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          decoration: BoxDecoration(
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedTabIndex = 1),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: _selectedTabIndex == 1
+                              ? const Color(0xFF4A5D4E)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Outfit Calendar',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: _selectedTabIndex == 1
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: _selectedTabIndex == 1
-                                ? const Color(0xFF4A5D4E)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Outfit Calender',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: _selectedTabIndex == 1
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: _selectedTabIndex == 1
-                                  ? Colors.white
-                                  : const Color(0xFF8E8E93),
-                            ),
+                                ? Colors.white
+                                : const Color(0xFF8E8E93),
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            FloatingActionButton(
-              onPressed: () => context.push('/outfits/new'),
-              tooltip: 'Create outfit',
-              backgroundColor: const Color(0xFF4A5D4E),
-              foregroundColor: Colors.white,
-              elevation: 2,
-              shape: const CircleBorder(),
-              child: const Icon(Icons.add, size: 28),
-            ),
-          ],
-        ),
-      ),
-      body: _selectedTabIndex == 0
-          ? outfits.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+          ),
+
+          // Main Body Content based on Tab
+          Expanded(
+            child: _selectedTabIndex == 0
+                ? outfits.when(
+              loading: () =>
+              const Center(child: CircularProgressIndicator()),
               error: (_, _) => _OutfitFeedback(
                 title: 'We could not load your outfits',
                 message: 'Check your connection and try again.',
@@ -162,7 +163,7 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                     ref.invalidate(ootdProvider);
                   },
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
                     children: <Widget>[
                       ootd.when(
                         loading: () => const Padding(
@@ -171,7 +172,9 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                             elevation: 0,
                             child: SizedBox(
                               height: 180,
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Center(
+                                child: CircularProgressIndicator(),
+                              ),
                             ),
                           ),
                         ),
@@ -180,22 +183,27 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: OotdCard(
                             recommendation: rec,
-                            onRefresh: () =>
-                                ref.read(ootdRefreshTokenProvider.notifier).state++,
+                            onRefresh: () => ref
+                                .read(ootdRefreshTokenProvider.notifier)
+                                .state++,
                             outfitContext: ref.watch(ootdContextProvider),
                             onContextChanged: (OutfitContext value) {
-                              ref.read(ootdContextProvider.notifier).state = value;
+                              ref
+                                  .read(ootdContextProvider.notifier)
+                                  .state = value;
                             },
                             onSave: actionState.isLoading
                                 ? null
                                 : (current) => ref
-                                    .read(ootdActionControllerProvider.notifier)
-                                    .saveAsOutfit(current.garments),
+                                .read(ootdActionControllerProvider
+                                .notifier)
+                                .saveAsOutfit(current.garments),
                             onWear: actionState.isLoading
                                 ? null
                                 : (current) => ref
-                                    .read(ootdActionControllerProvider.notifier)
-                                    .wearOutfit(current.garments),
+                                .read(ootdActionControllerProvider
+                                .notifier)
+                                .wearOutfit(current.garments),
                             isSaving: actionState.isLoading,
                             isWearing: actionState.isLoading,
                           ),
@@ -205,7 +213,7 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                         _OutfitFeedback(
                           title: 'No saved outfits yet',
                           message:
-                              'Combine garments from your wardrobe into outfits you can reuse.',
+                          'Combine garments from your wardrobe into outfits you can reuse.',
                           actionLabel: 'Create outfit',
                           onAction: () => context.push('/outfits/new'),
                         )
@@ -214,9 +222,12 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                           final List<Garment> items = outfit.garmentIds
                               .map(
                                 (String id) => wardrobe
-                                    .where((Garment garment) => garment.id == id)
-                                    .firstOrNull,
-                              )
+                                .where(
+                                  (Garment garment) =>
+                              garment.id == id,
+                            )
+                                .firstOrNull,
+                          )
                               .whereType<Garment>()
                               .toList();
                           return Padding(
@@ -224,7 +235,8 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                             child: OutfitCard(
                               outfit: outfit,
                               garments: items,
-                              onTap: () => context.push('/outfits/${outfit.id}'),
+                              onTap: () =>
+                                  context.push('/outfits/${outfit.id}'),
                             ),
                           );
                         }),
@@ -233,7 +245,10 @@ class _OutfitsScreenState extends ConsumerState<OutfitsScreen> {
                 );
               },
             )
-          : const CalendarScreen(),
+                : const CalendarScreen(),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -253,34 +268,33 @@ class _OutfitFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const Icon(
-                Icons.auto_awesome_outlined,
-                size: 64,
-                color: Color(0xFF4A5D4E),
-              ),
-              const SizedBox(height: 16),
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(message, textAlign: TextAlign.center),
-              if (actionLabel != null && onAction != null) ...<Widget>[
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: onAction,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A5D4E),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text(actionLabel!),
-                ),
-              ],
-            ],
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const Icon(
+            Icons.auto_awesome_outlined,
+            size: 64,
+            color: Color(0xFF4A5D4E),
           ),
-        ),
-      );
-
+          const SizedBox(height: 16),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Text(message, textAlign: TextAlign.center),
+          if (actionLabel != null && onAction != null) ...<Widget>[
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: onAction,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF4A5D4E),
+                foregroundColor: Colors.white,
+              ),
+              child: Text(actionLabel!),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
 }

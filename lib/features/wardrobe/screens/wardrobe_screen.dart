@@ -179,6 +179,7 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         // Notifications bell (with red unread dot badge)
+                        // Notifications bell (with red unread dot badge)
                         IconButton(
                           onPressed: () => context.push('/alerts'),
                           tooltip: 'Notifications',
@@ -202,6 +203,24 @@ class _WardrobeScreenState extends ConsumerState<WardrobeScreen> {
                               size: 26,
                               color: Color(0xFF1C1C1E),
                             ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        // Favorites / Heart Icon (Newly Added)
+                        IconButton(
+                          onPressed: () => context.push('/favorites'),
+                          tooltip: 'Favorites',
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            favoriteIds.isNotEmpty
+                                ? Icons.favorite
+                                : Icons.favorite_border_rounded,
+                            size: 26,
+                            color: favoriteIds.isNotEmpty
+                                ? const Color(0xFF4A5D4E)
+                                : const Color(0xFF1C1C1E),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.xs),

@@ -28,7 +28,10 @@ class AlertsScreen extends ConsumerWidget {
     final bool isRefreshing = alerts.isLoading;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F7F2), // Warm Cream Theme Accent
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: canNavigateBack
             ? BackArrowButton(onPressed: onNavigateBack)
             : null,
@@ -38,11 +41,11 @@ class AlertsScreen extends ConsumerWidget {
             onPressed: isRefreshing
                 ? null
                 : () async {
-                    await ref
-                        .read(alertsProvider.notifier)
-                        .regenerateAlerts();
-                  },
-            icon: const Icon(Icons.refresh),
+              await ref
+                  .read(alertsProvider.notifier)
+                  .regenerateAlerts();
+            },
+            icon: const Icon(Icons.refresh, color: Color(0xFF1C1C1E)),
           ),
         ],
       ),
@@ -141,14 +144,14 @@ class AlertsScreen extends ConsumerWidget {
             .read(alertsProvider.notifier)
             .markAsRead(alert.id)
             .catchError((Object error, StackTrace stackTrace) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Could not mark alert as read.'),
-                  ),
-                );
-              }
-            }),
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Could not mark alert as read.'),
+              ),
+            );
+          }
+        }),
       );
     }
 
@@ -163,10 +166,10 @@ class AlertsScreen extends ConsumerWidget {
   }
 
   Future<void> _dismissAlert(
-    BuildContext context,
-    WidgetRef ref,
-    Alert alert,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      Alert alert,
+      ) async {
     try {
       await ref.read(alertsProvider.notifier).dismissAlert(alert.id);
     } catch (_) {
@@ -189,9 +192,6 @@ class _AlertsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
-    final ColorScheme colors = Theme.of(context).colorScheme;
-
     final String subtitle = totalCount == 0
         ? 'No alerts'
         : unreadCount == 0
@@ -203,16 +203,50 @@ class _AlertsHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text('Alerts', style: textTheme.headlineMedium),
+        // Hanger Icon with Soft Green Badge
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Stack(
+              children: <Widget>[
+                Positioned(
+                  bottom: 2,
+                  left: 2,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDCE8CF), // Soft Green Highlight
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.checkroom_outlined, // Hanger Icon
+                  size: 38,
+                  color: Color(0xFF1C1C1E),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Text(
+          'Alerts',
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+            color: Color(0xFF1C1C1E),
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           subtitle,
-          style: textTheme.labelMedium?.copyWith(
-            color: colors.onSurfaceVariant,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Color(0xFF8E8E93),
           ),
         ),
       ],

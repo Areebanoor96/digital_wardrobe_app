@@ -34,7 +34,7 @@ class AlertCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _AlertIcon(type: alert.type, isRead: alert.isRead),
+              const _AlertIcon(),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -99,48 +99,33 @@ class AlertCard extends StatelessWidget {
 }
 
 class _AlertIcon extends StatelessWidget {
-  const _AlertIcon({required this.type, required this.isRead});
-
-  final AlertType type;
-  final bool isRead;
+  const _AlertIcon();
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color accent = isRead
-        ? colors.onSurface.withValues(alpha: 0.35)
-        : _accentColor(colors, type);
-
-    return Container(
+    return SizedBox(
       width: AppDimensions.touchTarget,
       height: AppDimensions.touchTarget,
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: isRead ? 0.08 : 0.12),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          // Soft Green Highlight Circle Badge
+          Container(
+            width: 26,
+            height: 26,
+            decoration: const BoxDecoration(
+              color: Color(0xFFDCE8CF),
+              shape: BoxShape.circle,
+            ),
+          ),
+          // Hanger Icon
+          const Icon(
+            Icons.checkroom_outlined,
+            size: 22,
+            color: Color(0xFF1C1C1E),
+          ),
+        ],
       ),
-      child: Icon(_iconData, size: AppDimensions.iconLg, color: accent),
     );
   }
-
-  IconData get _iconData => switch (type) {
-    AlertType.unused => Icons.watch_later_outlined,
-    AlertType.laundry => Icons.local_laundry_service_outlined,
-    AlertType.ootd => Icons.auto_awesome_outlined,
-    AlertType.growth => Icons.trending_up,
-    AlertType.lendReturn => Icons.swap_horiz,
-    AlertType.handMeDown => Icons.child_care_outlined,
-    AlertType.expiry => Icons.info_outline,
-    AlertType.sale => Icons.local_offer_outlined,
-  };
-
-  Color _accentColor(ColorScheme colors, AlertType type) => switch (type) {
-    AlertType.unused => AppPalette.warning,
-    AlertType.laundry => AppPalette.info,
-    AlertType.ootd => colors.primary,
-    AlertType.growth => AppPalette.success,
-    AlertType.lendReturn => colors.secondary,
-    AlertType.handMeDown => AppPalette.success,
-    AlertType.expiry => colors.error,
-    AlertType.sale => AppPalette.warning,
-  };
 }

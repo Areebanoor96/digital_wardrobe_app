@@ -38,461 +38,474 @@ class GarmentDetailScreen extends ConsumerWidget {
     return ref
         .watch(garmentProvider(garmentId))
         .when(
-          loading: () => Scaffold(
-            appBar: AppBar(leading: const BackArrowButton()),
-            body: const AppLoadingState(
-              showIcon: false,
-              label: 'Loading garment',
+      loading: () => Scaffold(
+        appBar: AppBar(leading: const BackArrowButton()),
+        body: const AppLoadingState(
+          showIcon: false,
+          label: 'Loading garment',
+        ),
+      ),
+      error: (_, _) => Scaffold(
+        appBar: AppBar(leading: const BackArrowButton()),
+        body: AppErrorState(
+          title: 'Garment unavailable',
+          message: 'This garment could not be loaded. Try again.',
+          onAction: () => ref.invalidate(garmentProvider(garmentId)),
+        ),
+      ),
+      data: (Garment garment) => Scaffold(
+        appBar: AppBar(
+          leading: const BackArrowButton(),
+          actions: <Widget>[
+            IconButton(
+              onPressed: () =>
+                  context.push('/garments/$garmentId/edit', extra: garment),
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Edit Item',
             ),
-          ),
-          error: (_, _) => Scaffold(
-            appBar: AppBar(leading: const BackArrowButton()),
-            body: AppErrorState(
-              title: 'Garment unavailable',
-              message: 'This garment could not be loaded. Try again.',
-              onAction: () => ref.invalidate(garmentProvider(garmentId)),
-            ),
-          ),
-          data: (Garment garment) => Scaffold(
-            appBar: AppBar(
-              leading: const BackArrowButton(),
-              actions: <Widget>[
-                IconButton(
-                  onPressed: () =>
-                      context.push('/garments/$garmentId/edit', extra: garment),
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Edit Item',
+            if (!garment.isArchived)
+              IconButton(
+                onPressed: archiveState.isLoading
+                    ? null
+                    : () => _archive(context, ref, garment),
+                icon: archiveState.isLoading
+                    ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                    : const Icon(Icons.archive_outlined),
+                tooltip: 'Move To Closet Vault',
+              )
+            else
+              IconButton(
+                onPressed: archiveState.isLoading
+                    ? null
+                    : () => _restore(context, ref, garment),
+                icon: archiveState.isLoading
+                    ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                    : const Icon(Icons.unarchive_outlined),
+                tooltip: 'Return To Wardrobe',
+              ),
+          ],
+        ),
+          // ListView ke children ka updated order:
+          body: ListView(
+            padding: const EdgeInsets.only(bottom: 100),
+            children: <Widget>[
+              _GarmentHero(photoUrls: garment.photoUrls),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                  AppSpacing.xl,
+                  0,
                 ),
-                if (!garment.isArchived)
-                  IconButton(
-                    onPressed: archiveState.isLoading
-                        ? null
-                        : () => _archive(context, ref, garment),
-                    icon: archiveState.isLoading
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.archive_outlined),
-                    tooltip: 'Move To Closet Vault',
-                  )
-                else
-                  IconButton(
-                    onPressed: archiveState.isLoading
-                        ? null
-                        : () => _restore(context, ref, garment),
-                    icon: archiveState.isLoading
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.unarchive_outlined),
-                    tooltip: 'Return To Wardrobe',
-                  ),
-              ],
-            ),
-            body: ListView(
-              padding: const EdgeInsets.only(bottom: 100),
-              children: <Widget>[
-                _GarmentHero(photoUrls: garment.photoUrls),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.sm,
-                    AppSpacing.xl,
-                    0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        garment.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.headlineLarge?.copyWith(height: 1.1),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      _GarmentSubtitle(garment: garment),
-                      const SizedBox(height: AppSpacing.xs),
-                      _GarmentDetailTags(garment: garment),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      garment.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineLarge?.copyWith(height: 1.1),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    _GarmentSubtitle(garment: garment),
+                    const SizedBox(height: AppSpacing.xs),
+                    _GarmentDetailTags(garment: garment),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.xs,
+                  AppSpacing.xl,
+                  AppSpacing.xxl,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    GarmentWearInsight(garment: garment),
+                    const SizedBox(height: AppSpacing.lg),
+                    if (garment.availabilityStatus ==
+                        GarmentAvailabilityStatus.lent ||
+                        garment.availabilityStatus ==
+                            GarmentAvailabilityStatus.borrowed) ...<Widget>[
                       const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.sm,
-                        runSpacing: AppSpacing.sm,
+                      _LendingSection(
+                        garment: garment,
+                        activeLending: activeLending,
+                        onMarkReturned: () =>
+                            _markReturned(context, ref, garment),
+                        isReturning: ref
+                            .watch(lendingControllerProvider)
+                            .isLoading,
+                        formatDate: _formatDate,
+                      ),
+                    ],
+                    if (_hasCareInformation(garment)) ...<Widget>[
+                      const SizedBox(height: AppSpacing.lg),
+                      GarmentMetadataSection(
+                        title: 'Care & Readiness',
                         children: <Widget>[
-                          if (garment.isArchived)
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                style: _detailActionButtonStyle(),
-                                onPressed: archiveState.isLoading
-                                    ? null
-                                    : () => _restore(context, ref, garment),
-                                icon: archiveState.isLoading
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                          GarmentInfoRow(
+                            label: 'Wash Instructions',
+                            value: garment.washInstructions!,
+                            icon: Icons.local_laundry_service_outlined,
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_hasStandaloneGarmentInformation(
+                      garment,
+                    )) ...<Widget>[
+                      const SizedBox(height: AppSpacing.lg),
+                      if ((garment.locationName?.trim().isNotEmpty ?? false))
+                        GarmentInfoRow(
+                          label: 'Location',
+                          value: garment.locationName!,
+                          icon: Icons.place_outlined,
+                        ),
+                      if (garment.occasions.any(
+                            (String o) => o.trim().isNotEmpty,
+                      ))
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
+                          child: GarmentInfoRow(
+                            label: 'Occasions',
+                            value: GarmentMetadataFormatter.detailListSummary(
+                              garment.occasions.map(_titleCase).toList(),
+                            ),
+                            icon: Icons.celebration_outlined,
+                          ),
+                        ),
+                      if (garment.moods.any(
+                            (String m) => m.trim().isNotEmpty,
+                      ))
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
+                          child: GarmentInfoRow(
+                            label: 'Moods',
+                            value: GarmentMetadataFormatter.detailListSummary(
+                              garment.moods.map(_titleCase).toList(),
+                            ),
+                            icon: Icons.style_outlined,
+                          ),
+                        ),
+                    ],
+                    if (_hasGarmentDetails(garment)) ...<Widget>[
+                      const SizedBox(height: AppSpacing.lg),
+                      GarmentMetadataSection(
+                        title: 'Item Details',
+                        children: <Widget>[
+                          if (_supportsSubcategory(garment.category) &&
+                              (garment.subcategory?.trim().isNotEmpty ??
+                                  false))
+                            GarmentInfoRow(
+                              label: _subcategoryLabel(garment.category),
+                              value: garment.subcategory!,
+                            ),
+                          if (_supportsSizes(garment.category) &&
+                              garment.effectiveSizes.isNotEmpty)
+                            GarmentInfoRow(
+                              label: 'Size',
+                              value: garment.effectiveSizes.join(', '),
+                              icon: Icons.straighten_outlined,
+                            ),
+                          if (_isClothing(garment.category)) ...<Widget>[
+                            if ((garment.fabric?.trim().isNotEmpty ?? false))
+                              GarmentInfoRow(
+                                label: 'Fabric',
+                                value: garment.fabric!,
+                              ),
+                            if ((garment.fit?.trim().isNotEmpty ?? false))
+                              GarmentInfoRow(
+                                label: 'Fit',
+                                value: garment.fit!,
+                              ),
+                            if ((garment.pattern?.trim().isNotEmpty ?? false))
+                              GarmentInfoRow(
+                                label: 'Pattern',
+                                value: garment.pattern!,
+                              ),
+                            if ((garment.fabricWeight?.trim().isNotEmpty ??
+                                false))
+                              GarmentInfoRow(
+                                label: 'Fabric Weight',
+                                value: garment.fabricWeight!,
+                              ),
+                          ],
+                          if (_supportsSleeveLength(garment.category) &&
+                              (garment.sleeveLength?.trim().isNotEmpty ??
+                                  false))
+                            GarmentInfoRow(
+                              label: 'Sleeve Length',
+                              value: garment.sleeveLength!,
+                            ),
+                          if (_supportsStitching(garment.category) &&
+                              garment.stitchingStatus != null)
+                            GarmentInfoRow(
+                              label: 'Stitching',
+                              value: garment.stitchingStatus!.label,
+                            ),
+                          if (garment.details?.trim().isNotEmpty ?? false)
+                            GarmentInfoRow(
+                              label: 'Details',
+                              value: garment.details!,
+                            ),
+                        ],
+                      ),
+                    ],
+                    if (_hasPurchaseInformation(garment)) ...<Widget>[
+                      const SizedBox(height: AppSpacing.lg),
+                      GarmentMetadataSection(
+                        title: 'Purchase Information',
+                        children: <Widget>[
+                          if (garment.brand?.trim().isNotEmpty ?? false)
+                            GarmentInfoRow(
+                              label: 'Brand',
+                              value: garment.brand!,
+                              icon: Icons.sell_outlined,
+                            ),
+                          if (garment.purchaseStore?.trim().isNotEmpty ??
+                              false)
+                            GarmentInfoRow(
+                              label: 'Store',
+                              value: garment.purchaseStore!,
+                            ),
+                          if (garment.price != null)
+                            GarmentInfoRow(
+                              label: 'Price',
+                              value:
+                              '${garment.currency} '
+                                  '${garment.price!.toStringAsFixed(0)}',
+                            ),
+                          if (garment.purchaseDate != null)
+                            GarmentInfoRow(
+                              label: 'Purchase Date',
+                              value: _formatDate(garment.purchaseDate!),
+                            ),
+                          if (_hasReceipt(garment))
+                            GarmentInfoRow(
+                              label: 'Receipt',
+                              value: 'Receipt attached',
+                              icon: Icons.receipt_long_outlined,
+                              trailing: IconButton(
+                                onPressed: () =>
+                                    _previewReceipt(context, garment),
+                                icon: const Icon(
+                                  Icons.visibility_outlined,
+                                  size: 18,
+                                ),
+                                tooltip: 'View Receipt',
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    GarmentMetadataSection(
+                      title: 'Wear History',
+                      children: <Widget>[
+                        history.when(
+                          loading: () =>
+                          const AppLoadingState(showIcon: false),
+                          error: (_, _) => TextButton.icon(
+                            onPressed: () => ref.invalidate(
+                              garmentWearHistoryProvider(garmentId),
+                            ),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry Loading Wear History'),
+                          ),
+                          data: (List<WearLog> history) => WearHistoryList(
+                            history: history,
+                            onDelete: (WearLog entry) =>
+                                _deleteWear(context, ref, garment, entry),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // --- ACTION BUTTONS MOVED BELOW WEAR HISTORY ---
+                    const SizedBox(height: AppSpacing.xl),
+                    Column(
+                      children: <Widget>[
+                        if (garment.isArchived)
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF4A5D4E),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 44),
+                                shape: const StadiumBorder(),
+                              ),
+                              onPressed: archiveState.isLoading
+                                  ? null
+                                  : () => _restore(context, ref, garment),
+                              icon: archiveState.isLoading
+                                  ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                                  : const Icon(
+                                Icons.unarchive_outlined,
+                                size: 18,
+                              ),
+                              label: Text(
+                                archiveState.isLoading
+                                    ? 'Restoring...'
+                                    : 'Restore To Wardrobe',
+                              ),
+                            ),
+                          )
+                        else ...<Widget>[
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF4A5D4E),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(0, 44),
+                                shape: const StadiumBorder(),
+                              ),
+                              onPressed: wearState.isLoading
+                                  ? null
+                                  : () => _markAsWorn(context, ref),
+                              icon: wearState.isLoading
+                                  ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                                  : const Icon(
+                                Icons.check_circle_outline,
+                                size: 18,
+                              ),
+                              label: Text(
+                                wearState.isLoading
+                                    ? 'Recording...'
+                                    : 'Mark as Worn',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: PopupMenuButton<
+                                    GarmentAvailabilityStatus
+                                >(
+                                  tooltip: 'Availability Status',
+                                  onSelected: (status) => _changeStatus(
+                                    context,
+                                    ref,
+                                    garment,
+                                    status,
+                                  ),
+                                  itemBuilder: (BuildContext menuContext) =>
+                                      GarmentAvailabilityStatus.values
+                                          .map(
+                                            (status) => PopupMenuItem<
+                                            GarmentAvailabilityStatus
+                                        >(
+                                          value: status,
+                                          child: Text(status.label),
                                         ),
                                       )
-                                    : const Icon(
-                                        Icons.unarchive_outlined,
-                                        size: 18,
+                                          .toList(),
+                                  offset: const Offset(0, 8),
+                                  child: Container(
+                                    height: 44,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(22),
+                                      border: Border.all(
+                                        color: const Color(0xFFE5E5EA),
                                       ),
-                                label: Text(
-                                  archiveState.isLoading
-                                      ? 'Restoring...'
-                                      : 'Restore To Wardrobe',
-                                ),
-                              ),
-                            )
-                          else ...<Widget>[
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    style: _detailActionButtonStyle(),
-                                    onPressed: wearState.isLoading
-                                        ? null
-                                        : () => _markAsWorn(context, ref),
-                                    icon: wearState.isLoading
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Icon(
-                                            Icons.check_circle_outline,
-                                            size: 18,
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                      children: <Widget>[
+                                        Icon(
+                                          Icons.swap_horiz,
+                                          size: 16,
+                                          color: Color(0xFF1C1C1E),
+                                        ),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'Change Status',
+                                          style: TextStyle(
+                                            color: Color(0xFF1C1C1E),
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
                                           ),
-                                    label: Text(
-                                      wearState.isLoading
-                                          ? 'Recording...'
-                                          : 'Mark As Worn',
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
+                              ),
+                              if (_isClothing(garment.category)) ...<Widget>[
                                 const SizedBox(width: AppSpacing.sm),
                                 Expanded(
-                                  child: PopupMenuButton<
-                                    GarmentAvailabilityStatus
-                                  >(
-                                    tooltip: 'Availability Status',
-                                    onSelected: (status) => _changeStatus(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size(0, 44),
+                                      backgroundColor: Colors.white,
+                                      side: const BorderSide(
+                                        color: Color(0xFFE5E5EA),
+                                      ),
+                                      shape: const StadiumBorder(),
+                                      foregroundColor: const Color(
+                                        0xFF1C1C1E,
+                                      ),
+                                    ),
+                                    onPressed: () => _editIroningStatus(
                                       context,
                                       ref,
                                       garment,
-                                      status,
                                     ),
-                                    itemBuilder: (BuildContext menuContext) =>
-                                        GarmentAvailabilityStatus.values
-                                            .map(
-                                              (status) => PopupMenuItem<
-                                                GarmentAvailabilityStatus
-                                              >(
-                                                value: status,
-                                                child: Text(status.label),
-                                              ),
-                                            )
-                                            .toList(),
-                                    offset: const Offset(0, 8),
-                                    child: Container(
-                                      height: 40,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: <Widget>[
-                                          Icon(
-                                            Icons.swap_horiz,
-                                            size: 16,
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onPrimary,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Change Status',
-                                            style: TextStyle(
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.onPrimary,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
+                                    icon: const Icon(
+                                      Icons.iron_outlined,
+                                      size: 16,
+                                    ),
+                                    label: const Text(
+                                      'Ironing Status',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
                                       ),
                                     ),
                                   ),
                                 ),
                               ],
-                            ),
-                            if (_isClothing(garment.category))
-                              Tooltip(
-                                message: 'Update Ironing Status',
-                                child: FilledButton.icon(
-                                  key: const ValueKey(
-                                    'garment-detail-ironing-status-action',
-                                  ),
-                                  style: _detailActionButtonStyle(),
-                                  onPressed: () =>
-                                      _editIroningStatus(context, ref, garment),
-                                  icon: const Icon(
-                                    Icons.iron_outlined,
-                                    size: 18,
-                                  ),
-                                  label: const Text('Ironing Status'),
-                                ),
-                              ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.xl,
-                    AppSpacing.xs,
-                    AppSpacing.xl,
-                    AppSpacing.xxl,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      GarmentWearInsight(garment: garment),
-                      const SizedBox(height: AppSpacing.lg),
-                      if (garment.availabilityStatus ==
-                              GarmentAvailabilityStatus.lent ||
-                          garment.availabilityStatus ==
-                              GarmentAvailabilityStatus.borrowed) ...<Widget>[
-                        const SizedBox(height: AppSpacing.sm),
-                        _LendingSection(
-                          garment: garment,
-                          activeLending: activeLending,
-                          onMarkReturned: () =>
-                              _markReturned(context, ref, garment),
-                          isReturning: ref
-                              .watch(lendingControllerProvider)
-                              .isLoading,
-                          formatDate: _formatDate,
-                        ),
-                      ],
-                      if (_hasCareInformation(garment)) ...<Widget>[
-                        const SizedBox(height: AppSpacing.lg),
-                        GarmentMetadataSection(
-                          title: 'Care & Readiness',
-                          children: <Widget>[
-                            GarmentInfoRow(
-                              label: 'Wash Instructions',
-                              value: garment.washInstructions!,
-                              icon: Icons.local_laundry_service_outlined,
-                            ),
-                          ],
-                        ),
-                      ],
-                      if (_hasStandaloneGarmentInformation(
-                        garment,
-                      )) ...<Widget>[
-                        const SizedBox(height: AppSpacing.lg),
-                        if ((garment.locationName?.trim().isNotEmpty ?? false))
-                          GarmentInfoRow(
-                            label: 'Location',
-                            value: garment.locationName!,
-                            icon: Icons.place_outlined,
-                          ),
-                        if (garment.occasions.any(
-                          (String o) => o.trim().isNotEmpty,
-                        ))
-                          Padding(
-                            padding: const EdgeInsets.only(top: AppSpacing.sm),
-                            child: GarmentInfoRow(
-                              label: 'Occasions',
-                              value: GarmentMetadataFormatter.detailListSummary(
-                                garment.occasions.map(_titleCase).toList(),
-                              ),
-                              icon: Icons.celebration_outlined,
-                            ),
-                          ),
-                        if (garment.moods.any(
-                          (String m) => m.trim().isNotEmpty,
-                        ))
-                          Padding(
-                            padding: const EdgeInsets.only(top: AppSpacing.sm),
-                            child: GarmentInfoRow(
-                              label: 'Moods',
-                              value: GarmentMetadataFormatter.detailListSummary(
-                                garment.moods.map(_titleCase).toList(),
-                              ),
-                              icon: Icons.style_outlined,
-                            ),
-                          ),
-                      ],
-                      if (_hasGarmentDetails(garment)) ...<Widget>[
-                        const SizedBox(height: AppSpacing.lg),
-                        GarmentMetadataSection(
-                          title: 'Item Details',
-                          children: <Widget>[
-                            if (_supportsSubcategory(garment.category) &&
-                                (garment.subcategory?.trim().isNotEmpty ??
-                                    false))
-                              GarmentInfoRow(
-                                label: _subcategoryLabel(garment.category),
-                                value: garment.subcategory!,
-                              ),
-                            if (_supportsSizes(garment.category) &&
-                                garment.effectiveSizes.isNotEmpty)
-                              GarmentInfoRow(
-                                label: 'Size',
-                                value: garment.effectiveSizes.join(', '),
-                                icon: Icons.straighten_outlined,
-                              ),
-                            if (_isClothing(garment.category)) ...<Widget>[
-                              if ((garment.fabric?.trim().isNotEmpty ?? false))
-                                GarmentInfoRow(
-                                  label: 'Fabric',
-                                  value: garment.fabric!,
-                                ),
-                              if ((garment.fit?.trim().isNotEmpty ?? false))
-                                GarmentInfoRow(
-                                  label: 'Fit',
-                                  value: garment.fit!,
-                                ),
-                              if ((garment.pattern?.trim().isNotEmpty ?? false))
-                                GarmentInfoRow(
-                                  label: 'Pattern',
-                                  value: garment.pattern!,
-                                ),
-                              if ((garment.fabricWeight?.trim().isNotEmpty ??
-                                  false))
-                                GarmentInfoRow(
-                                  label: 'Fabric Weight',
-                                  value: garment.fabricWeight!,
-                                ),
                             ],
-                            if (_supportsSleeveLength(garment.category) &&
-                                (garment.sleeveLength?.trim().isNotEmpty ??
-                                    false))
-                              GarmentInfoRow(
-                                label: 'Sleeve Length',
-                                value: garment.sleeveLength!,
-                              ),
-                            if (_supportsStitching(garment.category) &&
-                                garment.stitchingStatus != null)
-                              GarmentInfoRow(
-                                label: 'Stitching',
-                                value: garment.stitchingStatus!.label,
-                              ),
-
-                            if (garment.details?.trim().isNotEmpty ?? false)
-                              GarmentInfoRow(
-                                label: 'Details',
-                                value: garment.details!,
-                              ),
-                          ],
-                        ),
-                      ],
-                      if (_hasPurchaseInformation(garment)) ...<Widget>[
-                        const SizedBox(height: AppSpacing.lg),
-                        GarmentMetadataSection(
-                          title: 'Purchase Information',
-                          children: <Widget>[
-                            if (garment.brand?.trim().isNotEmpty ?? false)
-                              GarmentInfoRow(
-                                label: 'Brand',
-                                value: garment.brand!,
-                                icon: Icons.sell_outlined,
-                              ),
-                            if (garment.purchaseStore?.trim().isNotEmpty ??
-                                false)
-                              GarmentInfoRow(
-                                label: 'Store',
-                                value: garment.purchaseStore!,
-                              ),
-                            if (garment.price != null)
-                              GarmentInfoRow(
-                                label: 'Price',
-                                value:
-                                    '${garment.currency} '
-                                    '${garment.price!.toStringAsFixed(0)}',
-                              ),
-                            if (garment.purchaseDate != null)
-                              GarmentInfoRow(
-                                label: 'Purchase Date',
-                                value: _formatDate(garment.purchaseDate!),
-                              ),
-                            if (_hasReceipt(garment))
-                              GarmentInfoRow(
-                                label: 'Receipt',
-                                value: 'Receipt attached',
-                                icon: Icons.receipt_long_outlined,
-                                trailing: IconButton(
-                                  onPressed: () =>
-                                      _previewReceipt(context, garment),
-                                  icon: const Icon(
-                                    Icons.visibility_outlined,
-                                    size: 18,
-                                  ),
-                                  tooltip: 'View Receipt',
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.lg),
-                      GarmentMetadataSection(
-                        title: 'Wear History',
-                        children: <Widget>[
-                          history.when(
-                            loading: () =>
-                                const AppLoadingState(showIcon: false),
-                            error: (_, _) => TextButton.icon(
-                              onPressed: () => ref.invalidate(
-                                garmentWearHistoryProvider(garmentId),
-                              ),
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Retry Loading Wear History'),
-                            ),
-                            data: (List<WearLog> history) => WearHistoryList(
-                              history: history,
-                              onDelete: (WearLog entry) =>
-                                  _deleteWear(context, ref, garment, entry),
-                            ),
                           ),
                         ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );
-  }
-
-  static ButtonStyle _detailActionButtonStyle() {
-    return FilledButton.styleFrom(
-      minimumSize: const Size(0, 40),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 10,
+              ),
+            ],
+          )
       ),
-      textStyle: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-      ),
-      shape: const StadiumBorder(),
     );
   }
 
@@ -505,12 +518,12 @@ class GarmentDetailScreen extends ConsumerWidget {
             await ref
                 .read(wearLogControllerProvider.notifier)
                 .markAsWorn(
-                  garmentId,
-                  wornDate: wearEntry.wornDate,
-                  eventName: wearEntry.eventName,
-                  notes: wearEntry.notes,
-                  laundryStatusAfter: wearEntry.laundryStatusAfter,
-                );
+              garmentId,
+              wornDate: wearEntry.wornDate,
+              eventName: wearEntry.eventName,
+              notes: wearEntry.notes,
+              laundryStatusAfter: wearEntry.laundryStatusAfter,
+            );
 
             return !ref.read(wearLogControllerProvider).hasError;
           },
@@ -528,11 +541,11 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _deleteWear(
-    BuildContext context,
-    WidgetRef ref,
-    Garment garment,
-    WearLog entry,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      Garment garment,
+      WearLog entry,
+      ) async {
     await ref
         .read(wearLogControllerProvider.notifier)
         .deleteWear(garmentId: garment.id, wearLogId: entry.id);
@@ -556,17 +569,17 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _archive(
-    BuildContext context,
-    WidgetRef ref,
-    Garment garment,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      Garment garment,
+      ) async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
         title: const Text('Move To Closet Vault?'),
         content: const Text(
           'It will be removed from your wardrobe but kept safely '
-          'in your Closet Vault.',
+              'in your Closet Vault.',
         ),
         actions: <Widget>[
           TextButton(
@@ -610,10 +623,6 @@ class GarmentDetailScreen extends ConsumerWidget {
       return;
     }
 
-    if (ref.read(garmentArchiveControllerProvider).isLoading) {
-      return;
-    }
-
     await ref
         .read(garmentArchiveControllerProvider.notifier)
         .archive(garmentId: garment.id);
@@ -649,10 +658,10 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _restore(
-    BuildContext context,
-    WidgetRef ref,
-    Garment garment,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      Garment garment,
+      ) async {
     if (ref.read(garmentArchiveControllerProvider).isLoading) {
       return;
     }
@@ -694,10 +703,10 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _markReturned(
-    BuildContext context,
-    WidgetRef ref,
-    Garment garment,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      Garment garment,
+      ) async {
     await ref
         .read(lendingControllerProvider.notifier)
         .markReturned(garmentId: garment.id);
@@ -720,18 +729,18 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _changeStatus(
-    BuildContext context,
-    WidgetRef ref,
-    Garment garment,
-    GarmentAvailabilityStatus status,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      Garment garment,
+      GarmentAvailabilityStatus status,
+      ) async {
     if (status == garment.availabilityStatus) {
       return;
     }
 
     final bool isLending =
         status == GarmentAvailabilityStatus.lent ||
-        status == GarmentAvailabilityStatus.borrowed;
+            status == GarmentAvailabilityStatus.borrowed;
 
     _LendingEntryData? lending;
     if (isLending) {
@@ -758,22 +767,22 @@ class GarmentDetailScreen extends ConsumerWidget {
       await ref
           .read(garmentRepositoryProvider)
           .updateAvailabilityStatus(
-            garmentId: garment.id,
-            memberId: member.id,
-            status: status,
-          );
+        garmentId: garment.id,
+        memberId: member.id,
+        status: status,
+      );
 
       await ref
           .read(lendingRepositoryProvider)
           .syncForAvailability(
-            memberId: member.id,
-            garmentId: garment.id,
-            status: status,
-            personName: lending?.personName,
-            dateOut: lending?.dateOut,
-            expectedReturnDate: lending?.expectedReturnDate,
-            notes: lending?.notes,
-          );
+        memberId: member.id,
+        garmentId: garment.id,
+        status: status,
+        personName: lending?.personName,
+        dateOut: lending?.dateOut,
+        expectedReturnDate: lending?.expectedReturnDate,
+        notes: lending?.notes,
+      );
     } catch (error) {
       if (!context.mounted) {
         return;
@@ -798,10 +807,10 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _editIroningStatus(
-    BuildContext context,
-    WidgetRef ref,
-    Garment garment,
-  ) async {
+      BuildContext context,
+      WidgetRef ref,
+      Garment garment,
+      ) async {
     final IroningStatus? selected = await showDialog<IroningStatus?>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -837,10 +846,10 @@ class GarmentDetailScreen extends ConsumerWidget {
       await ref
           .read(garmentRepositoryProvider)
           .updateIroningStatus(
-            garmentId: garment.id,
-            memberId: member.id,
-            status: selected,
-          );
+        garmentId: garment.id,
+        memberId: member.id,
+        status: selected,
+      );
     } catch (error) {
       if (!context.mounted) {
         return;
@@ -858,7 +867,9 @@ class GarmentDetailScreen extends ConsumerWidget {
     ref.invalidate(garmentProvider(garmentId));
     ref.invalidate(garmentsProvider);
 
-    messenger.showSnackBar(SnackBar(content: Text('Ironing Status Updated.')));
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Ironing Status Updated.')),
+    );
   }
 
   void _previewReceipt(BuildContext context, Garment garment) {
@@ -933,7 +944,7 @@ class GarmentDetailScreen extends ConsumerWidget {
   bool _hasStandaloneGarmentInformation(Garment garment) {
     return (garment.locationName?.trim().isNotEmpty ?? false) ||
         garment.occasions.any(
-          (String occasion) => occasion.trim().isNotEmpty,
+              (String occasion) => occasion.trim().isNotEmpty,
         ) ||
         garment.moods.any((String mood) => mood.trim().isNotEmpty);
   }
@@ -945,13 +956,13 @@ class GarmentDetailScreen extends ConsumerWidget {
   bool _hasGarmentDetails(Garment garment) {
     final bool clothingDetails =
         _isClothing(garment.category) &&
-        ((garment.fabric?.trim().isNotEmpty ?? false) ||
-            (garment.fit?.trim().isNotEmpty ?? false) ||
-            (garment.pattern?.trim().isNotEmpty ?? false) ||
-            (garment.fabricWeight?.trim().isNotEmpty ?? false));
+            ((garment.fabric?.trim().isNotEmpty ?? false) ||
+                (garment.fit?.trim().isNotEmpty ?? false) ||
+                (garment.pattern?.trim().isNotEmpty ?? false) ||
+                (garment.fabricWeight?.trim().isNotEmpty ?? false));
     final bool subcategoryDetails =
         _supportsSubcategory(garment.category) &&
-        (garment.subcategory?.trim().isNotEmpty ?? false);
+            (garment.subcategory?.trim().isNotEmpty ?? false);
     final bool sizesPresent =
         _supportsSizes(garment.category) && garment.effectiveSizes.isNotEmpty;
 
@@ -1037,9 +1048,9 @@ class GarmentDetailScreen extends ConsumerWidget {
         .split(RegExp(r'\s+'))
         .map(
           (String word) => word.isEmpty
-              ? word
-              : word[0].toUpperCase() + word.substring(1).toLowerCase(),
-        )
+          ? word
+          : word[0].toUpperCase() + word.substring(1).toLowerCase(),
+    )
         .join(' ');
   }
 
@@ -1050,11 +1061,6 @@ class GarmentDetailScreen extends ConsumerWidget {
   }
 }
 
-/// Constrained hero image with a rounded bottom edge and page indicator.
-///
-/// Keeps the garment photo visually prominent without dominating the screen,
-/// while giving swiping across multiple photos the same behaviour as the
-/// original full-bleed carousel.
 class _GarmentHero extends StatefulWidget {
   const _GarmentHero({required this.photoUrls});
 
@@ -1100,7 +1106,9 @@ class _GarmentHeroState extends State<_GarmentHero> {
                     return GestureDetector(
                       onTap: () => _openLightbox(context, index),
                       child: ColoredBox(
-                        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerLowest,
                         child: GarmentImage(
                           imageUrl: widget.photoUrls[index],
                           fit: BoxFit.contain,
@@ -1119,7 +1127,7 @@ class _GarmentHeroState extends State<_GarmentHero> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List<Widget>.generate(
                       widget.photoUrls.length,
-                      (int index) {
+                          (int index) {
                         final bool selected = index == _currentPage;
 
                         return AnimatedContainer(
@@ -1130,8 +1138,10 @@ class _GarmentHeroState extends State<_GarmentHero> {
                           decoration: BoxDecoration(
                             color: selected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface
-                                    .withValues(alpha: 0.4),
+                                : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.4),
                             borderRadius: BorderRadius.circular(99),
                           ),
                         );
@@ -1161,7 +1171,6 @@ class _GarmentHeroState extends State<_GarmentHero> {
   }
 }
 
-/// Full-screen pinch-to-zoom garment image viewer.
 class _GarmentImageLightbox extends StatefulWidget {
   const _GarmentImageLightbox({
     required this.photoUrls,
@@ -1201,36 +1210,36 @@ class _GarmentImageLightboxState extends State<_GarmentImageLightbox> {
           Positioned.fill(
             child: widget.photoUrls.length == 1
                 ? InteractiveViewer(
-                    minScale: 0.8,
-                    maxScale: 4.0,
-                    panEnabled: true,
-                    child: Center(
-                      child: GarmentImage(
-                        imageUrl: widget.photoUrls.first,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  )
+              minScale: 0.8,
+              maxScale: 4.0,
+              panEnabled: true,
+              child: Center(
+                child: GarmentImage(
+                  imageUrl: widget.photoUrls.first,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            )
                 : PageView.builder(
-                    controller: _pageController,
-                    itemCount: widget.photoUrls.length,
-                    onPageChanged: (int index) {
-                      setState(() => _currentIndex = index);
-                    },
-                    itemBuilder: (BuildContext context, int index) {
-                      return InteractiveViewer(
-                        minScale: 0.8,
-                        maxScale: 4.0,
-                        panEnabled: true,
-                        child: Center(
-                          child: GarmentImage(
-                            imageUrl: widget.photoUrls[index],
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                      );
-                    },
+              controller: _pageController,
+              itemCount: widget.photoUrls.length,
+              onPageChanged: (int index) {
+                setState(() => _currentIndex = index);
+              },
+              itemBuilder: (BuildContext context, int index) {
+                return InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4.0,
+                  panEnabled: true,
+                  child: Center(
+                    child: GarmentImage(
+                      imageUrl: widget.photoUrls[index],
+                      fit: BoxFit.contain,
+                    ),
                   ),
+                );
+              },
+            ),
           ),
           Positioned(
             top: 16,
@@ -1281,7 +1290,6 @@ class _GarmentImageLightboxState extends State<_GarmentImageLightbox> {
   }
 }
 
-/// Editorial subtitle line: "Category · Signature material · Season"
 class _GarmentSubtitle extends StatelessWidget {
   const _GarmentSubtitle({required this.garment});
 
@@ -1372,10 +1380,10 @@ class _LendingSection extends StatelessWidget {
                     onPressed: isReturning ? null : onMarkReturned,
                     icon: isReturning
                         ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                         : const Icon(Icons.assignment_return_outlined),
                     label: const Text('Mark Returned'),
                   ),
@@ -1547,9 +1555,7 @@ class _ColorDetailTag extends StatelessWidget {
 }
 
 TextStyle? _tagTextStyle(BuildContext context) {
-  return Theme.of(
-    context,
-  ).textTheme.labelMedium?.copyWith(fontSize: 13);
+  return Theme.of(context).textTheme.labelMedium?.copyWith(fontSize: 13);
 }
 
 bool _supportsSizePersistence(GarmentCategory category) {
@@ -1941,7 +1947,7 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
                         child: Text('No Event'),
                       ),
                       ..._eventOptions.map(
-                        (String event) => DropdownMenuItem<String?>(
+                            (String event) => DropdownMenuItem<String?>(
                           value: event,
                           child: Text(event),
                         ),
@@ -1950,13 +1956,13 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
                     onChanged: _submitting
                         ? null
                         : (String? value) {
-                            setState(() {
-                              _selectedEvent = value;
-                              if (value != _otherEventValue) {
-                                _customEventController.clear();
-                              }
-                            });
-                          },
+                      setState(() {
+                        _selectedEvent = value;
+                        if (value != _otherEventValue) {
+                          _customEventController.clear();
+                        }
+                      });
+                    },
                   ),
                   if (_selectedEvent == _otherEventValue) ...<Widget>[
                     const SizedBox(height: AppSpacing.lg),
@@ -2013,10 +2019,10 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
                     onChanged: _submitting
                         ? null
                         : (LaundryStatus? value) {
-                            setState(() {
-                              _selectedLaundryStatus = value;
-                            });
-                          },
+                      setState(() {
+                        _selectedLaundryStatus = value;
+                      });
+                    },
                   ),
                 ],
               ),
@@ -2033,10 +2039,10 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
           onPressed: _submitting ? null : _submit,
           icon: _submitting
               ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
               : const Icon(Icons.check),
           label: const Text('Record Wear'),
         ),
@@ -2046,5 +2052,5 @@ class _WearEntryDialogState extends State<_WearEntryDialog> {
 
   String _formatWornDate(DateTime date) =>
       '${date.day.toString().padLeft(2, '0')}/'
-      '${date.month.toString().padLeft(2, '0')}/${date.year}';
+          '${date.month.toString().padLeft(2, '0')}/${date.year}';
 }

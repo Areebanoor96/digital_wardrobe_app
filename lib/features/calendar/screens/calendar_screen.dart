@@ -111,7 +111,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 }
-
 class _CalendarHeader extends StatelessWidget {
   const _CalendarHeader({required this.activeDayCount});
 
@@ -131,6 +130,35 @@ class _CalendarHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        // Calendar Icon with Soft Green Highlight Badge
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Stack(
+              children: <Widget>[
+                Positioned(
+                  bottom: 2,
+                  left: 2,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDCE8CF), // Soft Green Highlight
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.calendar_today_rounded, // Calendar Icon
+                  size: 38,
+                  color: Color(0xFF1C1C1E),
+                ),
+              ],
+            ),
+          ),
+        ),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
